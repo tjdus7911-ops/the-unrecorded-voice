@@ -7,8 +7,8 @@ ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 # 임시 음원이 없으면 생성
 ls "$ROOT"/game/assets/audio/breathing/PH_*.wav >/dev/null 2>&1 || python3 "$ROOT/tools/audio/make_placeholders.py"
 # 작업실 GLB가 없으면 생성 (bpy 필요)
-[ -f "$ROOT/game/assets/models/environments/stu_studio.glb" ] || { python3 "$ROOT/tools/blender/gen_studio_textures.py" && python3 "$ROOT/tools/blender/build_studio.py"; }
+[ -f "$ROOT/game/assets/models/environments/stu_studio.gltf" ] || "$ROOT/tools/build_all.sh"
 cd "$ROOT/game"
 "$GODOT" --headless --import --path . >/dev/null 2>&1 || true
 "$GODOT" --headless --fixed-fps 60 --path . res://scenes/tests/run_tests.tscn
-"$GODOT" --headless --fixed-fps 60 --path . res://scenes/tests/run_studio_tests.tscn
+"$GODOT" --headless --fixed-fps 60 --path . res://scenes/tests/run_phase01_tests.tscn

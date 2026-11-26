@@ -10,9 +10,13 @@
 
 ## 고정된 기술 결정
 - 엔진: **Godot 4.7.2-stable**, Forward+, GDScript. 프로젝트 루트는 `game/`
-- 3D: **Blender 5.3**, `tools/blender/*.py` 스크립트로 재현 가능하게 제작 → GLB로 `game/assets/models/`에 익스포트
+- 3D: **Blender 5.3**, `tools/blender/*.py` 스크립트로 재현 가능하게 제작 → **.gltf(+.bin)** 로 `game/assets/models/`에 익스포트.
+  텍스처는 임베드하지 않고 `game/assets/textures/`의 공유 파일을 참조(중복 VRAM 방지). 정적 메시는 재질별 병합, 상호작용 부품(`tuv_keep`)은 피벗 유지
+- 플레이 레벨: `game/scenes/levels/lvl_phase01.tscn` (작업실 + 복도 + 계단실, 로딩 없음). 좌표 변환 Blender (x,y,z) → Godot (x,z,-y)
+- 사운드는 `game/data/config/audio.json` 의 ID로만 재생(`Sounds` autoload). 음성은 대사 JSON의 경로로만 참조
+- 그래픽 확인은 **실제 Godot 화면**으로: `scenes/tests/capture_phase01.tscn` (lavapipe Vulkan + xvfb). 자동 테스트 통과만으로 품질 판단 금지
 - 대사·음성·조명 상태는 `game/data/` JSON으로 관리. 코드에 음성 파일 경로 하드코딩 금지
-- 테스트: `tools/ci/run_tests.sh` 가 통과해야 커밋한다
+- 테스트: `tools/ci/run_tests.sh` 가 통과해야 커밋한다 (시스템 39 + 레벨 43)
 
 ## 절대 규칙
 - 실행하지 못한 도구를 사용했다고 보고하지 않는다 (예: Blender MCP는 현재 미연결)

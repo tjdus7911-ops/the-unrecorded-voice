@@ -1,6 +1,6 @@
 class_name LightFixture
 extends Node3D
-## 조명기구 상태 관리. 자식 Light3D 전부와 (선택) 발광 메시를 함께 제어한다.
+## 조명기구 상태 관리. 자식 Light3D 전부와 발광 메시(형광등 튜브·LED 패널·전구)를 함께 제어한다.
 ## 챕터·스토리 진행에 따라 set_state()로 바꾼다.
 
 enum State {
@@ -12,23 +12,25 @@ enum State {
 }
 
 signal state_changed(state: State)
+signal flickered(on: bool)
 
 @export var state: State = State.NORMAL
 @export var switched_on := true
 @export var emissive_mesh: MeshInstance3D
+@export var emissive_color := Color(1.0, 0.75, 0.45)
+@export var emissive_energy := 4.0
 @export var flicker_min_on := 0.05
 @export var flicker_max_on := 1.8
 @export var hum_sound: AudioStream            ## 형광등 전기 소리
 
+var emissive_nodes: Array = []                ## MeshInstance3D 또는 그 부모 노드
 var _lights: Array[Light3D] = []
 var _energy: Array[float] = []
+var _mats: Array[StandardMaterial3D] = []
 var _t := 0.0
 var _lit := true
-var _emissive_mat: StandardMaterial3D
-var _emission_energy := 1.0
 
 func _ready() -> void:
-	# 자식 조명이 나중에 추가되어도 상태를 적용한다
 	child_entered_tree.connect(func(_n): _collect.call_deferred())
 	if hum_sound:
 		var p := AudioStreamPlayer3D.new()
@@ -44,10 +46,19 @@ func _collect() -> void:
 		if not _lights.has(c):
 			_lights.append(c)
 			_energy.append((c as Light3D).light_energy)
-	if emissive_mesh and _emissive_mat == null and emissive_mesh.get_active_material(0) is StandardMaterial3D:
-		_emissive_mat = emissive_mesh.get_active_material(0).duplicate()
-		emissive_mesh.material_override = _emissive_mat
-		_emission_energy = _emissive_mat.emission_energy_multiplier
+	if emissive_mesh and not emissive_nodes.has(emissive_mesh):
+		emissive_nodes.append(emissive_mesh)
+	if _mats.is_empty() and not emissive_nodes.is_empty():
+		for n in emissive_nodes:
+			var mis: Array = [n] if n is MeshInstance3D else (n as Node).find_children("*", "MeshInstance3D", true, false)
+			for mi in mis:
+				var m := StandardMaterial3D.new()
+				m.albedo_color = Color(0.85, 0.85, 0.83)
+				m.emission = emissive_color
+				m.emission_energy_multiplier = emissive_energy
+				m.roughness = 0.4
+				(mi as MeshInstance3D).material_override = m
+				_mats.append(m)
 	_apply()
 
 ## 실제로 빛을 내는 Light3D가 하나라도 있는가 (테스트용)
@@ -84,8 +95,9 @@ func _set_lit(on: bool, k := 1.0) -> void:
 	for i in _lights.size():
 		_lights[i].visible = on
 		_lights[i].light_energy = _energy[i] * k
-	if _emissive_mat:
-		_emissive_mat.emission_energy_multiplier = _emission_energy * k if on else 0.0
+	for m in _mats:
+		m.emission_enabled = on
+		m.emission_energy_multiplier = emissive_energy * k
 
 func _process(delta: float) -> void:
 	if state != State.FLICKER or not switched_on:
@@ -99,3 +111,4 @@ func _process(delta: float) -> void:
 		else:
 			_set_lit(true, 0.7 if reduce else 1.0)
 			_t = randf_range(flicker_min_on, flicker_max_on) * (3.0 if reduce else 1.0)
+		flickered.emit(_lit)

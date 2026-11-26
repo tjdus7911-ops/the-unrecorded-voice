@@ -3,58 +3,171 @@
   "chapter_id": "prologue",
   "lines": [
     {
-      "line_id": "PRO_S03_001", "character_id": "jungwoo_adult", "voice_id": "vo_jungwoo_adult",
-      "chapter_id": "prologue", "scene_id": "S03_knock",
-      "text": {"ko": "이 시간에 누구지?"}, "subtitle": {"ko": "이 시간에 누구지?"},
-      "emotion": "uneasy", "audio": {"ko": ""},
-      "playback": {"mode": "live", "position": "player", "volume_db": 0.0, "fx": []},
+      "line_id": "PRO_S03_001",
+      "character_id": "jungwoo_adult",
+      "voice_id": "vo_jungwoo_adult",
+      "chapter_id": "prologue",
+      "scene_id": "S03_knock",
+      "text": {
+        "ko": "이 시간에 누구지?"
+      },
+      "subtitle": {
+        "ko": "이 시간에 누구지?"
+      },
+      "emotion": "uneasy",
+      "audio": {
+        "ko": "res://assets/audio/voice/jungwoo_adult/PH_PRO_S03_001.wav"
+      },
+      "playback": {
+        "mode": "live",
+        "position": "player",
+        "volume_db": 0.0,
+        "fx": []
+      },
       "condition": "event:knock_1"
     },
     {
-      "line_id": "PRO_S04_NOTE_1", "character_id": "", "voice_id": "",
-      "chapter_id": "prologue", "scene_id": "S04_tapes",
-      "text": {"ko": "잡음을 제거하지 말아 주세요."}, "subtitle": {"ko": "잡음을 제거하지 말아 주세요."},
-      "emotion": "neutral", "audio": {"ko": ""},
-      "playback": {"mode": "document"}, "condition": "item:note_prologue"
+      "line_id": "PRO_S04_NOTE_1",
+      "character_id": "",
+      "voice_id": "",
+      "chapter_id": "prologue",
+      "scene_id": "S04_tapes",
+      "text": {
+        "ko": "잡음을 제거하지 말아 주세요."
+      },
+      "subtitle": {
+        "ko": "잡음을 제거하지 말아 주세요."
+      },
+      "emotion": "neutral",
+      "audio": {
+        "ko": ""
+      },
+      "playback": {
+        "mode": "document"
+      },
+      "condition": "item:note_prologue"
     },
     {
-      "line_id": "PRO_S04_NOTE_2", "character_id": "", "voice_id": "",
-      "chapter_id": "prologue", "scene_id": "S04_tapes",
-      "text": {"ko": "그 안에 목소리가 있습니다."}, "subtitle": {"ko": "그 안에 목소리가 있습니다."},
-      "emotion": "neutral", "audio": {"ko": ""},
-      "playback": {"mode": "document"}, "condition": "item:note_prologue"
+      "line_id": "PRO_S04_NOTE_2",
+      "character_id": "",
+      "voice_id": "",
+      "chapter_id": "prologue",
+      "scene_id": "S04_tapes",
+      "text": {
+        "ko": "그 안에 목소리가 있습니다."
+      },
+      "subtitle": {
+        "ko": "그 안에 목소리가 있습니다."
+      },
+      "emotion": "neutral",
+      "audio": {
+        "ko": ""
+      },
+      "playback": {
+        "mode": "document"
+      },
+      "condition": "item:note_prologue"
     },
     {
-      "line_id": "PRO_S05_001", "character_id": "soeun", "voice_id": "vo_soeun",
-      "chapter_id": "prologue", "scene_id": "S05_first_play",
-      "text": {"ko": "정우야, 녹음되고 있어?"}, "subtitle": {"ko": "정우야, 녹음되고 있어?"},
-      "emotion": "playful", "audio": {"ko": ""},
-      "playback": {"mode": "tape", "position": "recorder", "volume_db": -2.0, "fx": ["tape_hiss", "wow_flutter"]},
+      "line_id": "PRO_S05_001",
+      "character_id": "soeun",
+      "voice_id": "vo_soeun",
+      "chapter_id": "prologue",
+      "scene_id": "S05_first_play",
+      "text": {
+        "ko": "정우야, 녹음되고 있어?"
+      },
+      "subtitle": {
+        "ko": "정우야, 녹음되고 있어?"
+      },
+      "emotion": "playful",
+      "audio": {
+        "ko": "res://assets/audio/voice/soeun/PH_PRO_S05_001.wav"
+      },
+      "playback": {
+        "mode": "tape",
+        "position": "recorder",
+        "volume_db": -2.0,
+        "fx": [
+          "tape_hiss",
+          "wow_flutter"
+        ]
+      },
       "condition": "event:tape01_play"
     },
     {
-      "line_id": "PRO_S05_002", "character_id": "jungwoo_adult", "voice_id": "vo_jungwoo_adult",
-      "chapter_id": "prologue", "scene_id": "S05_first_play",
-      "text": {"ko": "...뭐야?"}, "subtitle": {"ko": "...뭐야?"},
-      "emotion": "flustered", "audio": {"ko": ""},
-      "playback": {"mode": "live", "position": "player", "volume_db": -3.0, "fx": []},
+      "line_id": "PRO_S05_002",
+      "character_id": "jungwoo_adult",
+      "voice_id": "vo_jungwoo_adult",
+      "chapter_id": "prologue",
+      "scene_id": "S05_first_play",
+      "text": {
+        "ko": "...뭐야?"
+      },
+      "subtitle": {
+        "ko": "...뭐야?"
+      },
+      "emotion": "flustered",
+      "audio": {
+        "ko": "res://assets/audio/voice/jungwoo_adult/PH_PRO_S05_002.wav"
+      },
+      "playback": {
+        "mode": "live",
+        "position": "player",
+        "volume_db": -3.0,
+        "fx": []
+      },
       "condition": "after:PRO_S05_001"
     },
     {
-      "line_id": "PRO_S05_003", "character_id": "soeun", "voice_id": "vo_soeun",
-      "chapter_id": "prologue", "scene_id": "S05_first_play",
-      "text": {"ko": "정우야?"}, "subtitle": {"ko": "정우야?"},
-      "emotion": "whisper", "audio": {"ko": ""},
-      "playback": {"mode": "memory", "position": "behind_player", "volume_db": -4.0, "fx": ["room_reverb"]},
+      "line_id": "PRO_S05_003",
+      "character_id": "soeun",
+      "voice_id": "vo_soeun",
+      "chapter_id": "prologue",
+      "scene_id": "S05_first_play",
+      "text": {
+        "ko": "정우야?"
+      },
+      "subtitle": {
+        "ko": "정우야?"
+      },
+      "emotion": "whisper",
+      "audio": {
+        "ko": "res://assets/audio/voice/soeun/PH_PRO_S05_003.wav"
+      },
+      "playback": {
+        "mode": "memory",
+        "position": "behind_player",
+        "volume_db": -4.0,
+        "fx": [
+          "room_reverb"
+        ]
+      },
       "condition": "event:recorder_stopped+silence_3s",
       "_note": "녹음기가 아닌 플레이어 뒤쪽 실제 공간에서 발생"
     },
     {
-      "line_id": "PRO_S06_001", "character_id": "jungwoo_adult", "voice_id": "vo_jungwoo_adult",
-      "chapter_id": "prologue", "scene_id": "S06_anomaly",
-      "text": {"ko": "누구세요?"}, "subtitle": {"ko": "누구세요?"},
-      "emotion": "fear", "audio": {"ko": ""},
-      "playback": {"mode": "live", "position": "player", "volume_db": 0.0, "fx": []},
+      "line_id": "PRO_S06_001",
+      "character_id": "jungwoo_adult",
+      "voice_id": "vo_jungwoo_adult",
+      "chapter_id": "prologue",
+      "scene_id": "S06_anomaly",
+      "text": {
+        "ko": "누구세요?"
+      },
+      "subtitle": {
+        "ko": "누구세요?"
+      },
+      "emotion": "fear",
+      "audio": {
+        "ko": "res://assets/audio/voice/jungwoo_adult/PH_PRO_S06_001.wav"
+      },
+      "playback": {
+        "mode": "live",
+        "position": "player",
+        "volume_db": 0.0,
+        "fx": []
+      },
       "condition": "event:knock_2"
     }
   ]

@@ -12,7 +12,7 @@ from pathlib import Path
 import numpy as np
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
-OUT = Path(__file__).resolve().parents[2] / "art" / "textures_source" / "stu"
+OUT = Path(__file__).resolve().parents[2] / "game" / "assets" / "textures" / "stu"
 OUT.mkdir(parents=True, exist_ok=True)
 FONT = "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc"
 R = random.Random(1998)

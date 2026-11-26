@@ -22,6 +22,8 @@ var sound_captions := false       ## 주요 효과음 방향·설명 자막 (접
 var reduce_flashes := false       ## 섬광 효과 완화
 var dynamic_range_compression := false  ## 음량 차이 완화
 var brightness := 1.0
+## 그래픽 품질: 0 낮음 / 1 보통 / 2 높음(기본). 높음 = 실시간 GI(SDFGI)·SSIL·SSR
+var graphics_quality := 2
 
 func _ready() -> void:
 	load_settings()
@@ -56,7 +58,7 @@ func save_settings() -> void:
 	for k in volumes:
 		cfg.set_value("audio", String(k), volumes[k])
 	for k in ["mouse_sensitivity", "camera_shake", "breathing_intensity", "subtitles",
-			"sound_captions", "reduce_flashes", "dynamic_range_compression", "brightness"]:
+			"sound_captions", "reduce_flashes", "dynamic_range_compression", "brightness", "graphics_quality"]:
 		cfg.set_value("game", k, get(k))
 	cfg.save(SAVE_PATH)
 
@@ -67,5 +69,20 @@ func load_settings() -> void:
 	for k in volumes.keys():
 		volumes[k] = cfg.get_value("audio", String(k), volumes[k])
 	for k in ["mouse_sensitivity", "camera_shake", "breathing_intensity", "subtitles",
-			"sound_captions", "reduce_flashes", "dynamic_range_compression", "brightness"]:
+			"sound_captions", "reduce_flashes", "dynamic_range_compression", "brightness", "graphics_quality"]:
 		set(k, cfg.get_value("game", k, get(k)))
+
+## 환경(Environment)에 품질 프리셋 적용 — 레벨이 호출
+func apply_quality(env: Environment, viewport: Viewport) -> void:
+	var q := graphics_quality
+	if OS.get_cmdline_user_args().has("--quality-low"):
+		q = 0
+	elif OS.get_cmdline_user_args().has("--quality-medium"):
+		q = 1
+	env.sdfgi_enabled = q >= 2
+	env.ssil_enabled = q >= 1
+	env.ssr_enabled = q >= 2
+	env.ssao_enabled = q >= 1
+	viewport.positional_shadow_atlas_size = 2048 if q >= 1 else 1024
+	RenderingServer.positional_soft_shadow_filter_set_quality(
+		RenderingServer.SHADOW_QUALITY_SOFT_MEDIUM if q >= 2 else RenderingServer.SHADOW_QUALITY_SOFT_LOW)

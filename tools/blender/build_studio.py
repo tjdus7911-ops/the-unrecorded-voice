@@ -17,9 +17,14 @@ from mathutils import Vector  # noqa: E402
 import tuv_lib as T  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[2]
-TEX = ROOT / "art" / "textures_source" / "stu"
+T.PBR_DIR = ROOT / "game" / "assets" / "textures" / "pbr"
+DECALS = ROOT / "game" / "assets" / "textures" / "decals"
+PROPS_BLEND = ROOT / "art" / "blender" / "props"
+CASSETTE_JSON = ROOT / "game" / "data" / "levels" / "stu_cassettes.json"
+CASSETTE_GLB = ROOT / "game" / "assets" / "models" / "props" / "prop_cassette_shelf.gltf"
+TEX = ROOT / "game" / "assets" / "textures" / "stu"
 BLEND = ROOT / "art" / "blender" / "environments" / "studio" / "stu_studio.blend"
-GLB = ROOT / "game" / "assets" / "models" / "environments" / "stu_studio.glb"
+GLB = ROOT / "game" / "assets" / "models" / "environments" / "stu_studio.gltf"
 RENDERS = ROOT / "art" / "renders" / "studio"
 
 W, D, H = 6.0, 5.0, 2.65          # 실내 폭(x), 깊이(y), 천장고
@@ -31,51 +36,67 @@ R = T.RNG
 
 # ======================================================================= materials
 def build_materials():
+    P = T.mat_pbr
     M = {}
-    M["wall"] = T.mat_wall_paint("stu_wall_paint", (0.80, 0.78, 0.73))
-    M["floor"] = T.mat_wood_planks("stu_floor_decotile")
-    M["ceiling"] = T.mat_ceiling_tile("stu_ceiling_tex")
-    M["baseboard"] = T.mat_basic("stu_baseboard_pvc", (0.16, 0.15, 0.14), 0.55)
-    M["alu"] = T.mat_basic("stu_aluminium", (0.62, 0.63, 0.64), 0.38, 1.0, 0.05, 30, 0.02)
-    M["alu_dark"] = T.mat_basic("stu_aluminium_anodized", (0.16, 0.16, 0.17), 0.42, 1.0, 0.05)
-    M["steel_door"] = T.mat_basic("stu_steel_door_paint", (0.46, 0.47, 0.46), 0.45, 0.2, 0.06, 18, 0.04)
-    M["chrome"] = T.mat_basic("stu_brushed_steel", (0.75, 0.75, 0.74), 0.28, 1.0, 0.03, 60, 0.01)
-    M["black_metal"] = T.mat_basic("stu_powdercoat_black", (0.035, 0.035, 0.037), 0.55, 0.6, 0.08)
-    M["walnut"] = T.mat_wood_planks("stu_walnut_veneer", (0.17, 0.10, 0.06), (0.27, 0.17, 0.10), (2.4, 0.9))
-    M["oak"] = T.mat_wood_planks("stu_oak_laminate", (0.42, 0.30, 0.19), (0.55, 0.41, 0.27), (2.0, 0.35))
-    M["shelf_white"] = T.mat_basic("stu_melamine_offwhite", (0.72, 0.70, 0.66), 0.6, 0, 0.05)
+    M["wall"] = P("stu_wall_paint", "wall_paint")
+    M["floor"] = P("stu_floor_decotile", "floor_decotile")
+    M["ceiling"] = P("stu_ceiling_tex", "ceiling_tex")
+    M["baseboard"] = P("stu_baseboard_pvc", "baseboard_pvc")
+    M["alu"] = P("stu_aluminium", "brushed_aluminium")
+    M["alu_dark"] = P("stu_anodized_dark", "anodized_dark")
+    M["steel_door"] = P("stu_steel_door_paint", "steel_door_paint")
+    M["chrome"] = P("stu_brushed_steel", "brushed_steel")
+    M["black_metal"] = P("stu_powdercoat_black", "powdercoat_black")
+    M["walnut"] = P("stu_walnut_veneer", "walnut_veneer")
+    M["oak"] = P("stu_oak_laminate", "oak_laminate")
+    M["shelf_white"] = P("stu_melamine_offwhite", "melamine_offwhite")
     M["glass"] = T.mat_glass("stu_window_glass")
     M["glass_clean"] = T.mat_glass("stu_glass_clean", 0.02, rain=False)
-    M["plastic_dark"] = T.mat_basic("stu_abs_charcoal", (0.05, 0.05, 0.055), 0.48, 0, 0.06, 80, 0.03)
-    M["plastic_grey"] = T.mat_basic("stu_abs_grey", (0.28, 0.28, 0.29), 0.5, 0, 0.06, 80, 0.03)
-    M["silver_panel"] = T.mat_basic("stu_silver_faceplate", (0.68, 0.68, 0.66), 0.32, 0.9, 0.04, 200, 0.01)
-    M["rubber"] = T.mat_basic("stu_rubber", (0.02, 0.02, 0.02), 0.8, 0, 0.04)
-    M["foam"] = T.mat_fabric("stu_acoustic_foam", (0.06, 0.065, 0.07), 1.0, 900)
-    M["sofa"] = T.mat_fabric("stu_sofa_fabric", (0.17, 0.19, 0.17))
-    M["chair_mesh"] = T.mat_fabric("stu_chair_mesh", (0.03, 0.03, 0.035), 0.8, 1500)
-    M["rug"] = T.mat_fabric("stu_rug_wool", (0.24, 0.20, 0.17), 1.0, 200)
-    M["lampshade"] = T.mat_fabric("stu_lampshade_linen", (0.78, 0.72, 0.6))
-    M["paper"] = T.mat_basic("stu_paper", (0.86, 0.85, 0.80), 0.85, 0, 0.04, 30, 0.02)
-    M["cardboard"] = T.mat_basic("stu_cardboard", (0.48, 0.36, 0.24), 0.9, 0, 0.1, 25, 0.06)
-    M["ceramic"] = T.mat_basic("stu_mug_ceramic", (0.80, 0.78, 0.74), 0.25, 0, 0.03)
-    M["cone"] = T.mat_basic("stu_speaker_cone", (0.04, 0.04, 0.04), 0.7, 0, 0.1, 300, 0.1)
-    M["leaf"] = T.mat_basic("stu_plant_leaf", (0.12, 0.2, 0.08), 0.55, 0, 0.15)
-    M["soil"] = T.mat_basic("stu_soil", (0.08, 0.06, 0.04), 0.95, 0, 0.2)
+    M["plastic_dark"] = P("stu_abs_charcoal", "abs_charcoal")
+    M["plastic_grey"] = P("stu_abs_grey", "abs_grey")
+    M["plastic_white"] = P("stu_abs_white", "abs_white")
+    M["blind"] = P("stu_blind_slat_painted", "abs_white", rough_mul=0.8)   # 도장 알루미늄 블라인드 (확산 반사)
+    M["silver_panel"] = P("stu_silver_faceplate", "silver_faceplate")
+    M["rubber"] = P("stu_rubber", "rubber_black")
+    M["foam"] = P("stu_acoustic_foam", "acoustic_foam")
+    M["sofa"] = P("stu_sofa_fabric", "sofa_fabric")
+    M["chair_mesh"] = P("stu_chair_mesh", "chair_mesh")
+    M["rug"] = P("stu_rug_wool", "rug_wool")
+    M["blanket"] = P("stu_blanket_flannel", "blanket_flannel")
+    M["lampshade"] = P("stu_lampshade_linen", "lampshade_linen")
+    M["paper"] = P("stu_paper", "paper")
+    M["cardboard"] = P("stu_cardboard", "cardboard")
+    M["ceramic"] = P("stu_ceramic_glaze", "ceramic_glaze")
+    M["sill"] = P("stu_sill_stone", "sill_stone")
+    M["cone"] = P("stu_speaker_cone", "rubber_black", rough_mul=0.9)
+    M["leaf"] = P("stu_plant_leaf", "leaf")
+    M["soil"] = P("stu_soil", "soil")
+    M["binder"] = [P(f"stu_binder_{i}", "abs_grey", tint=c) for i, c in enumerate([(0.35, 0.6, 1.2), (0.5, 0.5, 0.5), (1.4, 0.4, 0.3)])]
+    M["book"] = [P(f"stu_book_{i}", "paper", tint=c) for i, c in enumerate([(0.55, 0.15, 0.1), (0.12, 0.18, 0.3), (0.85, 0.8, 0.7),
+                                                                           (0.2, 0.3, 0.2), (0.15, 0.15, 0.15)])]
     M["screen"] = T.mat_image("stu_monitor_screen", str(TEX / "stu_monitor_screen.png"), emission=1.1, rough=0.25)
     M["screen_off"] = T.mat_basic("stu_screen_off", (0.01, 0.01, 0.012), 0.15)
     M["clock_face"] = T.mat_image("stu_clock_face", str(TEX / "stu_clock_face.png"), rough=0.5)
     M["calendar"] = T.mat_image("stu_calendar", str(TEX / "stu_calendar.png"), rough=0.8)
     M["archive"] = T.mat_image("stu_archive_label", str(TEX / "stu_archive_box_label.png"), rough=0.85)
-    M["inserts"] = [T.mat_image(f"stu_cassette_insert_{i:02d}", str(TEX / f"stu_cassette_insert_{i:02d}.png"),
-                                rough=0.6) for i in range(1, 9)]
-    M["cassette_shell"] = T.mat_basic("stu_cassette_case", (0.62, 0.64, 0.66), 0.12, 0, 0.02, 40, 0.0)
+    M["spine_atlas"] = T.mat_image("stu_cassette_spine_atlas", str(ROOT / "game/assets/textures/props/prop_cassette_spine_atlas.png"), rough=0.6)
+    M["spine_atlas"]["fit"] = False
+    M["inserts"] = [T.mat_image(f"stu_cassette_insert_{i:02d}", str(TEX / f"stu_cassette_insert_{i:02d}.png"), rough=0.6)
+                    for i in range(1, 9)]
+    M["cassette_shell"] = T.mat_basic("stu_cassette_case", (0.22, 0.23, 0.25), 0.18, 0, 0.02, 40, 0.0)   # 반투명 스모크 케이스 느낌
     M["vu"] = T.mat_emission("stu_vu_meter", (1.0, 0.62, 0.25), 1.6, (0.9, 0.8, 0.6))
     M["led_red"] = T.mat_emission("stu_led_red", (1.0, 0.08, 0.04), 6.0)
     M["led_green"] = T.mat_emission("stu_led_green", (0.25, 1.0, 0.35), 3.0)
     M["bulb_warm"] = T.mat_emission("stu_bulb_warm", (1.0, 0.70, 0.40), 30.0, (0.9, 0.85, 0.8))
-    M["led_panel_off"] = T.mat_basic("stu_led_panel_diffuser", (0.86, 0.86, 0.85), 0.4)
+    M["led_panel_off"] = P("stu_led_panel_diffuser", "abs_white")
     M["city_bldg"] = [T.mat_city_windows(f"ext_city_bldg_{i}", i) for i in range(4)]
-    M["ext_concrete"] = T.mat_basic("ext_concrete_wet", (0.08, 0.085, 0.09), 0.35, 0, 0.15, 6, 0.05)
+    M["ext_concrete"] = P("ext_concrete_wet", "concrete_wet")
+    M["sticky"] = T.mat_basic("stu_sticky_note", (0.95, 0.85, 0.35), 0.7)
+    M["d_dirt"] = T.mat_decal("stu_decal_dirt_wall", DECALS / "dirt_wall_bottom.png")
+    M["d_smudge"] = T.mat_decal("stu_decal_smudge", DECALS / "smudge_hands.png")
+    M["d_stain"] = T.mat_decal("stu_decal_ceiling_stain", DECALS / "ceiling_water_stain.png")
+    M["d_scuff"] = T.mat_decal("stu_decal_floor_scuff", DECALS / "floor_scuff.png", rough=0.5)
+    M["d_tape"] = T.mat_decal("stu_decal_tape_residue", DECALS / "tape_residue.png", rough=0.4)
     return M
 
 
@@ -147,13 +168,13 @@ def build_window(M, C):
         T.box(f"stu_window_sash_{i}_t", (sw, 0.035, sf), (0, 0, sh - sf / 2), alu, 0.002, col=col, parent=s)
         T.box(f"stu_window_sash_{i}_l", (sf, 0.035, sh), (-sw / 2 + sf / 2, 0, sh / 2), alu, 0.002, col=col, parent=s)
         T.box(f"stu_window_sash_{i}_r", (sf, 0.035, sh), (sw / 2 - sf / 2, 0, sh / 2), alu, 0.002, col=col, parent=s)
-        T.box(f"stu_window_sash_{i}_glass", (sw - 2 * sf, 0.006, sh - 2 * sf), (0, 0, sh / 2), glass, 0, col=col, parent=s)
+        T.keep(T.box(f"stu_window_sash_{i}_glass", (sw - 2 * sf, 0.006, sh - 2 * sf), (0, 0, sh / 2), glass, 0, col=col, parent=s), "rain_glass")
         # 손잡이 (크레센트)
         hx = sw / 2 - 0.05 if i == 0 else -sw / 2 + 0.05
         T.box(f"stu_window_sash_{i}_latch", (0.02, 0.03, 0.07), (hx, -0.03, sh * 0.5), M["chrome"], 0.004, col=col, parent=s)
     # 내부 창대 (인조대리석)
     T.box("stu_window_sill", (ww + 0.1, 0.18, 0.025), (cx, D + 0.05, WIN_Z0 - 0.012),
-          T.mat_basic("stu_sill_stone", (0.62, 0.6, 0.56), 0.3, 0, 0.12, 12, 0.02), 0.004, col=col)
+          M["sill"], 0.004, col=col)
     # 알루미늄 블라인드 2개 — 절반 정도 내려오고 살이 기울어짐 (창밖이 틈으로 보임)
     for i, bx in enumerate([WIN_X0 + ww * 0.25, WIN_X0 + ww * 0.75]):
         bw = ww / 2 - 0.04
@@ -162,7 +183,7 @@ def build_window(M, C):
         drop = 0.95 if i == 0 else 0.55
         n = int(drop / 0.022)
         slat = T.box(f"stu_blind_{i}_slat_src", (bw - 0.01, 0.025, 0.0012), (0, 0, -0.04),
-                     T.mat_basic("stu_blind_slat", (0.82, 0.82, 0.8), 0.35, 0.3, 0.03), 0, col=col, parent=b,
+                     M["blind"], 0, col=col, parent=b,
                      rot=(math.radians(38), 0, 0))
         for k in range(1, n):
             T.linked_copy(slat, f"stu_blind_{i}_slat_{k:02d}", (0, 0, -0.04 - k * 0.022),
@@ -184,6 +205,7 @@ def build_door(M, C):
     # 문짝 — 원점 = 경첩 축 (서쪽, 실내 쪽). 안쪽(+Y)으로 열림.
     hinge = T.empty("stu_door", (x0 + 0.005, -0.03, 0.0), col)
     hinge["tuv_anim"] = "door_hinge_z"
+    T.keep(hinge, "door")
     leaf = T.box("stu_door_leaf", (DOOR_W - 0.01, 0.045, DOOR_H - 0.01), (0, 0, 0.005), st, 0.003,
                  col=col, parent=hinge, pivot=(-0.5, 0, -0.5))
     # 문짝 패널 라인 (프레스 철문 디테일)
@@ -201,7 +223,7 @@ def build_door(M, C):
     T.box("stu_door_closer_arm", (0.28, 0.015, 0.015), (0.45, 0.1, DOOR_H - 0.06), M["black_metal"], 0.003, col=col, parent=hinge,
           rot=(0, 0, math.radians(-12)))
     leaf["tuv_interact"] = "door"
-    T.collider("stu_door_leaf", (DOOR_W - 0.01, 0.045, DOOR_H - 0.01), (x0 + DOOR_W / 2, -0.03, DOOR_H / 2), C["col"])
+    # 문 충돌체는 Godot에서 경첩에 붙는 AnimatableBody3D로 생성 (열고 닫을 때 함께 회전)
 
 
 def build_ceiling_fixtures(M, C, lights):
@@ -209,7 +231,7 @@ def build_ceiling_fixtures(M, C, lights):
     for i, x in enumerate([2.1, 4.5]):
         p = T.empty(f"stu_ceiling_panel_{i}", (x, 2.7, H - 0.005), col)
         T.box(f"stu_ceiling_panel_{i}_frame", (0.6, 0.6, 0.012), (0, 0, -0.006), M["alu"], 0.002, col=col, parent=p)
-        T.box(f"stu_ceiling_panel_{i}_diffuser", (0.57, 0.57, 0.004), (0, 0, -0.013), M["led_panel_off"], 0, col=col, parent=p)
+        T.keep(T.box(f"stu_ceiling_panel_{i}_diffuser", (0.57, 0.57, 0.004), (0, 0, -0.013), M["led_panel_off"], 0, col=col, parent=p), "light_emitter")
         ld = bpy.data.lights.new(f"stu_light_ceiling_{i}", "AREA")
         ld.shape = "SQUARE"
         ld.size = 0.55
@@ -247,6 +269,7 @@ def build_desk(M, C):
     for i, (z, h) in enumerate(zip(hz, hh)):
         dr = T.empty(f"stu_desk_drawer_{i}", (0, -0.312, z), col, parent=ped)
         dr["tuv_anim"] = "drawer_slide_-y"
+        T.keep(dr, "drawer")
         dr["tuv_interact"] = "drawer"
         T.box(f"stu_desk_drawer_{i}_front", (0.40, 0.018, h - 0.008), (0, -0.009, 0), M["walnut"], 0.003, col=col, parent=dr)
         T.box(f"stu_desk_drawer_{i}_box", (0.36, 0.56, h - 0.04), (0, 0.28, -0.01), M["oak"], 0.002, col=col, parent=dr)
@@ -269,15 +292,13 @@ def build_chair(M, C):
     T.cyl("stu_chair_gas_sleeve", 0.032, 0.14, (0, 0, 0.17), M["plastic_dark"], col=col, parent=root)
     T.box("stu_chair_mech", (0.24, 0.24, 0.05), (0, 0, 0.43), M["black_metal"], 0.01, col=col, parent=root)
     seat = T.box("stu_chair_seat", (0.5, 0.48, 0.08), (0, 0, 0.49), M["chair_mesh"], 0.03, 4, col=col, parent=root)
-    sub = seat.modifiers.new("Subsurf", "SUBSURF")
-    sub.levels = sub.render_levels = 1
+    T.wrinkle(seat, 0.004, 0.05, 2)
     # 등받이 프레임 + 메쉬
     T.box("stu_chair_back_spine", (0.06, 0.03, 0.32), (0, 0.27, 0.62), M["plastic_dark"], 0.01, col=col, parent=root,
           rot=(math.radians(-8), 0, 0))
     back = T.box("stu_chair_back", (0.46, 0.05, 0.52), (0, 0.3, 0.92), M["chair_mesh"], 0.025, 4, col=col, parent=root,
                  rot=(math.radians(-12), 0, 0))
-    sub = back.modifiers.new("Subsurf", "SUBSURF")
-    sub.levels = sub.render_levels = 1
+    T.wrinkle(back, 0.003, 0.06, 2, seed=1)
     for sx in (-1, 1):
         T.box(f"stu_chair_arm_post_{sx}", (0.03, 0.05, 0.2), (sx * 0.27, 0.05, 0.56), M["plastic_dark"], 0.008, col=col, parent=root)
         T.box(f"stu_chair_arm_pad_{sx}", (0.07, 0.24, 0.025), (sx * 0.27, 0.02, 0.67), M["rubber"], 0.01, 3, col=col, parent=root)
@@ -295,19 +316,24 @@ def build_sofa(M, C):
     T.box("stu_sofa_base", (L, Dp, 0.22), (0, 0, 0.21), M["sofa"], 0.02, 3, col=col, parent=root)
     for sx in (-1, 1):
         a = T.box(f"stu_sofa_arm_{sx}", (0.16, Dp, 0.36), (sx * (L / 2 - 0.08), 0, 0.42), M["sofa"], 0.05, 4, col=col, parent=root)
-        a.modifiers.new("Subsurf", "SUBSURF").levels = 1
+        T.wrinkle(a, 0.004, 0.08, 2, seed=sx + 5)
     for i, x in enumerate((-0.41, 0.41)):
         s = T.box(f"stu_sofa_seat_cushion_{i}", (0.8, 0.62, 0.15), (x, -0.08, 0.39 - i * 0.008), M["sofa"], 0.05, 4,
                   col=col, parent=root, rot=(0, math.radians(R.uniform(-1, 1)), 0))
-        s.modifiers.new("Subsurf", "SUBSURF").levels = 1
+        T.wrinkle(s, 0.007, 0.07, 2, seed=i)
+        # 앉았던 자국: 쿠션 가운데가 살짝 꺼짐
+        sag = s.modifiers.new("Sag", "SIMPLE_DEFORM")
+        sag.deform_method = "BEND"
+        sag.angle = math.radians(4 + 3 * i)
+        sag.deform_axis = "Y"
         b = T.box(f"stu_sofa_back_cushion_{i}", (0.8, 0.2, 0.46), (x, 0.31, 0.64), M["sofa"], 0.06, 4,
                   col=col, parent=root, rot=(math.radians(-14 - i * 3), 0, math.radians(R.uniform(-2, 2))))
-        b.modifiers.new("Subsurf", "SUBSURF").levels = 1
+        T.wrinkle(b, 0.008, 0.07, 2, seed=i + 2)
     T.box("stu_sofa_backframe", (L, 0.14, 0.42), (0, 0.38, 0.53), M["sofa"], 0.03, 3, col=col, parent=root)
     # 던져 둔 담요
-    bl = T.box("stu_sofa_blanket", (0.55, 0.62, 0.05), (0.55, -0.05, 0.49), T.mat_fabric("stu_blanket", (0.42, 0.34, 0.26)),
+    bl = T.box("stu_sofa_blanket", (0.55, 0.62, 0.05), (0.55, -0.05, 0.49), M["blanket"],
                0.024, 4, col=col, parent=root, rot=(0.05, 0.08, 0.3))
-    bl.modifiers.new("Subsurf", "SUBSURF").levels = 2
+    T.wrinkle(bl, 0.018, 0.05, 2, seed=9)
     T.collider("stu_sofa", (Dp, L, 0.8), (5.55, 2.0, 0.4), C["col"], kind="convcolonly")
 
 
@@ -325,14 +351,31 @@ def build_coffee_table(M, C):
     return root
 
 
+CASS = []   # (matrix_world, insert_idx) — Godot MultiMesh 데이터
+
+
+def _spine_src(i, M, col):
+    sp = T.box(f"stu_cassette_spine_src_{i}", (0.0008, 0.0145, 0.104), (0, 0, -10), M["spine_atlas"], 0, col=col)
+    me = sp.data
+    ys = [v.co.y for v in me.vertices]
+    zs = [v.co.z for v in me.vertices]
+    y0, y1, z0, z1 = min(ys), max(ys), min(zs), max(zs)
+    uv = me.uv_layers[0].data
+    for poly in me.polygons:
+        for li in poly.loop_indices:
+            co = me.vertices[me.loops[li].vertex_index].co
+            uv[li].uv = ((co.z - z0) / (z1 - z0), 1 - (i + 1) / 8 + (co.y - y0) / (y1 - y0) / 8)
+    if "uv_m" in me.uv_layers:
+        me.uv_layers.remove(me.uv_layers["uv_m"])
+    return sp
+
+
 def build_shelves(M, C):
     col = C["furn"]
-    # 카세트 케이스 원본 (세워 꽂힘: 등이 +X 방향)
-    src_case = T.box("stu_cassette_case_src", (0.069, 0.0165, 0.108), (0, 0, -10), M["cassette_shell"], 0.0012, col=col)
-    spines = []
-    for i, ins in enumerate(M["inserts"]):
-        sp = T.box(f"stu_cassette_spine_src_{i}", (0.0008, 0.0145, 0.104), (0, 0, -10), ins, 0, col=col)
-        spines.append(sp)
+    ccol = C["cass"]
+    # 카세트 케이스 원본 (세워 꽂힘: 등이 +X 방향) — 게임에서는 MultiMesh 인스턴스
+    src_case = T.box("stu_cassette_case_src", (0.069, 0.0165, 0.108), (0, 0, -10), M["cassette_shell"], 0.0012, col=ccol)
+    spines = [_spine_src(i, M, ccol) for i in range(8)]
     n_case = 0
     for u, y0 in enumerate([1.95, 3.33]):
         root = T.empty(f"stu_shelf_{u}", (0.0, y0, 0), col)
@@ -358,12 +401,13 @@ def build_shelves(M, C):
                     # 앞면에만 라벨 재질
                     for p in bx.data.polygons:
                         p.material_index = 1 if p.normal.x > 0.9 else 0
+                    T.fit_uvs(bx)
                 continue
             if (u, k) in [(1, 5)]:
                 # 서류 바인더
                 for b in range(14):
                     T.box(f"stu_shelf_{u}_binder_{b}", (0.28, 0.055, 0.31), (0.15, 0.06 + b * 0.06, zb + 0.155),
-                          T.mat_basic(f"stu_binder_{b % 3}", [(0.1, 0.18, 0.35), (0.12, 0.12, 0.12), (0.35, 0.1, 0.08)][b % 3], 0.4),
+                          M["binder"][b % 3],
                           0.004, col=col, parent=root, rot=(0, 0, 0) if b < 11 else (math.radians(14), 0, 0))
                 continue
             y = 0.03
@@ -376,27 +420,56 @@ def build_shelves(M, C):
                 for r in range(rows):
                     x = Dp - 0.06 - r * 0.115
                     tilt = math.radians(R.uniform(-1.2, 1.2))
-                    T.linked_copy(src_case, f"stu_cassette_{n_case:04d}", (x, y + 0.009, zb + 0.054 + 0.0005),
-                                  (0, tilt, 0), col, root)
-                    if r == 0:
-                        T.linked_copy(spines[R.randrange(len(spines))], f"stu_cassette_spine_{n_case:04d}",
-                                      (x + 0.0349, y + 0.009, zb + 0.054), (0, tilt, 0), col, root)
+                    idx = R.randrange(8)
+                    cc = T.linked_copy(src_case, f"stu_cassette_{n_case:04d}", (x, y + 0.009, zb + 0.054 + 0.0005),
+                                       (0, tilt, 0), ccol, root)
+                    T.linked_copy(spines[idx], f"stu_cassette_spine_{n_case:04d}", (x + 0.0349, y + 0.009, zb + 0.054),
+                                  (0, tilt, 0), ccol, root)
+                    CASS.append((cc, idx, (0.0349, 0, -0.0005)))
                     n_case += 1
                 y += 0.0175
             # 가끔 위에 눕혀 둔 테이프
             if R.random() < 0.5:
                 for s in range(R.randint(1, 3)):
-                    T.linked_copy(src_case, f"stu_cassette_{n_case:04d}", (Dp - 0.1, L - 0.25 + R.uniform(-0.05, 0.05),
-                                  zb + 0.009 + s * 0.017),
-                                  (math.pi / 2, 0, math.radians(R.uniform(-20, 20))), col, root)
+                    cc = T.linked_copy(src_case, f"stu_cassette_{n_case:04d}", (Dp - 0.1, L - 0.25 + R.uniform(-0.05, 0.05),
+                                       zb + 0.009 + s * 0.017),
+                                       (math.pi / 2, 0, math.radians(R.uniform(-20, 20))), ccol, root)
+                    CASS.append((cc, -1, None))
                     n_case += 1
         T.collider(f"stu_shelf_{u}", (Dp, L, Hh), (Dp / 2, y0 + L / 2, Hh / 2), C["col"], kind="convcolonly")
-    src_case.hide_render = True
-    src_case.hide_viewport = True
-    for s in spines:
-        s.hide_render = True
-        s.hide_viewport = True
+    for o in [src_case] + spines:
+        o.hide_render = True
     return n_case
+
+
+def export_cassette_instances(C):
+    """선반 카세트 → Godot MultiMesh용 JSON (+ 원본 메시 GLB)."""
+    import json
+    bpy.context.view_layer.update()
+    cases, sp = [], []
+    for obj, idx, _ in CASS:
+        x = T.blender_to_godot_xform(obj.matrix_world)
+        cases.append(x)
+        if idx >= 0:
+            spn = bpy.data.objects.get(obj.name.replace("stu_cassette_", "stu_cassette_spine_"))
+            if spn:
+                s_ = T.blender_to_godot_xform(spn.matrix_world)
+                s_["atlas"] = idx
+                sp.append(s_)
+    CASSETTE_JSON.parent.mkdir(parents=True, exist_ok=True)
+    CASSETTE_JSON.write_text(json.dumps({"_doc": "build_studio.py 생성 — 선반 카세트 인스턴스 (Godot 좌표)",
+                                         "cases": cases, "spines": sp}), "utf-8")
+    # 원본 메시 (원점에 둔 케이스 1개 + 등 라벨 1개)
+    for o in bpy.context.view_layer.objects:
+        o.select_set(False)
+    src = bpy.data.objects["stu_cassette_case_src"]
+    sp0 = bpy.data.objects["stu_cassette_spine_src_0"]
+    for o in (src, sp0):
+        o.location = (0, 0, 0)
+        o.hide_render = False
+        o.select_set(True)
+    T.gltf_export(str(CASSETTE_GLB))
+    return len(cases), len(sp)
 
 
 def build_south_cabinet(M, C):
@@ -407,6 +480,7 @@ def build_south_cabinet(M, C):
     for i, x in enumerate((-0.3, 0.3)):
         dr = T.empty(f"stu_cabinet_door_{i}", (x + (-0.295 if i == 0 else 0.295), 0.412, 0.42), col, parent=root)
         dr["tuv_anim"] = "door_hinge_z"
+        T.keep(dr, "cabinet_door")
         T.box(f"stu_cabinet_door_{i}_panel", (0.59, 0.018, 0.74), (0.295 if i == 0 else -0.295, 0, 0), M["oak"], 0.003,
               col=col, parent=dr)
         T.box(f"stu_cabinet_door_{i}_knob", (0.012, 0.02, 0.1), (0.55 if i == 0 else -0.55, 0.015, 0.25), M["black_metal"], 0.004,
@@ -417,8 +491,7 @@ def build_south_cabinet(M, C):
         h = R.uniform(0.2, 0.27)
         w = R.uniform(0.022, 0.045)
         T.box(f"stu_cabinet_book_{b}", (w, 0.17, h), (x + w / 2, 0.22, 0.82 + h / 2),
-              T.mat_basic(f"stu_book_{b % 5}", [(0.45, 0.12, 0.08), (0.1, 0.15, 0.25), (0.75, 0.7, 0.6), (0.18, 0.25, 0.18),
-                                                (0.12, 0.12, 0.12)][b % 5], 0.6), 0.002, col=col, parent=root)
+              M["book"][b % 5], 0.002, col=col, parent=root)
         x += w + 0.002
     T.box("stu_cabinet_bookend", (0.012, 0.12, 0.15), (x + 0.01, 0.22, 0.895), M["black_metal"], 0.002, col=col, parent=root)
     T.box("stu_router", (0.18, 0.12, 0.03), (0.35, 0.25, 0.835), M["plastic_dark"], 0.006, col=col, parent=root)
@@ -431,8 +504,7 @@ def build_south_cabinet(M, C):
         lf = T.box(f"stu_plant_leaf_{i}", (0.03, 0.16, 0.002), (0.05 + math.cos(a) * 0.05, 0.25 + math.sin(a) * 0.05, 1.0),
                    M["leaf"], 0, col=col, parent=root, rot=(math.radians(R.uniform(30, 70)), 0, a + math.pi / 2))
         lf.modifiers.new("Bend", "SIMPLE_DEFORM").deform_method = "BEND"
-    # 손전등 놓을 자리 (손전등 모델: tools/blender/build_prop_flashlight.py — 다음 단계)
-    T.empty("stu_flashlight_spawn", (-0.15, 0.3, 0.83), col, parent=root, rot=(0, 0, math.radians(25)))
+    T.empty("stu_spawn_prop_flashlight", (-0.18, 0.24, 0.82), col, parent=root, rot=(0, 0, math.radians(-70)))
     T.collider("stu_cabinet", (1.2, 0.42, 0.82), (2.35, 0.21, 0.41), C["col"], kind="convcolonly")
 
 
@@ -486,7 +558,7 @@ def build_desk_items(M, C, lights):
     T.box("stu_monitor_base", (0.28, 0.2, 0.012), (0, 0.0, 0.006), M["black_metal"], 0.004, col=col, parent=mon)
     T.box("stu_monitor_neck", (0.05, 0.03, 0.36), (0, 0.03, 0.19), M["black_metal"], 0.006, col=col, parent=mon)
     T.box("stu_monitor_panel", (0.82, 0.03, 0.37), (0, -0.005, 0.32), M["plastic_dark"], 0.006, col=col, parent=mon)
-    T.box("stu_monitor_screen", (0.8, 0.002, 0.345), (0, -0.0215, 0.325), M["screen"], 0, col=col, parent=mon)
+    T.keep(T.box("stu_monitor_screen", (0.8, 0.002, 0.345), (0, -0.0215, 0.325), M["screen"], 0, col=col, parent=mon), "screen")
     # 키보드 (키캡 개별)
     kb = T.empty("stu_keyboard", (2.95, 4.2, top), col, rot=(0, 0, math.radians(2)))
     T.box("stu_keyboard_case", (0.44, 0.14, 0.022), (0, 0, 0.011), M["plastic_dark"], 0.004, col=col, parent=kb)
@@ -501,16 +573,15 @@ def build_desk_items(M, C, lights):
     key.hide_render = True
     T.box("stu_mouse", (0.06, 0.11, 0.035), (3.33, 4.19, top + 0.017), M["plastic_dark"], 0.014, 4, col=col)
     T.box("stu_mousepad", (0.3, 0.25, 0.003), (3.35, 4.2, top + 0.0015), M["rubber"], 0.002, col=col)
-    # 카세트 데크 (REF 10 음성 복원 장비 계열)
-    build_cassette_deck(M, col, None, "stu_tape_deck", (2.2, 4.62, top), wood=True)
+    # 카세트 데크·녹음기·손전등은 독립 프롭(prop_*.glb) — 여기서는 배치 마커만 둔다
+    T.empty("stu_spawn_prop_tape_deck", (2.2, 4.6, top), col)
     # 오디오 인터페이스
     ai = T.box("stu_audio_interface", (0.18, 0.11, 0.045), (2.62, 4.5, top + 0.0225), M["alu_dark"], 0.005, col=col)
     for i in range(4):
         T.cyl(f"stu_ai_knob_{i}", 0.008, 0.012, (2.56 + i * 0.035, 4.442, top + 0.025), M["chrome"], rot=(math.pi / 2, 0, 0),
               col=col, verts=16)
     T.box("stu_ai_led", (0.06, 0.001, 0.004), (2.62, 4.444, top + 0.038), M["led_green"], 0, col=col)
-    # 휴대용 녹음기 (테이블 위, 표시등 깜빡임 — 타이틀 씬)
-    build_recorder(M, col, None, (2.42, 4.22, top), (0, 0, math.radians(-14)))
+    T.empty("stu_spawn_prop_recorder", (2.45, 4.23, top), col, rot=(0, 0, math.radians(-14)))
     # 헤드폰
     hp = T.empty("stu_headphones", (3.62, 4.32, top + 0.045), col, rot=(math.radians(85), 0, math.radians(30)))
     for sx in (-1, 1):
@@ -527,7 +598,8 @@ def build_desk_items(M, C, lights):
           rot=(math.radians(-62), 0, 0), pivot=(0, 0, -0.5))
     T.cyl("stu_lamp_shade", 0.075, 0.13, (0, -0.46, 0.52), M["black_metal"], rot=(math.radians(-50), 0, 0), col=col, parent=lp,
           r2=0.03, cap=False, verts=32)
-    T.cyl("stu_lamp_bulb", 0.022, 0.03, (0, -0.44, 0.5), M["bulb_warm"], rot=(math.radians(-50), 0, 0), col=col, parent=lp)
+    T.keep(T.cyl("stu_lamp_bulb", 0.022, 0.03, (0, -0.44, 0.5), M["bulb_warm"], rot=(math.radians(-50), 0, 0), col=col, parent=lp),
+           "light_emitter")
     ld = bpy.data.lights.new("stu_light_desk_lamp", "SPOT")
     ld.energy = 55
     ld.color = (1.0, 0.74, 0.46)
@@ -674,6 +746,7 @@ def build_walls_misc(M, C, lights):
                                 ("second", 0.125, 0.0015, ss / 60, 0.024)):
         hand_root = T.empty(f"stu_clock_hand_{nm}", (0, 0, zz), col, parent=ck, rot=(0, 0, -ang * math.tau))
         hand_root["tuv_anim"] = "clock_hand_z"
+        T.keep(hand_root, "clock_hand")
         T.box(f"stu_clock_hand_{nm}_mesh", (wd, ln, 0.0012), (0, ln * 0.4, 0),
               M["led_red"] if nm == "second" else M["black_metal"], 0, col=col, parent=hand_root)
     # 달력 (서벽 문 근처)
@@ -754,6 +827,180 @@ def build_exterior(M, C, lights):
     bpy.context.scene.world = w
 
 
+# ======================================================================= details (2차)
+def outlet(M, col, name, loc, rot):
+    """한국형 벽 콘센트 2구 (접지형 원형 소켓) — 120x70 mm 플레이트."""
+    r = T.empty(name, loc, col, rot=rot)
+    T.box(f"{name}_plate", (0.07, 0.008, 0.12), (0, 0, 0), M["plastic_white"], 0.003, 3, col=col, parent=r)
+    for k, z in enumerate((0.028, -0.028)):
+        T.cyl(f"{name}_socket_{k}", 0.019, 0.004, (0, -0.005, z), M["plastic_white"], rot=(math.pi / 2, 0, 0), col=col, parent=r, verts=24)
+        for hx in (-0.0095, 0.0095):
+            T.cyl(f"{name}_hole_{k}_{hx > 0}", 0.0024, 0.0045, (hx, -0.0062, z), M["plastic_dark"], rot=(math.pi / 2, 0, 0),
+                  col=col, parent=r, verts=10)
+    return r
+
+
+def build_details(M, C):
+    col = C["props"]
+    # 벽 콘센트
+    outlet(M, col, "stu_outlet_n", (3.35, D - 0.004, 0.3), (0, 0, 0))
+    outlet(M, col, "stu_outlet_e", (W - 0.004, 3.25, 0.3), (0, 0, math.pi / 2))
+    outlet(M, col, "stu_outlet_w", (0.004, 1.55, 0.3), (0, 0, -math.pi / 2))
+    outlet(M, col, "stu_outlet_s", (3.4, 0.004, 0.3), (0, 0, math.pi))
+    # 전등 스위치 (문 옆, 2구 로커) — 상호작용: 천장 LED 패널 2개
+    sw = T.empty("stu_light_switch", (1.62, 0.004, 1.25), C["arch"], rot=(0, 0, math.pi))
+    T.keep(sw, "light_switch")
+    T.box("stu_light_switch_plate", (0.07, 0.008, 0.12), (0, 0, 0), M["plastic_white"], 0.003, 3, col=C["arch"], parent=sw)
+    for k, x in enumerate((-0.016, 0.016)):
+        rk = T.empty(f"stu_light_switch_rocker_{k}", (x, -0.006, 0), C["arch"], parent=sw)
+        rk["tuv_anim"] = "rocker_x_8"
+        T.box(f"stu_light_switch_rocker_{k}_cap", (0.026, 0.006, 0.08), (0, 0, 0), M["plastic_white"], 0.003, 3, col=C["arch"], parent=rk)
+    T.box("stu_light_switch_led", (0.004, 0.002, 0.004), (0, -0.0045, 0.05), M["led_green"], 0, col=C["arch"], parent=sw)
+    # 멀티탭 + 플러그 + 전선
+    ms = T.empty("stu_power_strip", (3.3, 4.74, 0.0), col, rot=(0, 0, math.radians(4)))
+    T.box("stu_power_strip_body", (0.36, 0.062, 0.038), (0, 0, 0.019), M["plastic_white"], 0.008, 3, col=col, parent=ms)
+    for k in range(4):
+        x = -0.11 + k * 0.06
+        T.cyl(f"stu_power_strip_socket_{k}", 0.017, 0.003, (x, 0, 0.038), M["plastic_white"], col=col, parent=ms, verts=24)
+        if k < 3:
+            T.cyl(f"stu_power_plug_{k}", 0.019, 0.035, (x, 0, 0.056), M["plastic_dark"], col=col, parent=ms, verts=24, r2=0.016)
+    T.box("stu_power_strip_switch", (0.022, 0.03, 0.006), (0.155, 0, 0.04), T.mat_emission("stu_strip_switch", (1, 0.2, 0.1), 1.5,
+          (0.6, 0.1, 0.05)), 0.003, col=col, parent=ms)
+    rub = M["rubber"]
+    T.curve_tube("stu_cable_strip_outlet", [(3.48, 4.74, 0.02), (3.45, 4.88, 0.006), (3.36, 4.97, 0.006), (3.35, 4.99, 0.27)], 0.004, rub, col)
+    T.curve_tube("stu_cable_monitor", [(3.02, 4.66, 0.86), (3.06, 4.79, 0.6), (3.1, 4.8, 0.1), (3.19, 4.74, 0.05)], 0.003, rub, col)
+    T.curve_tube("stu_cable_deck", [(2.25, 4.76, 0.8), (2.3, 4.8, 0.4), (2.6, 4.82, 0.006), (3.12, 4.78, 0.006), (3.25, 4.74, 0.05)], 0.0028, rub, col)
+    T.curve_tube("stu_cable_lamp", [(1.98, 4.7, 0.76), (1.95, 4.8, 0.5), (2.1, 4.85, 0.006), (3.0, 4.86, 0.006), (3.31, 4.74, 0.05)], 0.0028, rub, col)
+    T.curve_tube("stu_cable_rack", [(4.6, 4.6, 0.6), (4.45, 4.75, 0.2), (4.0, 4.85, 0.006), (3.45, 4.78, 0.006), (3.37, 4.74, 0.05)], 0.0035, rub, col)
+    T.curve_tube("stu_cable_floorlamp", [(5.62, 0.62, 0.02), (5.8, 0.9, 0.006), (5.95, 2.6, 0.006), (5.99, 3.25, 0.25)], 0.003, rub, col)
+    # 책상 위 개인 소지품
+    top = 0.74
+    gl = T.empty("stu_glasses", (3.52, 4.18, top + 0.012), col, rot=(0, 0, math.radians(-25)))
+    for sx in (-1, 1):
+        T.torus(f"stu_glasses_rim_{sx}", 0.022, 0.0016, (sx * 0.031, 0, 0), M["black_metal"], rot=(math.radians(80), 0, 0), col=col, parent=gl)
+        T.cyl(f"stu_glasses_lens_{sx}", 0.021, 0.0015, (sx * 0.031, 0, 0), M["glass_clean"], rot=(math.radians(80), 0, 0), col=col, parent=gl)
+        T.box(f"stu_glasses_temple_{sx}", (0.0018, 0.13, 0.002), (sx * 0.054, 0.065, -0.008), M["black_metal"], 0.0006, col=col, parent=gl,
+              rot=(math.radians(-8), 0, math.radians(sx * 6)))
+    T.box("stu_glasses_bridge", (0.018, 0.002, 0.002), (0, 0, 0.012), M["black_metal"], 0.0006, col=col, parent=gl)
+    ph = T.box("stu_phone", (0.072, 0.152, 0.008), (3.75, 4.25, top + 0.004), M["plastic_dark"], 0.006, 4, col=col,
+               rot=(0, 0, math.radians(12)))
+    T.box("stu_phone_camera", (0.03, 0.03, 0.002), (3.75 - 0.012, 4.25 + 0.05, top + 0.009), M["alu_dark"], 0.004, 3, col=col,
+          rot=(0, 0, math.radians(12)))
+    T.box("stu_wallet", (0.11, 0.09, 0.016), (1.75 + 0.35, 4.48, top + 0.008),
+          T.mat_pbr("stu_leather_brown", "rubber_black", tint=(9.0, 5.0, 3.0)), 0.006, 4, col=col, rot=(0, 0, math.radians(-30)))
+    kr = T.empty("stu_keys", (3.92, 4.33, top + 0.003), col)
+    T.torus("stu_keyring", 0.013, 0.0012, (0, 0, 0), M["chrome"], col=col, parent=kr)
+    for k, a in enumerate((0.3, 1.2)):
+        T.box(f"stu_key_{k}", (0.055, 0.02, 0.002), (math.cos(a) * 0.04, math.sin(a) * 0.04, 0), M["chrome"], 0.002, col=col, parent=kr,
+              rot=(0, 0, a))
+    # 펼쳐진 수첩
+    nb = T.empty("stu_notebook", (2.75, 4.38, top), col, rot=(0, 0, math.radians(-8)))
+    for sx in (-1, 1):
+        T.box(f"stu_notebook_page_{sx}", (0.105, 0.15, 0.006), (sx * 0.053, 0, 0.003), M["paper"], 0.002, 3, col=col, parent=nb,
+              rot=(0, math.radians(-sx * 3), 0))
+    T.box("stu_notebook_cover", (0.22, 0.155, 0.002), (0, 0, 0.0005), M["walnut"], 0.001, col=col, parent=nb)
+    for k in range(6):
+        T.box(f"stu_notebook_ink_{k}", (R.uniform(0.04, 0.08), 0.0012, 0.0002), (0.05 + R.uniform(-0.01, 0.01), 0.05 - k * 0.016, 0.0062),
+              M["plastic_dark"], 0, col=col, parent=nb)
+    # 펜꽂이 + 펜
+    T.lathe("stu_pen_cup", [(0.0, 0.0), (0.032, 0.0), (0.033, 0.1), (0.031, 0.1), (0.03, 0.004), (0.0, 0.004)], 32,
+            (1.75 + 0.38, 4.7, top), mat=M["black_metal"], col=col, cap_ends=False)
+    for k in range(4):
+        T.cyl(f"stu_pen_cup_pen_{k}", 0.0045, 0.14, (2.13 + R.uniform(-0.012, 0.012), 4.7 + R.uniform(-0.012, 0.012), top + 0.075),
+              [M["plastic_dark"], M["plastic_white"], M["binder"][0], M["binder"][2]][k], rot=(R.uniform(-0.25, 0.25), R.uniform(-0.25, 0.25), 0),
+              col=col, verts=8)
+    # 모니터 베젤 포스트잇 2장 + 생수병 + 이어폰 케이스 + USB
+    for k, x in enumerate((-0.36, 0.33)):
+        T.box(f"stu_sticky_{k}", (0.07, 0.0006, 0.07), (3.0 + x, 4.62 - 0.0225, top + 0.43 - k * 0.02), M["sticky"], 0, col=col,
+              rot=(math.radians(R.uniform(-4, 4)), 0, math.radians(R.uniform(-5, 5))))
+    T.lathe("stu_water_bottle", [(0.0, 0.0), (0.032, 0.0), (0.034, 0.01), (0.034, 0.15), (0.02, 0.19), (0.013, 0.2), (0.013, 0.215),
+                                 (0.0, 0.215)], 32, (4.0, 4.62, top), mat=T.mat_glass("stu_pet_bottle", 0.05, rain=False), col=col)
+    T.cyl("stu_water_bottle_cap", 0.0145, 0.012, (4.0, 4.62, top + 0.221), M["binder"][0], col=col, verts=24)
+    T.box("stu_earbuds_case", (0.06, 0.045, 0.024), (3.58, 4.55, top + 0.012), M["plastic_white"], 0.011, 4, col=col)
+    T.box("stu_usb_stick", (0.04, 0.012, 0.005), (2.66, 4.57, top + 0.003), M["alu"], 0.0015, col=col, rot=(0, 0, 0.6))
+    # 문가: 젖은 우산(기대어 둠) + 실내 슬리퍼
+    um = T.empty("stu_umbrella", (0.18, 0.55, 0.0), col, rot=(math.radians(-8), math.radians(10), 0))
+    T.lathe("stu_umbrella_canopy", [(0.0, 0.08), (0.03, 0.12), (0.045, 0.4), (0.04, 0.75), (0.012, 0.85), (0.0, 0.86)], 16,
+            (0, 0, 0), mat=T.mat_pbr("stu_umbrella_fabric", "sofa_fabric", tint=(0.4, 0.45, 0.6), rough_mul=0.5), col=col, parent=um,
+            radial_fn=lambda th, z: 1.0 - 0.18 * (abs(math.sin(th * 4)) < 0.3))
+    T.cyl("stu_umbrella_tip", 0.004, 0.08, (0, 0, 0.04), M["chrome"], col=col, parent=um, verts=8)
+    T.torus("stu_umbrella_handle", 0.035, 0.008, (0.035, 0, 0.92), M["walnut"], rot=(math.pi / 2, 0, 0), col=col, parent=um, arc=0.5)
+    T.cyl("stu_umbrella_shaft", 0.005, 0.1, (0, 0, 0.87), M["chrome"], col=col, parent=um, verts=8)
+    for k, (x, a) in enumerate(((0.42, 0.2), (0.58, -0.15))):
+        sl = T.empty(f"stu_slipper_{k}", (x, 0.35, 0), col, rot=(0, 0, a))
+        T.box(f"stu_slipper_{k}_sole", (0.1, 0.27, 0.02), (0, 0, 0.01), M["rubber"], 0.01, 3, col=col, parent=sl)
+        T.box(f"stu_slipper_{k}_strap", (0.1, 0.09, 0.03), (0, -0.04, 0.03), T.mat_pbr("stu_slipper_strap", "abs_grey", tint=(0.4, 0.5, 0.8)),
+              0.012, 3, col=col, parent=sl)
+    # 책상 아래 PC 본체 (팬 소리 음원 위치)
+    pc = T.empty("stu_pc_tower", (2.25, 4.5, 0.0), col)
+    T.box("stu_pc_case", (0.2, 0.42, 0.44), (0, 0, 0.23), M["black_metal"], 0.006, 3, col=col, parent=pc)
+    T.box("stu_pc_front", (0.2, 0.006, 0.44), (0, -0.212, 0.23), M["plastic_dark"], 0.004, col=col, parent=pc)
+    for k in range(8):
+        T.box(f"stu_pc_vent_{k}", (0.14, 0.003, 0.006), (0, -0.216, 0.12 + k * 0.025), M["alu_dark"], 0, col=col, parent=pc)
+    T.box("stu_pc_power_led", (0.006, 0.002, 0.006), (0.06, -0.216, 0.41), M["led_green"], 0, col=col, parent=pc)
+    for sx in (-1, 1):
+        T.box(f"stu_pc_foot_{sx}", (0.18, 0.04, 0.02), (0, sx * 0.17, 0.01), M["rubber"], 0.004, col=col, parent=pc)
+    T.empty("stu_spawn_sound_pc_fan", (2.25, 4.5, 0.3), col)
+    T.collider("stu_pc_tower", (0.2, 0.42, 0.44), (2.25, 4.5, 0.23), C["col"], kind="convcolonly")
+    # 책상 아래 떨어진 카세트 (어둠 속 단서 테스트용 위치)
+    T.empty("stu_spawn_clue_under_desk", (2.7, 4.35, 0.0), col, rot=(0, 0, math.radians(35)))
+    # 택배 상자 위치 (복도, 문 바로 앞)
+    T.empty("stu_spawn_prop_parcel", (DOOR_X + 0.05, -0.75, 0.0), col, rot=(0, 0, math.radians(8)))
+
+
+def build_decals(M, C):
+    """생활 흔적: 벽 하단 오염, 스위치·문 손때, 천장 누수 얼룩, 바닥 긁힘."""
+    col = C["props"]
+    up = 0.24
+    for i in range(4):
+        T.decal_plane(f"stu_decal_dirt_n_{i}", 1.5, 0.3, (0.75 + i * 1.5, D - 0.0015, 0.08 + up / 2), (math.pi / 2, 0, 0), M["d_dirt"], col)
+        T.decal_plane(f"stu_decal_dirt_s_{i}", 1.5, 0.3, (1.62 + i * 1.1, 0.0015, 0.08 + up / 2), (math.pi / 2, 0, math.pi), M["d_dirt"], col)
+    for i in range(3):
+        T.decal_plane(f"stu_decal_dirt_w_{i}", 1.6, 0.3, (0.0015, 0.8 + i * 1.6, 0.08 + up / 2), (math.pi / 2, 0, math.pi / 2), M["d_dirt"], col)
+        T.decal_plane(f"stu_decal_dirt_e_{i}", 1.6, 0.3, (W - 0.0015, 0.8 + i * 1.6, 0.08 + up / 2), (math.pi / 2, 0, -math.pi / 2), M["d_dirt"], col)
+    T.decal_plane("stu_decal_smudge_switch", 0.28, 0.32, (1.62, 0.0018, 1.25), (math.pi / 2, 0, math.pi), M["d_smudge"], col)
+    T.decal_plane("stu_decal_smudge_doorjamb", 0.22, 0.5, (1.47, 0.0018, 1.05), (math.pi / 2, 0, math.pi), M["d_smudge"], col)
+    T.decal_plane("stu_decal_smudge_desk_wall", 0.5, 0.35, (2.4, D - 0.0018, 0.95), (math.pi / 2, 0, 0), M["d_smudge"], col)
+    T.decal_plane("stu_decal_ceiling_stain", 0.75, 0.75, (5.05, 0.95, H - 0.0018), (math.pi, 0, 0.4), M["d_stain"], col)
+    T.decal_plane("stu_decal_ceiling_stain_2", 0.4, 0.4, (0.7, 4.1, H - 0.0018), (math.pi, 0, 1.3), M["d_stain"], col)
+    for nm, w_, loc in (("chair", 1.1, (2.95, 3.6, 0.0015)), ("door", 0.9, (DOOR_X, 0.7, 0.0015)), ("shelf", 0.8, (0.7, 3.2, 0.0015)),
+                        ("path", 1.2, (2.2, 2.2, 0.0015))):
+        T.decal_plane(f"stu_decal_scuff_{nm}", w_, w_, loc, (0, 0, R.uniform(0, 3)), M["d_scuff"], col)
+    T.decal_plane("stu_decal_tape_wall", 0.3, 0.3, (4.3, D - 0.0018, 1.6), (math.pi / 2, 0, 0), M["d_tape"], col)
+
+
+PROP_PLACEMENT = {   # prop.blend 컬렉션 → 마커 (렌더용 인스턴스. GLB에는 포함하지 않고 Godot이 마커 위치에 프롭 씬을 배치)
+    "prop_tape_deck": ("stu_spawn_prop_tape_deck", (0, 0, 0)),
+    "prop_recorder": ("stu_spawn_prop_recorder", (0, 0, 0)),
+    "prop_flashlight": ("stu_spawn_prop_flashlight", (0, 0, 0.0285)),
+}
+
+
+def place_prop_instances(C):
+    n = 0
+    for name, (marker, off) in PROP_PLACEMENT.items():
+        path = PROPS_BLEND / f"{name}.blend"
+        mk = bpy.data.objects.get(marker)
+        if not path.exists() or mk is None:
+            print("[stu] prop missing (run build_props.py first):", name)
+            continue
+        with bpy.data.libraries.load(str(path), link=False) as (src, dst):
+            dst.collections = [c for c in src.collections if c == name]
+        pc = dst.collections[0]
+        for o in list(pc.all_objects):
+            if o.name.endswith("colonly"):
+                pc.objects.unlink(o)
+        inst = bpy.data.objects.new(f"{name}_instance", None)
+        inst.instance_type = "COLLECTION"
+        inst.instance_collection = pc
+        bpy.context.view_layer.update()
+        inst.matrix_world = mk.matrix_world.copy()
+        inst.location = inst.location + __import__("mathutils").Vector(off)
+        T._link(inst, C["propinst"])
+        n += 1
+    return n
+
+
 # ======================================================================= cameras / export
 def build_cameras(C):
     col = C["cams"]
@@ -785,7 +1032,7 @@ def main():
     T.reset_scene()
     C = {k: T.collection(v) for k, v in {"arch": "stu_architecture", "furn": "stu_furniture", "props": "stu_props",
                                           "lights": "stu_lights", "col": "stu_collision", "ext": "stu_exterior",
-                                          "cams": "stu_cameras"}.items()}
+                                          "cams": "stu_cameras", "cass": "stu_cassettes", "propinst": "stu_prop_instances"}.items()}
     M = build_materials()
     lights = []
     build_shell(M, C)
@@ -801,27 +1048,20 @@ def main():
     build_speakers_rack(M, C)
     build_desk_items(M, C, lights)
     build_walls_misc(M, C, lights)
+    build_details(M, C)
+    build_decals(M, C)
     build_exterior(M, C, lights)
+    n_inst = place_prop_instances(C)
     cams = build_cameras(C)
     C["col"].hide_render = True
 
     BLEND.parent.mkdir(parents=True, exist_ok=True)
     GLB.parent.mkdir(parents=True, exist_ok=True)
+    CASSETTE_GLB.parent.mkdir(parents=True, exist_ok=True)
     bpy.ops.wm.save_as_mainfile(filepath=str(BLEND), compress=True)
-    T.export_glb(str(GLB), [C["arch"], C["furn"], C["props"], C["col"]])
     n_obj = len([o for o in bpy.data.objects if o.type == "MESH"])
-    n_tri = 0
-    dg = bpy.context.evaluated_depsgraph_get()
-    for o in bpy.data.objects:
-        if o.type == "MESH" and not o.hide_render and o.users_collection and o.users_collection[0].name != "stu_exterior":
-            ev = o.evaluated_get(dg)
-            me = ev.to_mesh()
-            n_tri += sum(len(p.vertices) - 2 for p in me.polygons)
-            ev.to_mesh_clear()
-    print(f"[stu] meshes={n_obj} cassettes={n_cass} interior_tris={n_tri}")
+    print(f"[stu] source meshes={n_obj} cassettes={n_cass} prop_instances={n_inst}")
     print(f"[stu] saved {BLEND}")
-    print(f"[stu] exported {GLB}")
-
     if do_render:
         RENDERS.mkdir(parents=True, exist_ok=True)
         T.setup_render(samples, res, exposure=0.0)
@@ -831,13 +1071,20 @@ def main():
                 continue
             hide = ceiling_objs if name in ("plan", "top") else []
             if name == "plan":
-                bpy.context.scene.view_settings.exposure = 1.5
+                bpy.context.scene.view_settings.exposure = 2.1
                 bpy.context.scene.render.resolution_x, bpy.context.scene.render.resolution_y = (1100, 1000)
             else:
-                bpy.context.scene.view_settings.exposure = 1.3
+                bpy.context.scene.view_settings.exposure = 1.9
                 bpy.context.scene.render.resolution_x, bpy.context.scene.render.resolution_y = res
             T.render(cam, str(RENDERS / f"stu_{name}.png"), hide)
             print("[stu] rendered", name)
+    # --- 게임용 최적화 익스포트 (씬을 변경하므로 저장·렌더 이후에 실행) ---
+    nc, ns = export_cassette_instances(C)
+    merged, kept, src = T.export_optimized(str(GLB), [C["arch"], C["furn"], C["props"], C["ext"]], C["col"], "stu",
+                                           exclude=[C["cass"], C["propinst"]])
+    print(f"[stu] cassette instances: cases={nc} spines={ns} -> {CASSETTE_JSON.name}")
+    print(f"[stu] GLB: source meshes={src} -> merged static={merged} + kept interactive={kept}")
+    print(f"[stu] exported {GLB}")
 
 
 if __name__ == "__main__":

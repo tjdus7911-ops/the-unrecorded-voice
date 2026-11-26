@@ -66,3 +66,14 @@ game/assets/models/**/*.glb
 game/assets/models/**/*.png
 art/renders/
 art/textures_source/stu/
+# PHASE 01 2차: 모두 tools/build_all.sh 로 재생성 (LFS 업로드 복구 전까지 커밋하지 않음)
+game/assets/models/**/*.gltf
+game/assets/models/**/*.bin
+game/assets/textures/**/*.png
+game/assets/textures/**/*.jpg
+game/assets/audio/**/*.ogg
+game/assets/audio/**/*.wav
+art/textures_source/
+builds/
+game/assets/fonts/*.otf
+# ↑ 한글 폰트 서브셋(OFL)은 프로젝트 ZIP에 포함 — LFS 복구 후 커밋

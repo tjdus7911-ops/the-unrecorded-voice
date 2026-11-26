@@ -52,8 +52,17 @@ var _height := 1.75
 var _bob_t := 0.0
 var _breath_t := 0.0
 var _interact_target: Interactable
+var footsteps: Footsteps
+var inspect: InspectSystem
 
 func _ready() -> void:
+	footsteps = Footsteps.new()
+	footsteps.name = "Footsteps"
+	add_child(footsteps)
+	inspect = InspectSystem.new()
+	inspect.name = "Inspect"
+	inspect.player = self
+	camera.add_child(inspect)
 	stamina = stamina_max
 	_height = stand_height
 	_yaw = rotation.y
@@ -114,7 +123,8 @@ func _physics_process(delta: float) -> void:
 	move_and_slide()
 
 	_update_camera_fx(delta)
-	_update_interact_target()
+	if input_enabled:
+		_update_interact_target()
 	breathing.update_from_player(self, delta)
 	heartbeat.set_danger(danger)
 	flashlight.set_tremble(danger)
@@ -187,11 +197,19 @@ func _update_interact_target() -> void:
 	var t: Interactable = null
 	if interact_ray.is_colliding():
 		var c := interact_ray.get_collider()
-		if c is Interactable and (c as Interactable).can_interact(self):
+		if c is Interactable and (c as Interactable).can_interact(self) and _line_of_sight(interact_ray.get_collision_point()):
 			t = c
 	if t != _interact_target:
 		_interact_target = t
 		interact_target_changed.emit(t)
+
+## 벽 너머 오브젝트는 조작할 수 없게: 월드 충돌체가 조사 지점보다 0.3 m 이상 앞에 있으면 가려진 것으로 본다
+## (서랍처럼 가구 충돌 상자 바로 안쪽에 있는 부품은 허용)
+func _line_of_sight(point: Vector3) -> bool:
+	var q := PhysicsRayQueryParameters3D.create(camera.global_position, point, 1)
+	q.exclude = [get_rid()]
+	var hit := get_world_3d().direct_space_state.intersect_ray(q)
+	return hit.is_empty() or (hit.position as Vector3).distance_to(point) < 0.3
 
 ## 테스트·컷신용: 특정 지점을 바라보게 한다
 func look_at_point(pt: Vector3) -> void:
@@ -206,6 +224,9 @@ func try_interact() -> bool:
 	interact_ray.force_raycast_update()
 	_update_interact_target()
 	if _interact_target:
-		_interact_target.interact(self)
+		if _interact_target.inspectable and not _interact_target.action.is_valid():
+			inspect.open(_interact_target)
+		else:
+			_interact_target.interact(self)
 		return true
 	return false

@@ -37,7 +37,8 @@ func _run() -> void:
 	p = bed.player
 
 	# --- 데이터 ---
-	check(DialogueDB.lines.size() == 7, "dialogue: prologue lines loaded", str(DialogueDB.lines.size()))
+	var pro := DialogueDB.lines.keys().filter(func(k): return String(k).begins_with("PRO_"))
+	check(pro.size() == 7, "dialogue: prologue lines loaded", str(pro.size()))
 	check(DialogueDB.text_of("PRO_S05_003") == "정우야?", "dialogue: text lookup")
 	check(DialogueDB.get_line("PRO_S05_003")["playback"]["position"] == "behind_player", "dialogue: '정우야?' is spatial behind player")
 	check(DialogueDB.speaker_name("PRO_S03_001") == "정우", "dialogue: speaker name")

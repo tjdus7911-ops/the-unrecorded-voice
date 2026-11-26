@@ -42,10 +42,15 @@ def one_pole_lp(x, cutoff):
 
 
 def breath_noise(n, bright):
+    """입·성도 공명(포먼트)을 거친 호흡 노이즈 — 단순 필터 노이즈보다 사람 숨소리에 가깝게."""
+    from scipy import signal as sg
     w = rng.standard_normal(n)
-    lo = one_pole_lp(w, 300 + 900 * bright)
-    hi = one_pole_lp(w, 2500 + 3500 * bright)
-    return (hi - lo * 0.6) * 0.8
+    out = np.zeros(n)
+    for f, q, a in ((520 + 300 * bright, 3.0, 1.0), (1450 + 500 * bright, 4.0, 0.7), (2600 + 600 * bright, 5.0, 0.35)):
+        b, a_ = sg.iirpeak(f, q, fs=SR)
+        out += a * sg.lfilter(b, a_, w)
+    hiss = one_pole_lp(w, 7000) - one_pole_lp(w, 3500)
+    return (out * 0.7 + hiss * 0.25 * bright) * 0.9
 
 
 def envelope(n, attack, release, curve=1.6):

@@ -6,4 +6,4 @@ if not exist "%~dp0\..\..\game\assets\audio\breathing\PH_breath_calm_01.wav" pyt
 cd /d "%~dp0\..\..\game"
 %GODOT% --headless --import --path . >nul 2>&1
 %GODOT% --headless --fixed-fps 60 --path . res://scenes/tests/run_tests.tscn
-%GODOT% --headless --fixed-fps 60 --path . res://scenes/tests/run_studio_tests.tscn
+%GODOT% --headless --fixed-fps 60 --path . res://scenes/tests/run_phase01_tests.tscn

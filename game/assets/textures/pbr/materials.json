@@ -1,0 +1,266 @@
+{
+ "wall_paint": {
+  "tile_m": [
+   2.0,
+   2.0
+  ],
+  "normal": true
+ },
+ "wall_paint_ivory": {
+  "tile_m": [
+   2.0,
+   2.0
+  ],
+  "normal": true
+ },
+ "floor_decotile": {
+  "tile_m": [
+   2.4,
+   2.4
+  ],
+  "normal": true
+ },
+ "walnut_veneer": {
+  "tile_m": [
+   1.0,
+   1.0
+  ],
+  "normal": true
+ },
+ "oak_laminate": {
+  "tile_m": [
+   1.0,
+   1.0
+  ],
+  "normal": true
+ },
+ "ceiling_tex": {
+  "tile_m": [
+   1.2,
+   1.2
+  ],
+  "normal": true
+ },
+ "melamine_offwhite": {
+  "tile_m": [
+   1.0,
+   1.0
+  ],
+  "normal": true
+ },
+ "sofa_fabric": {
+  "tile_m": [
+   0.3,
+   0.3
+  ],
+  "normal": true,
+  "sheen": true
+ },
+ "chair_mesh": {
+  "tile_m": [
+   0.15,
+   0.15
+  ],
+  "normal": true,
+  "sheen": true
+ },
+ "rug_wool": {
+  "tile_m": [
+   0.6,
+   0.6
+  ],
+  "normal": true,
+  "sheen": true
+ },
+ "blanket_flannel": {
+  "tile_m": [
+   0.4,
+   0.4
+  ],
+  "normal": true,
+  "sheen": true
+ },
+ "lampshade_linen": {
+  "tile_m": [
+   0.3,
+   0.3
+  ],
+  "normal": true,
+  "sheen": true
+ },
+ "acoustic_foam": {
+  "tile_m": [
+   0.3,
+   0.3
+  ],
+  "normal": true
+ },
+ "brushed_aluminium": {
+  "tile_m": [
+   0.5,
+   0.5
+  ],
+  "normal": true
+ },
+ "brushed_steel": {
+  "tile_m": [
+   0.5,
+   0.5
+  ],
+  "normal": true
+ },
+ "anodized_dark": {
+  "tile_m": [
+   0.5,
+   0.5
+  ],
+  "normal": true
+ },
+ "silver_faceplate": {
+  "tile_m": [
+   0.3,
+   0.3
+  ],
+  "normal": true
+ },
+ "powdercoat_black": {
+  "tile_m": [
+   0.5,
+   0.5
+  ],
+  "normal": true
+ },
+ "steel_door_paint": {
+  "tile_m": [
+   1.0,
+   1.0
+  ],
+  "normal": true
+ },
+ "steel_door_paint_green": {
+  "tile_m": [
+   1.0,
+   1.0
+  ],
+  "normal": true
+ },
+ "fire_red_paint": {
+  "tile_m": [
+   0.5,
+   0.5
+  ],
+  "normal": true
+ },
+ "abs_charcoal": {
+  "tile_m": [
+   0.5,
+   0.5
+  ],
+  "normal": true
+ },
+ "abs_grey": {
+  "tile_m": [
+   0.5,
+   0.5
+  ],
+  "normal": true
+ },
+ "abs_white": {
+  "tile_m": [
+   0.5,
+   0.5
+  ],
+  "normal": true
+ },
+ "paper": {
+  "tile_m": [
+   0.3,
+   0.3
+  ],
+  "normal": true
+ },
+ "cardboard": {
+  "tile_m": [
+   0.6,
+   0.6
+  ],
+  "normal": true
+ },
+ "ceramic_glaze": {
+  "tile_m": [
+   0.3,
+   0.3
+  ],
+  "normal": true
+ },
+ "rubber_black": {
+  "tile_m": [
+   0.3,
+   0.3
+  ],
+  "normal": true
+ },
+ "sill_stone": {
+  "tile_m": [
+   0.8,
+   0.8
+  ],
+  "normal": true
+ },
+ "baseboard_pvc": {
+  "tile_m": [
+   0.5,
+   0.5
+  ],
+  "normal": true
+ },
+ "leaf": {
+  "tile_m": [
+   0.2,
+   0.2
+  ],
+  "normal": true
+ },
+ "soil": {
+  "tile_m": [
+   0.2,
+   0.2
+  ],
+  "normal": true
+ },
+ "corridor_floor_tile": {
+  "tile_m": [
+   1.2,
+   1.2
+  ],
+  "normal": true
+ },
+ "wall_tile_white": {
+  "tile_m": [
+   0.6,
+   0.6
+  ],
+  "normal": true
+ },
+ "stair_terrazzo": {
+  "tile_m": [
+   1.0,
+   1.0
+  ],
+  "normal": true
+ },
+ "concrete_wet": {
+  "tile_m": [
+   3.0,
+   3.0
+  ],
+  "normal": true
+ },
+ "concrete_paint": {
+  "tile_m": [
+   2.0,
+   2.0
+  ],
+  "normal": true
+ }
+}
