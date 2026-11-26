@@ -1,0 +1,8 @@
+{
+  "_note": "PLACEHOLDER",
+  "beats": [
+    "res://assets/audio/heartbeat/PH_heartbeat_01.wav",
+    "res://assets/audio/heartbeat/PH_heartbeat_02.wav",
+    "res://assets/audio/heartbeat/PH_heartbeat_03.wav"
+  ]
+}

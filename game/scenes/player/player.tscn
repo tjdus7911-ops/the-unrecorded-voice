@@ -1,0 +1,47 @@
+[gd_scene load_steps=8 format=3]
+
+[ext_resource type="Script" path="res://scripts/player/player_controller.gd" id="1_ctrl"]
+[ext_resource type="Script" path="res://scripts/player/flashlight.gd" id="2_flash"]
+[ext_resource type="Script" path="res://scripts/audio/breathing_system.gd" id="3_breath"]
+[ext_resource type="Script" path="res://scripts/audio/heartbeat_system.gd" id="4_heart"]
+[ext_resource type="AudioStream" path="res://assets/audio/sfx/PH_flashlight_click_on.wav" id="5_on"]
+[ext_resource type="AudioStream" path="res://assets/audio/sfx/PH_flashlight_click_off.wav" id="6_off"]
+
+[sub_resource type="CapsuleShape3D" id="cap"]
+radius = 0.28
+height = 1.75
+
+[node name="Player" type="CharacterBody3D"]
+collision_layer = 2
+collision_mask = 1
+floor_snap_length = 0.3
+script = ExtResource("1_ctrl")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.875, 0)
+shape = SubResource("cap")
+
+[node name="Head" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.62, 0)
+
+[node name="Camera3D" type="Camera3D" parent="Head"]
+current = true
+fov = 70.0
+near = 0.03
+far = 200.0
+
+[node name="InteractRay" type="RayCast3D" parent="Head/Camera3D"]
+target_position = Vector3(0, 0, -2)
+collision_mask = 5
+collide_with_areas = false
+
+[node name="Flashlight" type="Node3D" parent="."]
+script = ExtResource("2_flash")
+click_on_sound = ExtResource("5_on")
+click_off_sound = ExtResource("6_off")
+
+[node name="BreathingSystem" type="Node" parent="."]
+script = ExtResource("3_breath")
+
+[node name="HeartbeatSystem" type="Node" parent="."]
+script = ExtResource("4_heart")

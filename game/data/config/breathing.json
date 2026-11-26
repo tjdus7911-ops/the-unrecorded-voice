@@ -1,0 +1,41 @@
+{
+  "_note": "PLACEHOLDER 음원. 최종 성우 녹음으로 교체 시 이 목록만 변경.",
+  "loops": {
+    "calm": [
+      "res://assets/audio/breathing/PH_breath_calm_01.wav",
+      "res://assets/audio/breathing/PH_breath_calm_02.wav",
+      "res://assets/audio/breathing/PH_breath_calm_03.wav"
+    ],
+    "walk": [
+      "res://assets/audio/breathing/PH_breath_walk_01.wav",
+      "res://assets/audio/breathing/PH_breath_walk_02.wav",
+      "res://assets/audio/breathing/PH_breath_walk_03.wav"
+    ],
+    "run": [
+      "res://assets/audio/breathing/PH_breath_run_01.wav",
+      "res://assets/audio/breathing/PH_breath_run_02.wav",
+      "res://assets/audio/breathing/PH_breath_run_03.wav"
+    ],
+    "exhausted": [
+      "res://assets/audio/breathing/PH_breath_exhausted_01.wav",
+      "res://assets/audio/breathing/PH_breath_exhausted_02.wav",
+      "res://assets/audio/breathing/PH_breath_exhausted_03.wav"
+    ],
+    "fear": [
+      "res://assets/audio/breathing/PH_breath_fear_01.wav",
+      "res://assets/audio/breathing/PH_breath_fear_02.wav",
+      "res://assets/audio/breathing/PH_breath_fear_03.wav"
+    ]
+  },
+  "oneshots": {
+    "gasp": [
+      "res://assets/audio/breathing/PH_breath_gasp_01.wav"
+    ],
+    "relief": [
+      "res://assets/audio/breathing/PH_breath_relief_01.wav"
+    ],
+    "exhale_hard": [
+      "res://assets/audio/breathing/PH_breath_exhale_hard_01.wav"
+    ]
+  }
+}

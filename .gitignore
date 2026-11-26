@@ -1,0 +1,62 @@
+# ---------------------------------------------------------------
+# The Unrecorded Voice — .gitignore
+# ---------------------------------------------------------------
+
+# --- Secrets (API 키·인증 정보는 절대 커밋하지 않는다) ---
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+secrets/
+**/secrets.json
+**/credentials*.json
+tools/**/config.local.*
+
+# --- Godot 4 ---
+game/.godot/
+game/export_presets.cfg.local
+*.translation
+game/android/
+mono_crash.*.json
+
+# --- Build outputs (Steam 빌드·익스포트는 저장소에 올리지 않음) ---
+builds/
+export/
+*.exe
+*.pck
+*.x86_64
+*.app
+*.dmg
+*.zip
+*.7z
+
+# --- Blender ---
+*.blend1
+*.blend2
+*.blend@
+*.blend.bak
+__pycache__/
+*.pyc
+
+# --- 로컬 전용 레퍼런스 (출처·라이선스 미확인 이미지) ---
+refs_local/*
+!refs_local/README.md
+
+# --- 렌더 작업 중간 파일 ---
+art/renders/_wip/
+art/renders/**/*_tmp.*
+
+# --- OS / Editor ---
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+*.swp
+*~
+
+# --- 생성물: 임시(PH_) 합성 음원은 스크립트로 재생성 (tools/audio/make_placeholders.py) ---
+# 현재 Claude 세션에서 GitHub LFS 업로드가 거부되어(2026-11-26) 바이너리를 커밋하지 않는다.
+game/assets/audio/**/PH_*.wav
+art/renders/testbed/
