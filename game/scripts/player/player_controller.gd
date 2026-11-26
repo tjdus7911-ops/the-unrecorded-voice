@@ -57,6 +57,20 @@ signal recorder_key_pressed
 signal interacted_any
 
 var _lock_until := 0.0
+var seated := false                  ## 의자에 앉아 있음 (이동 불가, 시점은 자유)
+const seated_height := 1.22
+var _kick := 0.0
+
+## 앉기/일어서기 (EVENT 01 — 조작권은 시점만 잠깐 제한 없이 유지)
+func set_seated(on: bool) -> void:
+	seated = on
+	if on:
+		_height = seated_height
+		_apply_height()
+
+## 놀람·충격 시 카메라 순간 반동 (카메라 흔들림 설정을 따른다)
+func camera_kick(amount: float) -> void:
+	_kick = maxf(_kick, amount)
 
 var footsteps: Footsteps
 var arms: ViewmodelArms
@@ -127,7 +141,7 @@ func _physics_process(delta: float) -> void:
 	var input_dir := Vector2.ZERO
 	var want_run := false
 	var want_crouch := false
-	if input_enabled:
+	if input_enabled and not seated:
 		input_dir = Input.get_vector("move_left", "move_right", "move_forward", "move_back")
 		want_run = Input.is_action_pressed("sprint")
 		want_crouch = Input.is_action_pressed("crouch")
@@ -173,7 +187,9 @@ func _update_crouch(want: bool, delta: float) -> void:
 	elif is_crouching and _can_stand():
 		is_crouching = false
 	var goal := crouch_height if is_crouching else stand_height
-	_height = move_toward(_height, goal, delta * 3.0)
+	if seated:
+		goal = seated_height
+	_height = move_toward(_height, goal, delta * (1.6 if seated or _height < seated_height + 0.2 else 3.0))
 	_apply_height()
 
 func _can_stand() -> bool:
@@ -225,6 +241,13 @@ func _update_camera_fx(delta: float) -> void:
 		bob_y *= 0.2
 		bob_x *= 0.2
 	camera.position = camera.position.lerp(Vector3(bob_x, bob_y + sway, 0.0) * shake, clampf(delta * 12.0, 0.0, 1.0))
+	if _kick > 0.001:
+		camera.rotation.x = sin(Time.get_ticks_msec() * 0.06) * 0.02 * _kick * shake
+		camera.rotation.z = sin(Time.get_ticks_msec() * 0.045) * 0.012 * _kick * shake
+		_kick = move_toward(_kick, 0.0, delta * 2.5)
+	else:
+		camera.rotation.x = 0.0
+		camera.rotation.z = 0.0
 
 # --- Interaction ----------------------------------------------------------
 func _update_interact_target() -> void:

@@ -330,6 +330,59 @@ def fluorescent_start():
     return out
 
 
+def monster_breath(dur=7.0, seed=0):
+    """괴물의 불규칙한 숨: 젖은 들숨·쉰 날숨이 고르지 않은 간격으로, 낮은 성대 떨림(약 55 Hz)이 섞인다."""
+    r = np.random.default_rng(seed)
+    out = np.zeros(int(dur * SR))
+    t = 0.1
+    while t < dur - 1.2:
+        ln = r.uniform(0.35, 1.1)
+        n = int(ln * SR)
+        tt = np.arange(n) / SR
+        env = np.sin(np.pi * np.minimum(tt / ln, 1)) ** r.uniform(0.6, 1.6)
+        air = bp(noise(ln), r.uniform(250, 500), r.uniform(1800, 3200)) * env
+        f0 = r.uniform(42, 70) * (1 + 0.15 * np.sin(2 * np.pi * r.uniform(3, 9) * tt))
+        rasp = np.sign(np.sin(np.cumsum(2 * np.pi * f0 / SR))) * 0.25
+        rasp = reson(rasp, r.uniform(400, 700), 4) * env * r.uniform(0.2, 0.7)
+        wet = bp(noise(ln), 1500, 6000) * (r.random(n) > 0.985) * env * 0.6
+        place(out, (air + rasp + wet) * r.uniform(0.6, 1.0), t)
+        t += ln + r.uniform(0.05, 0.6)
+    return out
+
+
+def monster_step():
+    """맨발로 무겁게 딛는 소리 + 발톱 긁힘."""
+    d = 0.5
+    slap = lp(noise(d), 260) * env_exp(d, 0.035) * 1.3 + bp(noise(d), 800, 2500) * env_exp(d, 0.012) * 0.5
+    scrape = bp(noise(0.25), 2500, 7000) * env_exp(0.25, 0.05, 0.03) * 0.25
+    out = np.zeros(int(0.6 * SR))
+    place(out, slap, 0)
+    place(out, scrape, 0.04)
+    return out
+
+
+def door_bang(strength=1.0):
+    """철문을 몸으로 들이받는 충격: 낮은 공명 + 금속 덜컹 + 문틀 떨림."""
+    body = modal([58, 104, 171, 263, 410], [0.35, 0.25, 0.15, 0.1, 0.06], [1, 0.8, 0.5, 0.3, 0.2], 1.4)
+    clank = modal([780, 1450, 2380], [0.08, 0.05, 0.03], [0.6, 0.4, 0.3], 0.5)
+    out = np.zeros(int(1.6 * SR))
+    place(out, mix(body, lp(noise(0.5), 200) * env_exp(0.5, 0.04) * 1.5) * strength, 0)
+    place(out, clank * 0.6 * strength, 0.01)
+    place(out, door_locked()[: int(0.5 * SR)] * 0.5, 0.08)
+    return out
+
+
+def knock_soft():
+    return knock_seq(1, 0.4) * 0.35
+
+
+def handle_rattle():
+    out = np.zeros(int(1.0 * SR))
+    for k in range(5):
+        place(out, click(0.05, 1900 + 120 * k, 5, 600, 0.7) + steel_door_knock()[: int(0.05 * SR)] * 0.15, k * 0.16 + rng.uniform(0, 0.03))
+    return out
+
+
 def main():
     print("ambience:")
     reg("amb_rain_window", save("ambience", "amb_rain_window", rain_on_glass(), 0.8, loop=True), loop=True)
@@ -381,6 +434,14 @@ def main():
         place(sw, creak(0.5, 26, 18) * 0.5, 0.3 + k * 1.15)
         place(sw, creak(0.45, 18, 25) * 0.35, 0.85 + k * 1.15)
     reg("sfx_swing_creak", save("sfx", "sfx_swing_creak", sw, 0.6))
+    print("monster:")
+    reg("mon_breath", [save("sfx", f"mon_breath_{i}", monster_breath(7.0, i), 0.7) for i in range(3)])
+    reg("mon_step", [save("footsteps", f"mon_step_{i:02d}", monster_step(), 0.9) for i in range(5)])
+    reg("sfx_door_bang", [save("sfx", f"sfx_door_bang_{i}", door_bang(0.7 + 0.15 * i), 0.95) for i in range(3)])
+    reg("sfx_knock_soft", save("sfx", "sfx_knock_soft", knock_soft(), 0.5))
+    reg("sfx_handle_rattle", save("sfx", "sfx_handle_rattle", handle_rattle(), 0.7))
+    reg("sfx_door_creak_slow", save("sfx", "sfx_door_creak_slow", creak(3.5, 12, 20) * 0.5, 0.5))
+    reg("sfx_chair_creak", save("sfx", "sfx_chair_creak", creak(0.6, 30, 22) * 0.4, 0.4))
     cfg = {"_doc": "사운드 ID → 파일 (PH_ = 합성 임시 음원). tools/audio/make_sfx.py 생성. 교체 시 이 파일만 수정.", "sounds": REG}
     (GAME / "data" / "config" / "audio.json").write_text(json.dumps(cfg, ensure_ascii=False, indent=1), "utf-8")
 

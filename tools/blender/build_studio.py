@@ -274,12 +274,14 @@ def build_desk(M, C):
         T.box(f"stu_desk_drawer_{i}_front", (0.40, 0.018, h - 0.008), (0, -0.009, 0), M["walnut"], 0.003, col=col, parent=dr)
         T.box(f"stu_desk_drawer_{i}_box", (0.36, 0.56, h - 0.04), (0, 0.28, -0.01), M["oak"], 0.002, col=col, parent=dr)
         T.box(f"stu_desk_drawer_{i}_pull", (0.14, 0.02, 0.012), (0, -0.025, h / 2 - 0.03), M["chrome"], 0.004, col=col, parent=dr)
-    T.collider("stu_desk", (2.2, 0.75, top_z), (3.0, 4.43, top_z / 2), C["col"], kind="convcolonly")
+    # 상판 두께만 충돌 (0.6 m 위) — 몸은 막히고, 책상 아래(EVENT 07 테이프)는 시선·조사 광선이 닿는다
+    T.collider("stu_desk", (2.2, 0.75, top_z - 0.6), (3.0, 4.43, (top_z + 0.6) / 2), C["col"], kind="convcolonly")
 
 
 def build_chair(M, C):
     col = C["furn"]
-    root = T.empty("stu_chair", (2.95, 3.6, 0), col, rot=(0, 0, math.radians(-8)))
+    root = T.empty("stu_chair", (2.95, 3.6, 0), col, rot=(0, 0, math.radians(172)))   # 등받이가 책상 반대쪽(앉은 사람 뒤)
+    T.keep(root)          # 스토리: 시야 밖에서 의자 방향이 바뀐다 (요구사항 11 EVENT 05)
     # 5발 베이스 + 캐스터
     for i in range(5):
         a = i / 5 * math.tau

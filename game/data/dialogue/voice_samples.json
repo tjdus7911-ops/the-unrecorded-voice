@@ -1,97 +1,104 @@
 {
- "_doc": "임시 TTS 가이드 음성 (비상업 라이선스 모델). 최종 더빙으로 교체 전용. 대사 타이밍·자막 동기화 테스트.",
- "chapter_id": "samples",
- "lines": [
-  {
-   "line_id": "SMP_SOEUN_01",
-   "character_id": "soeun",
-   "voice_id": "vo_soeun",
-   "text": {
-    "ko": "나중에 까먹을 수도 있잖아."
-   },
-   "emotion": "joy",
-   "audio": {
-    "ko": "res://assets/audio/voice/soeun/PH_SMP_SOEUN_01.wav"
-   },
-   "status": "PLACEHOLDER_TTS_NONCOMMERCIAL"
-  },
-  {
-   "line_id": "SMP_JWC_01",
-   "character_id": "jungwoo_child",
-   "voice_id": "vo_jungwoo_child",
-   "text": {
-    "ko": "이런 걸 왜 녹음해?"
-   },
-   "emotion": "playful",
-   "audio": {
-    "ko": "res://assets/audio/voice/jungwoo_child/PH_SMP_JWC_01.wav"
-   },
-   "status": "PLACEHOLDER_TTS_NONCOMMERCIAL"
-  },
-  {
-   "line_id": "SMP_JWC_02",
-   "character_id": "jungwoo_child",
-   "voice_id": "vo_jungwoo_child",
-   "text": {
-    "ko": "난 안 까먹는데?"
-   },
-   "emotion": "playful",
-   "audio": {
-    "ko": "res://assets/audio/voice/jungwoo_child/PH_SMP_JWC_02.wav"
-   },
-   "status": "PLACEHOLDER_TTS_NONCOMMERCIAL"
-  },
-  {
-   "line_id": "SMP_MANSU_01",
-   "character_id": "mansu",
-   "voice_id": "vo_mansu",
-   "text": {
-    "ko": "거기 누구 있어요? 순찰 중입니다."
-   },
-   "emotion": "uneasy",
-   "audio": {
-    "ko": "res://assets/audio/voice/mansu/PH_SMP_MANSU_01.wav"
-   },
-   "status": "PLACEHOLDER_TTS_NONCOMMERCIAL"
-  },
-  {
-   "line_id": "SMP_MANSU_02",
-   "character_id": "mansu",
-   "voice_id": "vo_mansu",
-   "text": {
-    "ko": "나는 아무것도 못 들었어요."
-   },
-   "emotion": "fear",
-   "audio": {
-    "ko": "res://assets/audio/voice/mansu/PH_SMP_MANSU_02.wav"
-   },
-   "status": "PLACEHOLDER_TTS_NONCOMMERCIAL"
-  },
-  {
-   "line_id": "SMP_YOUNGSIK_01",
-   "character_id": "youngsik",
-   "voice_id": "vo_youngsik",
-   "text": {
-    "ko": "들어가면 안 됩니다."
-   },
-   "emotion": "neutral",
-   "audio": {
-    "ko": "res://assets/audio/voice/youngsik/PH_SMP_YOUNGSIK_01.wav"
-   },
-   "status": "PLACEHOLDER_TTS_NONCOMMERCIAL"
-  },
-  {
-   "line_id": "SMP_YOUNGSIK_02",
-   "character_id": "youngsik",
-   "voice_id": "vo_youngsik",
-   "text": {
-    "ko": "관리사무소입니다. 무슨 일이시죠?"
-   },
-   "emotion": "neutral",
-   "audio": {
-    "ko": "res://assets/audio/voice/youngsik/PH_SMP_YOUNGSIK_02.wav"
-   },
-   "status": "PLACEHOLDER_TTS_NONCOMMERCIAL"
-  }
- ]
+  "_doc": "임시 TTS 가이드 음성 (비상업 라이선스 모델). 최종 더빙으로 교체 전용. 대사 타이밍·자막 동기화 테스트.",
+  "chapter_id": "samples",
+  "lines": [
+    {
+      "line_id": "SMP_SOEUN_01",
+      "character_id": "soeun",
+      "voice_id": "vo_soeun",
+      "text": {
+        "ko": "나중에 까먹을 수도 있잖아."
+      },
+      "emotion": "joy",
+      "audio": {
+        "ko": "res://assets/audio/voice/soeun/ko/TTS_SMP_SOEUN_01.wav"
+      },
+      "status": "PLACEHOLDER_TTS_NONCOMMERCIAL",
+      "voice_source": "Supertonic 3 TTS (OpenRAIL-M, commercial use allowed) — replace with voice actors if budget allows"
+    },
+    {
+      "line_id": "SMP_JWC_01",
+      "character_id": "jungwoo_child",
+      "voice_id": "vo_jungwoo_child",
+      "text": {
+        "ko": "이런 걸 왜 녹음해?"
+      },
+      "emotion": "playful",
+      "audio": {
+        "ko": "res://assets/audio/voice/jungwoo_child/ko/TTS_SMP_JWC_01.wav"
+      },
+      "status": "PLACEHOLDER_TTS_NONCOMMERCIAL",
+      "voice_source": "Supertonic 3 TTS (OpenRAIL-M, commercial use allowed) — replace with voice actors if budget allows"
+    },
+    {
+      "line_id": "SMP_JWC_02",
+      "character_id": "jungwoo_child",
+      "voice_id": "vo_jungwoo_child",
+      "text": {
+        "ko": "난 안 까먹는데?"
+      },
+      "emotion": "playful",
+      "audio": {
+        "ko": "res://assets/audio/voice/jungwoo_child/ko/TTS_SMP_JWC_02.wav"
+      },
+      "status": "PLACEHOLDER_TTS_NONCOMMERCIAL",
+      "voice_source": "Supertonic 3 TTS (OpenRAIL-M, commercial use allowed) — replace with voice actors if budget allows"
+    },
+    {
+      "line_id": "SMP_MANSU_01",
+      "character_id": "mansu",
+      "voice_id": "vo_mansu",
+      "text": {
+        "ko": "거기 누구 있어요? 순찰 중입니다."
+      },
+      "emotion": "uneasy",
+      "audio": {
+        "ko": "res://assets/audio/voice/mansu/ko/TTS_SMP_MANSU_01.wav"
+      },
+      "status": "PLACEHOLDER_TTS_NONCOMMERCIAL",
+      "voice_source": "Supertonic 3 TTS (OpenRAIL-M, commercial use allowed) — replace with voice actors if budget allows"
+    },
+    {
+      "line_id": "SMP_MANSU_02",
+      "character_id": "mansu",
+      "voice_id": "vo_mansu",
+      "text": {
+        "ko": "나는 아무것도 못 들었어요."
+      },
+      "emotion": "fear",
+      "audio": {
+        "ko": "res://assets/audio/voice/mansu/ko/TTS_SMP_MANSU_02.wav"
+      },
+      "status": "PLACEHOLDER_TTS_NONCOMMERCIAL",
+      "voice_source": "Supertonic 3 TTS (OpenRAIL-M, commercial use allowed) — replace with voice actors if budget allows"
+    },
+    {
+      "line_id": "SMP_YOUNGSIK_01",
+      "character_id": "youngsik",
+      "voice_id": "vo_youngsik",
+      "text": {
+        "ko": "들어가면 안 됩니다."
+      },
+      "emotion": "neutral",
+      "audio": {
+        "ko": "res://assets/audio/voice/youngsik/ko/TTS_SMP_YOUNGSIK_01.wav"
+      },
+      "status": "PLACEHOLDER_TTS_NONCOMMERCIAL",
+      "voice_source": "Supertonic 3 TTS (OpenRAIL-M, commercial use allowed) — replace with voice actors if budget allows"
+    },
+    {
+      "line_id": "SMP_YOUNGSIK_02",
+      "character_id": "youngsik",
+      "voice_id": "vo_youngsik",
+      "text": {
+        "ko": "관리사무소입니다. 무슨 일이시죠?"
+      },
+      "emotion": "neutral",
+      "audio": {
+        "ko": "res://assets/audio/voice/youngsik/ko/TTS_SMP_YOUNGSIK_02.wav"
+      },
+      "status": "PLACEHOLDER_TTS_NONCOMMERCIAL",
+      "voice_source": "Supertonic 3 TTS (OpenRAIL-M, commercial use allowed) — replace with voice actors if budget allows"
+    }
+  ]
 }

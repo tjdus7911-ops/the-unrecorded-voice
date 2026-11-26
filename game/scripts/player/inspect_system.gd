@@ -8,6 +8,7 @@ extends Node3D
 
 signal opened(target: Interactable)
 signal closed(target: Interactable, picked: bool)
+signal flipped(target: Interactable, back: bool)
 
 const VIEW_POS := Vector3(-0.035, -0.015, -0.29)    ## 손에 든 물체 중심 (카메라 루트 공간) — 화면 중앙 가까이, 설명 패널과 겹치지 않게
 
@@ -171,6 +172,10 @@ func _input(event: InputEvent) -> void:
 ## 앞면 ↔ 뒷면
 func flip() -> void:
 	_flip_target = PI if _flip_target < 0.5 else 0.0
+	var back := _flip_target > 0.5
+	if active and back and active.clue_back != &"":
+		ClueBook.add(active.clue_back)
+	flipped.emit(active, back)
 	Sounds.play("sfx_paper_rustle" if _is_paper() else "sfx_pickup", &"SFX", -12.0)
 
 func _unhandled_input(event: InputEvent) -> void:

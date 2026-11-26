@@ -17,7 +17,6 @@
 |---|---|---|---|---|
 | `game/assets/audio/breathing/PH_*.wav` | 호흡 음원 | PLACEHOLDER | 자체 생성(포먼트 필터 합성, `tools/audio/make_placeholders.py`) | 실제 성우 호흡으로 교체 필요 |
 | `game/assets/audio/{ambience,sfx,footsteps}/PH_*` | 빗소리·천둥·팬·형광등·시계·발소리(4재질)·문·노크·카세트·상자·정전·데드볼트·형광등 점등·그네 등 42종 | PLACEHOLDER | 자체 DSP 합성 (`tools/audio/make_sfx.py`) — 외부 녹음 없음 | 최종 사운드 디자인(폴리 녹음 또는 라이선스 라이브러리)으로 교체 권장 |
-| `game/assets/audio/voice/*/PH_*.wav` | 캐릭터 한국어 음성 16개(프롤로그 대사 7 + 샘플 7 + 테이프 웃음 2) | PLACEHOLDER · **비상업** | sherpa-onnx(Apache-2.0) + Mimic3 `ko_KO-kss_low` 음성 (KSS 데이터셋 기반: **CC BY-NC-SA 4.0**) — 캐릭터별 음정·포먼트 처리 | ⚠ 상업 빌드 포함 금지. 대사 타이밍·자막 동기화 테스트 전용. 최종 더빙으로 교체 |
 | `game/assets/fonts/NotoSansKR-*-subset.otf` | UI 한글 폰트 (한글 11,172자 + 라틴 서브셋) | THIRD_PARTY | Noto Sans CJK — **SIL Open Font License 1.1** (상업 이용·임베딩 가능). 원문 `game/assets/fonts/LICENSE_NotoSansCJK.txt` | |
 | `game/assets/textures/pbr/*` · `decals/*` · `fx/*` | PBR 타일 텍스처 37종 · 데칼 5종 · 손전등 패턴 | ORIGINAL | 자체 생성 (`tools/textures/gen_pbr.py`, `gen_fx_textures.py`) — 주기적 FFT 노이즈 | |
 | `game/assets/textures/{stu,props,cor}/*` | 모니터 UI·시계·라벨·운송장·메모 손글씨·표지판 | ORIGINAL | 자체 생성 (Noto Sans CJK OFL 폰트로 글자 렌더) | 실존 택배사·제품 디자인 사용 없음 |
@@ -35,4 +34,5 @@ REF 01~21 시트 이미지는 웹 출처가 섞여 있어 `refs_local/`(git 제�
 | `game/assets/textures/chr/chr_skin_*`, `chr_knit_*`, `chr_rib_*` | 피부(베이크) · 니트 저지 · 2x2 고무단 | ORIGINAL | `build_arms.py` 베이크, `tools/textures/gen_knit_textures.py` | |
 | `game/assets/models/characters/PH_chr_soeun_silhouette.gltf` | 소은 역광 실루엣 (1998 복도 끝) | PLACEHOLDER | MakeHuman CC0 메시를 아이 비율로 변형 (`tools/blender/build_silhouette.py`) | 얼굴·디테일 없음. 정식 캐릭터 모델로 교체 |
 | `game/scripts/levels/apt_corridor.gd` (1998 아파트 복도) | EVENT 08 도착 공간 | PLACEHOLDER (블록아웃) | 기존 자체 PBR 텍스처로 코드 생성 | PHASE 02 승인 후 Blender로 정식 제작 |
-| `game/assets/audio/sfx/PH_tape_playground.wav` | 테이프 01 도입부 (놀이터 공기·그네·아이 웃음) | PLACEHOLDER · **비상업** | 합성 + 위 TTS 웃음 (CC BY-NC-SA 4.0 영향) | 최종 녹음으로 교체 |
+| `game/assets/audio/voice/<캐릭터>/<ko|en|ja>/TTS_*.wav` | 캐릭터 음성 (정우·어린 정우·소은·만수·영식) 한·영·일 | THIRD_PARTY 생성물 (상업 이용 가능) | **Supertonic 3** (Supertone Inc.) 모델 — **OpenRAIL-M** (상업 이용 허용, 사용 제한 조항 준수), 코드 MIT. sherpa-onnx(Apache-2.0)로 실행 (`tools/audio/make_voice_supertonic.py`). 이전 Mimic3(KSS, 비상업) 음성은 **모두 삭제** | 성우 녹음 예산이 생기면 교체 권장. OpenRAIL-M 사용 제한(타인 사칭·기만 등) 준수 |
+| `game/assets/audio/sfx/TTS_tape_playground.wav`, `TTS_child_laugh.wav` | 테이프 도입부·아이 웃음 | 위와 동일 + 자체 합성 | Supertonic 3 + DSP | |

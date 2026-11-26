@@ -32,6 +32,9 @@ var _lag_basis := Basis()
 var tremble := 0.0          ## 공포 떨림 0~1
 var exhaustion := 0.0       ## 달린 뒤 0~1
 var enabled := true
+var _flinch := 0.0
+var _flinch_secs := 0.3
+var _flinch_shake := 1.0
 ## 외부 카메라 검토용: 1인칭 재질 보정(z_clip_scale·fov_override)을 끈다
 static var plain_materials := false
 
@@ -139,6 +142,22 @@ func apply_viewmodel_materials(root: Node) -> void:
 		if m.material_override is BaseMaterial3D:
 			var mo := (m.material_override as BaseMaterial3D).duplicate() as BaseMaterial3D
 			_viewmodel_material(mo)
+			m.material_override = mo
+
+## 손에서 놓은 물체를 다시 월드 렌더링으로 (뷰모델 재질·레이어 해제)
+func restore_world_materials(root: Node) -> void:
+	for mi in root.find_children("*", "MeshInstance3D", true, false):
+		var m := mi as MeshInstance3D
+		m.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
+		m.layers = 1
+		for s in m.get_surface_override_material_count():
+			var o := m.get_surface_override_material(s)
+			if o is BaseMaterial3D and (o as BaseMaterial3D).use_z_clip_scale:
+				m.set_surface_override_material(s, null)
+		if m.material_override is BaseMaterial3D and (m.material_override as BaseMaterial3D).use_z_clip_scale:
+			var mo := (m.material_override as BaseMaterial3D).duplicate() as BaseMaterial3D
+			mo.use_z_clip_scale = false
+			mo.use_fov_override = false
 			m.material_override = mo
 
 func _bone(n: String) -> int:
@@ -315,6 +334,7 @@ func _process(delta: float) -> void:
 		return
 	follow_camera(delta)
 	_carry_update()
+	_flinch = move_toward(_flinch, 0.0, delta / maxf(_flinch_secs, 0.05))
 	_t += delta
 	# 걷기·숨쉬기·떨림 (모든 손 공통 미세 움직임)
 	var speed := 0.0
@@ -330,6 +350,8 @@ func _process(delta: float) -> void:
 		h.F = _nlerp(h.F, h.want_F, k)
 		h.R = _nlerp(h.R, h.want_R, k)
 		var off := Vector3.ZERO
+		if _flinch > 0.0:
+			off += Vector3(0.012 * h.sign, 0.05, 0.05) * _flinch + Vector3(sin(_t * 47.0), sin(_t * 41.0 + h.sign), 0) * 0.006 * _flinch_shake * _flinch
 		if h.mode != Mode.REACH:
 			var ph := _bob_phase + (0.0 if side == "L" else PI)
 			off.y += sin(ph * 2.0) * 0.010 * walk + sin(_t * 1.6) * 0.0025 * (1.0 + exhaustion * 2.5)
@@ -643,3 +665,33 @@ func _carry_update() -> void:
 func hold_pos_for(objT: Transform3D, side: String) -> Vector3:
 	var h: Hand = sides[side]
 	return (objT * h.held_offset.affine_inverse()).origin
+
+
+## 놀라 움찔: 두 손이 몸 쪽 위로 튀었다가 돌아온다 (shake: 손전등 흔들림 배율)
+func flinch(shake := 1.0, secs := 0.3) -> void:
+	_flinch = 1.0
+	_flinch_secs = secs
+	_flinch_shake = shake * float(GameSettings.camera_shake)
+
+## EVENT 01: 헤드폰 벗기 — 두 손이 귀 옆으로 올라갔다가 앞으로 내려온다
+func headphones_off() -> void:
+	for side in sides:
+		var h: Hand = sides[side]
+		h.mode = Mode.REACH
+		h.pose_want = "grab_handle"
+	var tw := create_tween()
+	tw.tween_method(func(k: float):
+		for side in sides:
+			var h: Hand = sides[side]
+			var ear := Vector3(0.17 * h.sign, 0.0, -0.16)
+			aim(side, _low_pos(h).lerp(ear, k), Vector3(0, 1, 0.2).normalized(), Vector3(0, 0, -1), 30.0), 0.0, 1.0, 0.55).set_trans(Tween.TRANS_SINE)
+	tw.tween_interval(0.25)
+	tw.tween_method(func(k: float):
+		for side in sides:
+			var h: Hand = sides[side]
+			var ear := Vector3(0.17 * h.sign, 0.0, -0.16)
+			var desk := Vector3(0.10 * h.sign, -0.35, -0.42)
+			aim(side, ear.lerp(desk, k), Vector3(-0.2 * h.sign, -0.3, -1).normalized(), Vector3(0, 1, 0), 30.0), 0.0, 1.0, 0.7).set_trans(Tween.TRANS_SINE)
+	tw.tween_callback(func():
+		for side in sides:
+			set_mode(side, Mode.HIDDEN))

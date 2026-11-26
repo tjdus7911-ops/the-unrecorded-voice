@@ -234,9 +234,58 @@
     "res://assets/audio/sfx/PH_sfx_swing_creak.wav"
    ]
   },
+  "mon_breath": {
+   "files": [
+    "res://assets/audio/sfx/PH_mon_breath_0.wav",
+    "res://assets/audio/sfx/PH_mon_breath_1.wav",
+    "res://assets/audio/sfx/PH_mon_breath_2.wav"
+   ]
+  },
+  "mon_step": {
+   "files": [
+    "res://assets/audio/footsteps/PH_mon_step_00.wav",
+    "res://assets/audio/footsteps/PH_mon_step_01.wav",
+    "res://assets/audio/footsteps/PH_mon_step_02.wav",
+    "res://assets/audio/footsteps/PH_mon_step_03.wav",
+    "res://assets/audio/footsteps/PH_mon_step_04.wav"
+   ]
+  },
+  "sfx_door_bang": {
+   "files": [
+    "res://assets/audio/sfx/PH_sfx_door_bang_0.wav",
+    "res://assets/audio/sfx/PH_sfx_door_bang_1.wav",
+    "res://assets/audio/sfx/PH_sfx_door_bang_2.wav"
+   ]
+  },
+  "sfx_knock_soft": {
+   "files": [
+    "res://assets/audio/sfx/PH_sfx_knock_soft.wav"
+   ]
+  },
+  "sfx_handle_rattle": {
+   "files": [
+    "res://assets/audio/sfx/PH_sfx_handle_rattle.wav"
+   ]
+  },
+  "sfx_door_creak_slow": {
+   "files": [
+    "res://assets/audio/sfx/PH_sfx_door_creak_slow.wav"
+   ]
+  },
+  "sfx_chair_creak": {
+   "files": [
+    "res://assets/audio/sfx/PH_sfx_chair_creak.wav"
+   ]
+  },
   "tape_playground": {
    "files": [
-    "res://assets/audio/sfx/PH_tape_playground.wav"
+    "res://assets/audio/sfx/TTS_tape_playground.wav"
+   ],
+   "loop": false
+  },
+  "sfx_child_laugh": {
+   "files": [
+    "res://assets/audio/sfx/TTS_child_laugh.wav"
    ],
    "loop": false
   }

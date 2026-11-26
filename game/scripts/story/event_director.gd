@@ -135,6 +135,8 @@ func _triggered(e: Dictionary) -> bool:
 			return player.global_position.distance_to(tp) <= float(tr.get("radius", 2.0)) and _conds(e)
 		"time":
 			return since >= float(tr.get("secs", 0.0)) and _conds(e)
+		"condition":
+			return story.check(String(tr.get("cond", ""))) and _conds(e)
 	return false
 
 func _fire(e: Dictionary) -> void:

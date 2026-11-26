@@ -55,7 +55,7 @@ func _ready() -> void:
 	v.add_child(_lbl("호흡 · 심장"))
 	v.add_child(b)
 	var a := HFlowContainer.new()
-	for line in ["PRO_S03_001", "PRO_S05_001", "PRO_S05_003", "PRO_S06_002", "PRO_S07_001"]:
+	for line in ["PRO_E01_001", "PRO_E03_TAPE_1", "PRO_E05_001", "PRO_E07_001", "PRO_E08_001"]:
 		a.add_child(_btn(line, func(): lvl.play_line_world(line, lvl.player.camera.global_position + Vector3(0, 0, 2), false)))
 	a.add_child(_btn("비 끔", func(): lvl.set_rain(false, 1.0)))
 	a.add_child(_btn("비 켬", func(): lvl.set_rain(true, 1.0)))

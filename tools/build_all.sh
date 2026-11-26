@@ -11,8 +11,10 @@ python3 tools/textures/gen_fx_textures.py
 python3 tools/blender/build_props.py "$@"
 python3 tools/blender/build_studio.py "$@"
 python3 tools/blender/build_corridor.py "$@"
+python3 tools/blender/build_arms.py
+python3 tools/blender/build_characters.py
 python3 tools/blender/draw_plan.py art/blender/environments/studio/stu_studio.blend art/renders/studio/stu_floorplan.png
 python3 tools/audio/make_placeholders.py
 python3 tools/audio/make_sfx.py
-[ -d "${TUV_TTS_MODEL:-/opt/tts/vits-mimic3-ko_KO-kss_low}" ] && python3 tools/audio/make_voice_samples.py || echo "TTS 모델 없음 — 음성 샘플 생략"
+[ -d "${TUV_SUPERTONIC:-/home/claude/ext_tts/sherpa-onnx-supertonic-3-tts-int8-2026-05-11}" ] && python3 tools/audio/make_voice_supertonic.py || echo "Supertonic 모델 없음 — 음성 생략 (tools/audio/make_voice_supertonic.py 주석 참고)"
 echo done

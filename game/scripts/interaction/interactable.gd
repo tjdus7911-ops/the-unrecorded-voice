@@ -23,6 +23,8 @@ var inspect_text := ""
 var inspect_visual: Node3D           ## 조사 화면에 띄울 시각 노드 (복제해서 사용)
 var pickup_item: StringName = &""
 var remove_on_pickup: Node           ## 획득 시 월드에서 제거할 노드
+var inspect_text_back := ""          ## 뒤집었을 때 보이는 글 (숨겨진 단서 등)
+var clue_back: StringName = &""      ## 뒷면을 보면 얻는 단서 ID (data/progress/clues.json)
 ## ---- 1인칭 손 동작 (ViewmodelArms)
 ## reach: "" 손 동작 없음 / "grab" 손잡이 잡기 / "press" 검지로 누르기 / "pull" 잡고 당기기(따라감) / "pick" 집기
 var reach := ""

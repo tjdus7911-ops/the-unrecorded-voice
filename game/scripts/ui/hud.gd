@@ -126,6 +126,9 @@ func bind_player(p: PlayerController) -> void:
 	_player = p
 	p.interact_target_changed.connect(func(t): _target = t)
 	p.inspect.opened.connect(_on_inspect_open)
+	p.inspect.flipped.connect(func(t, back):
+		if t and t.inspect_text_back != "":
+			inspect_body.text = tr(t.inspect_text_back) if back else tr(t.inspect_text))
 	p.inspect.closed.connect(func(_t, _p): inspect_panel.visible = false; crosshair.visible = true)
 
 func show_toast(text: String, secs := 2.5) -> void:

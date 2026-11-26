@@ -45,6 +45,20 @@ func point(name: String) -> Vector3:
 			return lvl.recorder.global_position if lvl.recorder else Vector3.ZERO
 		"behind_voice":
 			return _behind
+		"corridor_end":
+			return lvl.b2g(Vector3(12.3, -1.1, 1.1))
+		"soeun":
+			return lvl.soeun_node.global_position + Vector3(0, 0.9, 0) if lvl.soeun_node else Vector3.ZERO
+		"room_dark_corner":
+			var best := Vector3.ZERO
+			var bd := -1.0
+			for c in [Vector3(0.4, 4.5, 1.0), Vector3(5.6, 4.5, 1.0), Vector3(5.6, 0.5, 1.0), Vector3(0.4, 2.5, 1.0)]:
+				var g: Vector3 = lvl.b2g(c)
+				var d := g.distance_to(lvl.player.global_position)
+				if d > bd:
+					bd = d
+					best = g
+			return best
 		"apt_light", "apt_spawn":
 			return lvl.apt.point(name) if lvl.apt else Vector3.ZERO
 	return Vector3.ZERO
@@ -59,6 +73,8 @@ func check(cond: String) -> bool:
 			return Inventory.has_flashlight
 		"not_tried_door":
 			return not tried_door
+		"recorder_stopped_after_tape":
+			return lvl.recorder_state == "loaded" and lvl.director.is_done("EV03_tape_play") and not lvl.door_ajar
 	return true
 
 func do_action(a: Dictionary, instant: bool) -> void:
@@ -160,9 +176,103 @@ func do_action(a: Dictionary, instant: bool) -> void:
 		"soeun_far":
 			if not instant and lvl.apt:
 				lvl.apt.show_soeun(float(a.get("secs", 1.2)))
+		"intro_seated":
+			if not instant:
+				lvl.intro_seated()
+		"intro_headphones":
+			if not instant:
+				lvl.intro_headphones()
+		"intro_stand_up":
+			if not instant:
+				lvl.intro_stand_up()
+		"figure_far":
+			if not instant:
+				lvl.show_monster_at("corridor_end", float(a.get("secs", 1.2)))
+		"corridor_light_off":
+			lvl.set_light("CorLight%d" % int(a.get("index", 5)), "story_off", instant)
+		"tape_cut":
+			if not instant:
+				lvl.tape_cut()
+		"door_creep":
+			if not instant:
+				lvl.door_creep(float(a.get("deg", 12.0)), float(a.get("secs", 4.0)))
+		"presence_in_gap":
+			if not instant:
+				lvl.presence_in_gap(bool(a.get("on", true)))
+		"await_look_door":
+			if not instant:
+				_await_look_door(float(a.get("radius", 2.6)), float(a.get("max_deg", 28.0)), float(a.get("fallback_after", 20.0)))
+		"flinch":
+			if not instant:
+				lvl.player.arms.flinch()
+				lvl.player.camera_kick(0.6)
+		"flashlight_shake":
+			if not instant:
+				lvl.player.arms.flinch(1.6, float(a.get("secs", 0.5)))
+		"recorder_self_play":
+			lvl.recorder_self(true, instant)
+		"recorder_self_stop":
+			lvl.recorder_self(false, instant)
+		"offsight":
+			lvl.offsight_change(String(a.get("what", "")), instant)
+		"child_steps_room":
+			if not instant:
+				_child_steps_room()
+		"show_under_desk_tape":
+			lvl.show_under_desk_tape()
+		"soeun_peek":
+			if not instant:
+				lvl.soeun_peek(float(a.get("secs", 0.8)))
+		"monster_breath_door":
+			if not instant:
+				lvl.monster_breath_door(bool(a.get("on", true)))
+		"door_handle_rattle":
+			if not instant:
+				lvl.door_handle_rattle()
+		"door_bang":
+			if not instant:
+				lvl.door_bang(float(a.get("strength", 1.0)))
+		"silence":
+			if not instant:
+				lvl.sudden_silence(2.8)
+		"to_title":
+			if not instant and not lvl.get_meta("test_no_title", false):
+				GameFlow.restart_level("title")
 		"title_card":
 			if not instant:
 				_title_card(a.get("title", ""), a.get("subtitle", ""), float(a.get("secs", 4.0)))
+
+## EVENT 04: 문틈의 존재를 플레이어가 직접 발견해 다가가면 문이 쾅 닫힌다 (카메라 강제 회전 없음)
+func _await_look_door(radius: float, max_deg: float, fallback: float) -> void:
+	var el := 0.0
+	while el < fallback:
+		await get_tree().create_timer(0.1, false).timeout
+		el += 0.1
+		var cam: Camera3D = lvl.player.camera
+		var gap: Vector3 = lvl.door_gap_point()
+		var dir := (gap - cam.global_position).normalized()
+		var ang := rad_to_deg((-cam.global_transform.basis.z).angle_to(dir))
+		if ang < max_deg and cam.global_position.distance_to(gap) < radius + 1.5:
+			if cam.global_position.distance_to(gap) < radius:
+				break
+	lvl.door_slam_presence()
+	await get_tree().create_timer(0.5, false).timeout
+	lvl.play_line_world("PRO_E04_001", Vector3.ZERO, true)
+	lvl.player.danger = maxf(lvl.player.danger, 0.5)
+
+## EVENT 06: 정전 속 어린아이 발소리 — 플레이어 시야 밖(뒤·옆)에서 방을 가로지른다
+func _child_steps_room() -> void:
+	var p: PlayerController = lvl.player
+	var back := p.camera.global_transform.basis.z
+	back.y = 0
+	back = back.normalized()
+	var side := back.cross(Vector3.UP)
+	var a: Vector3 = lvl.clamp_to_studio(p.global_position + back * 2.0 - side * 1.6)
+	var b: Vector3 = lvl.clamp_to_studio(p.global_position + back * 2.0 + side * 1.6)
+	for i in 7:
+		var k := i / 6.0
+		Sounds.play_at("step_wood", a.lerp(b, k) + Vector3(0, 0.05, 0), &"SFX", -13.0, null, 0.03, "작은 발소리" if i == 0 else "", 2.0)
+		await get_tree().create_timer(0.26, false).timeout
 
 ## 정전 뒤 서랍 쪽을 찾게 하는 희미한 빛: 창밖 번개/네온 대신 — 책상 아래 멀티탭 대기 LED처럼 작은 붉은 점 + 아주 약한 창빛
 func _set_guide(on: bool) -> void:

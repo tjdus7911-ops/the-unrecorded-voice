@@ -23,6 +23,7 @@ Inventory="*res://scripts/systems/inventory.gd"
 Sounds="*res://scripts/audio/sound_lib.gd"
 GameFlow="*res://scripts/systems/game_flow.gd"
 SaveGame="*res://scripts/systems/save_game.gd"
+ClueBook="*res://scripts/systems/clue_book.gd"
 
 [display]
 

@@ -103,7 +103,7 @@ func _run() -> void:
 	check(Sounds.has("step_wood") and Sounds.has("step_tile") and Sounds.has("sfx_door_open") and Sounds.has("amb_rain_window"),
 			"sound: library loaded from audio.json")
 	check(AudioServer.get_bus_index(&"RoomCorridor") >= 0, "sound: per-room reverb buses")
-	check(DialogueDB.audio_of("PRO_S05_001") != null, "voice: sample attached to PRO_S05_001 via data")
+	check(DialogueDB.audio_of("PRO_E03_TAPE_1") != null, "voice: sample attached to PRO_E03_TAPE_1 via data")
 
 	# --- 작업실 이동·발소리(나무) ---
 	await place(Vector3(2.4, 2.0, 0), 0.0)

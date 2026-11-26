@@ -1,0 +1,13 @@
+{
+ "_doc": "단서·엔딩 데이터 (요구사항 10 §4). kind: required(필수 진행) / hidden(선택 — 숨겨진 엔딩용). 숨겨진 단서를 하나도 찾지 않아도 일반 엔딩에 도달할 수 있다. 정확한 엔딩 해금 조건·추가 대사는 기획 검토 후 확정 (docs/design/open_questions.md Q-13).",
+ "clues": [
+  {"id": "clue_pro_memo", "chapter": "prologue", "kind": "required", "title": {"ko": "손으로 쓴 메모", "en": "Handwritten memo", "ja": "手書きのメモ"}},
+  {"id": "clue_pro_tape01", "chapter": "prologue", "kind": "required", "title": {"ko": "TAPE 01 첫 녹음", "en": "TAPE 01, first recording", "ja": "TAPE 01 最初の録音"}},
+  {"id": "clue_pro_tape_back", "chapter": "prologue", "kind": "hidden", "ending": "hidden", "title": {"ko": "테이프 뒷면의 연필 글씨", "en": "Pencil note on the tape's back", "ja": "テープ裏の鉛筆書き"}},
+  {"id": "clue_pro_waybill", "chapter": "prologue", "kind": "hidden", "ending": "hidden", "title": {"ko": "보낸 사람 없는 운송장", "en": "Waybill with no sender", "ja": "差出人のない送り状"}}
+ ],
+ "endings": [
+  {"id": "normal", "title": {"ko": "일반 엔딩", "en": "Normal ending", "ja": "ノーマルエンド"}, "requires": "all_required"},
+  {"id": "hidden", "title": {"ko": "숨겨진 엔딩", "en": "Hidden ending", "ja": "隠しエンド"}, "requires": "all_required + hidden(TBD)"}
+ ]
+}

@@ -34,6 +34,13 @@ var _monitor_mat_orig: Material
 var flashlight_prop: Node3D
 var drawer_open := [false, false, false]
 var debug_menu: CanvasLayer
+var monster_node: Node3D
+var monster_poser: CharacterPoser
+var soeun_node: Node3D
+var soeun_poser: CharacterPoser
+var clue_tape: Node3D
+var _self_play := false
+var _mon_breath: AmbientEmitter
 var title_ui: CanvasLayer
 var title_cam: Camera3D
 var _title_t := 0.0
@@ -224,6 +231,7 @@ func get_save_state() -> Dictionary:
 		"lights": lights,
 		"objects": _objects_state(),
 		"done": director.done.keys() if director else [],
+		"clues": ClueBook.found.keys(),
 	}
 
 func apply_save_state(st: Dictionary) -> void:
@@ -241,6 +249,7 @@ func apply_save_state(st: Dictionary) -> void:
 			fx[k].switched_on = st.lights[k].get("on", true)
 			fx[k].set_state(int(st.lights[k].get("state", 0)))
 	_apply_objects_state(st.get("objects", {}))
+	ClueBook.restore(st.get("clues", []))
 
 func _objects_state() -> Dictionary:
 	return {"door_open": door_open, "door_locked": door_locked, "parcel_open": parcel_open, "parcel_on_desk": parcel_on_desk,
@@ -652,7 +661,7 @@ func _process(delta: float) -> void:
 		_ding_t = randf_range(70.0, 140.0)
 		Sounds.play_at("sfx_elevator_ding", b2g(Vector3(-4.9, -1.1, 1.3)), &"SFX", -16.0, null, 0.0, "멀리서 엘리베이터 소리", 2.0)
 	# 재생 중 릴 회전 · VU 바늘
-	if recorder_state == "playing":
+	if recorder_state == "playing" or _self_play:
 		for r in _reels:
 			if is_instance_valid(r):
 				r.rotate_object_local(Vector3.UP, -delta * 3.2)
@@ -964,6 +973,7 @@ func _props() -> void:
 	# 녹음기 (책상) — 테이프를 넣고 재생
 	recorder = _place("prop_recorder", "stu_spawn_prop_recorder")
 	if recorder:
+		_rec_home = recorder.global_transform
 		var it := Interactable.attach_to(recorder, "녹음기", 0.015, 0.08)
 		it.name = "RecorderInteract"
 		it.prompt_fn = func(): return "녹음기 들기" if _hands_on() else _recorder_prompt()
@@ -1026,11 +1036,14 @@ func _props() -> void:
 		mk.add_child(c)
 		c.rotation = Vector3(deg_to_rad(90), 0, 0)
 		c.position = Vector3(0, 0.009, 0)
+		clue_tape = c
 		var it := Interactable.attach_to(c, "카세트테이프", 0.02, 0.08)
 		it.inspectable = true
 		it.inspect_visual = c
 		it.inspect_title = "라벨 없는 카세트테이프"
-		it.inspect_text = "책상 아래에 떨어져 있었다.\n케이스 어디에도 글씨가 없다."
+		it.inspect_text = "상자에서 사라졌던 테이프다.\n왜 책상 아래에…"
+		it.inspect_text_back = "뒷면 — 연필 자국이 희미하다.\n'B면은 끝까지 들어.'"
+		it.clue_back = &"clue_pro_tape_back"
 		it.reach = "pick"
 		it.pickup_item = &"cassette_unlabeled"
 	# 어둠 속 단서 2: 불이 나간 하행 계단참의 열쇠 꾸러미
@@ -1221,7 +1234,7 @@ func _play_tape() -> void:
 	if director == null:
 		get_tree().create_timer(1.6, false).timeout.connect(func():
 			if recorder_state == "playing":
-				_play_line_at("PRO_S05_001", recorder))
+				_play_line_at("PRO_E03_TAPE_1", recorder))
 
 func _stop_tape() -> void:
 	recorder_state = "loaded"
@@ -1284,13 +1297,26 @@ func _setup_story(mode: String) -> void:
 	story_fx.director = director
 	add_child(director)
 	director.load_file("res://data/events/prologue_events.json")
+	if mode == "new":
+		ClueBook.reset()
 	Inventory.item_added.connect(func(id):
 		_notify("item:" + String(id))
+		if id == &"note_prologue":
+			ClueBook.add(&"clue_pro_memo")
 		if id == &"flashlight":
 			_notify("flashlight_pickup"))
 	player.flashlight.toggled.connect(func(on): _notify("flashlight_on" if on else "flashlight_off"))
-	player.inspect.opened.connect(func(t): _notify("inspect:" + t.inspect_title))
+	player.inspect.opened.connect(func(t):
+		_notify("inspect:" + t.inspect_title)
+		if t.inspect_title == "운송장":
+			ClueBook.add(&"clue_pro_waybill"))
+	director.event_finished.connect(func(id): if id == "EV03_tape_play": ClueBook.add(&"clue_pro_tape01"))
 	player.interacted_any.connect(func(): _notify("interact"))
+	if clue_tape and mode == "new":
+		clue_tape.visible = false
+		var cit := clue_tape.find_child("Interact", true, false) as Interactable
+		if cit:
+			cit.enabled = false
 	if parcel and mode == "new":
 		parcel.visible = false
 		var pit := parcel.find_child("ParcelInteract", false, false) as Interactable
@@ -1547,3 +1573,278 @@ func enter_apartment() -> void:
 	player.set("_pitch", 0.0)
 	player.footsteps.surface_zones.append({"aabb": apt.bounds(), "surface": "tile"})
 	set_rain(false, 0.0)
+
+
+# ======================================================================= 요구사항 11 프롤로그 연출
+func _character(path: String) -> Array:
+	if not ResourceLoader.exists(path):
+		return [null, null]
+	var c := (load(path) as PackedScene).instantiate() as Node3D
+	add_child(c)
+	c.visible = false
+	var sk := c.find_children("*", "Skeleton3D", true, false)
+	var pz := CharacterPoser.new()
+	c.add_child(pz)
+	if not sk.is_empty():
+		pz.setup(sk[0])
+	for mi in c.find_children("*", "MeshInstance3D", true, false):
+		(mi as MeshInstance3D).extra_cull_margin = 2.0
+	return [c, pz]
+
+func _monster() -> void:
+	if monster_node == null:
+		var r := _character("res://assets/models/characters/gst_prologue_monster.gltf")
+		monster_node = r[0]
+		monster_poser = r[1]
+		if monster_poser:
+			monster_poser.hunch = 1.0
+
+func _soeun() -> void:
+	if soeun_node == null:
+		var r := _character("res://assets/models/characters/chr_soeun.gltf")
+		soeun_node = r[0]
+		soeun_poser = r[1]
+
+## EVENT 01: 책상 의자에 앉아 작업하던 상태로 시작 → 헤드폰을 벗고 → 일어선다
+var _chair_home: Transform3D
+func _chair_bodies(on: bool) -> void:
+	# 의자 충돌체는 의자 노드와 따로 익스포트됨 (stu_chair-colonly 등) → 이름으로 모두 찾는다
+	for b in find_children("*", "CollisionObject3D", true, false):
+		var nm := String(b.name) + "/" + String(b.get_parent().name)
+		if nm.contains("stu_chair"):
+			var co := b as CollisionObject3D
+			co.set_meta("tuv_layer", co.get_meta("tuv_layer", co.collision_layer))
+			co.collision_layer = co.get_meta("tuv_layer") if on else 0
+
+func intro_seated() -> void:
+	var chair := find_child("stu_chair", true, false) as Node3D
+	var mon := find_child("stu_monitor_screen", true, false) as Node3D
+	if chair == null or mon == null:
+		return
+	_chair_home = chair.global_transform
+	_chair_bodies(false)
+	var to_desk := Vector3(mon.global_position.x - chair.global_position.x, 0, mon.global_position.z - chair.global_position.z).normalized()
+	# 의자 좌판 위(등받이보다 조금 앞) — 시선은 모니터
+	player.global_position = Vector3(chair.global_position.x, 0.02, chair.global_position.z) + to_desk * 0.06
+	player.set_seated(true)
+	player.look_at_point(mon.global_position + Vector3(0, -0.05, 0))
+
+func intro_headphones() -> void:
+	player.arms.headphones_off()
+	Sounds.play("sfx_pickup", &"SFX", -10.0)
+
+## 일어서며 의자를 뒤로 민다 (바퀴 굴러가는 소리)
+func intro_stand_up() -> void:
+	var chair := find_child("stu_chair", true, false) as Node3D
+	var mon := find_child("stu_monitor_screen", true, false) as Node3D
+	player.set_seated(false)
+	Sounds.play_at("sfx_chair_creak", player.global_position, &"SFX", -6.0)
+	if chair == null or mon == null:
+		return
+	var to_desk := Vector3(mon.global_position.x - chair.global_position.x, 0, mon.global_position.z - chair.global_position.z).normalized()
+	var side := to_desk.cross(Vector3.UP)
+	var shift := -to_desk * 0.3 - side * 0.5        # 서랍장 반대쪽으로 밀어 서랍 앞을 막지 않게
+	var col := find_child("stu_chair_col", true, false) as Node3D
+	if col:
+		col.global_position += shift        # 충돌은 꺼져 있는 동안 미리 옮겨 둔다
+	var tw := create_tween().set_parallel()
+	tw.tween_property(chair, "global_position", chair.global_position + shift, 0.9).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	tw.tween_property(chair, "rotation:y", chair.rotation.y + deg_to_rad(25), 0.9)
+	tw.chain().tween_callback(func(): _chair_bodies(true))
+
+## 복도 끝 등 지정 위치에 괴물이 잠깐 서 있다 사라짐 (연출용 — 공격 없음)
+func show_monster_at(where: String, secs: float) -> void:
+	_monster()
+	if monster_node == null:
+		return
+	monster_node.global_position = story_fx.point(where) + Vector3(0, -1.1, 0)
+	monster_node.look_at(Vector3(player.global_position.x, monster_node.global_position.y, player.global_position.z), Vector3.UP, true)
+	monster_poser.mode = "idle"
+	monster_poser.head_raise = 0.15
+	monster_node.visible = true
+	await get_tree().create_timer(secs, false).timeout
+	monster_node.visible = false
+
+## EVENT 03: 녹음이 갑자기 끊긴다 (음성·도입부 소리만 멈추고 테이프는 계속 돈다 → 플레이어가 정지)
+func tape_cut() -> void:
+	if recorder == null:
+		return
+	for c in recorder.find_children("*", "AudioStreamPlayer3D", true, false):
+		var a := c as AudioStreamPlayer3D
+		if a != motor and a != hiss and a.playing and a.bus == &"VoiceTape":
+			a.stop()
+	Sounds.play_at("sfx_tape_stop", recorder.global_position, &"SFX", -14.0)
+	hiss.base_volume_db = -12.0
+
+## EVENT 04: 문이 조금씩 열린다
+var door_ajar := false
+func door_creep(deg: float, secs: float) -> void:
+	if door_hinge == null:
+		return
+	# 문이 열려 있었다면 스스로 닫히다가 틈만 남기고 멈춘다
+	door_open = false
+	door_ajar = true
+	var tw := create_tween()
+	tw.tween_property(door_hinge, "rotation:y", deg_to_rad(deg), secs).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+
+func door_gap_point() -> Vector3:
+	return door_hinge.global_transform * Vector3(0.88, 1.45, 0.0) if door_hinge else Vector3.ZERO
+
+## 문틈 너머(복도)에서 무언가가 바라본다 — 긴 손가락이 문 모서리에, 머리카락 사이 얼굴
+func presence_in_gap(on: bool) -> void:
+	_monster()
+	if monster_node == null:
+		return
+	if on:
+		# 문은 안쪽으로 열린다 → 틈은 문짝 끝과 걸쇠 쪽 문틀 사이. 그 바로 바깥(복도)에 선다
+		var outside: Vector3 = b2g(Vector3(0.95, -0.5, 0.0))
+		monster_node.global_position = Vector3(door_hinge.global_position.x + 0.78, 0.0, outside.z)
+		monster_node.look_at(Vector3(player.global_position.x, 0.0, player.global_position.z), Vector3.UP, true)
+		monster_poser.mode = "peek"
+		monster_poser.head_raise = 0.7
+	monster_node.visible = on
+
+func door_slam_presence() -> void:
+	if door_hinge:
+		var tw := create_tween()
+		tw.tween_property(door_hinge, "rotation:y", 0.0, 0.18).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	door_ajar = false
+	door_open = false
+	get_tree().create_timer(0.18, false).timeout.connect(func():
+		Sounds.play_at("sfx_door_bang", door_inside_point(), &"SFX", 2.0, null, 0.0, "문이 쾅 닫히는 소리")
+		if monster_node:
+			monster_node.visible = false
+		player.camera_kick(0.5))
+
+## EVENT 05: 정지한 녹음기가 혼자 돈다 — 손에 들고 있었다면, 돌아본 사이 녹음기는 손에서 사라져 책상 위에서 돌고 있다
+var _rec_home: Transform3D
+func recorder_self(on: bool, instant: bool) -> void:
+	_self_play = on
+	if recorder == null:
+		return
+	if on and player.held_recorder == recorder:
+		player.arms.detach("R")
+		player.arms.set_mode("R", ViewmodelArms.Mode.HIDDEN)
+		player.arms.restore_world_materials(recorder)
+		player.held_recorder = null
+		recorder.global_transform = _rec_home
+		var rit := recorder.find_child("RecorderInteract", false, false) as Interactable
+		if rit:
+			rit.enabled = true
+	if on and not instant:
+		motor.stream = Sounds.pick("amb_tape_motor")
+		motor.base_volume_db = -18.0
+		motor.play()
+	elif not on:
+		motor.stop()
+
+## 시야 밖에서만 바뀌는 물건 (플레이어 눈앞에서 순간이동하지 않게)
+func offsight_change(what: String, instant: bool) -> void:
+	var target: Node3D = null
+	match what:
+		"chair_turn":
+			target = find_child("stu_chair", true, false) as Node3D
+		"tape_vanish":
+			target = parcel.find_child("prop_tape_4", true, false) as Node3D if parcel else null
+	if target == null:
+		return
+	if not instant:
+		var cam := player.camera
+		var el := 0.0
+		while el < 120.0:
+			await get_tree().create_timer(0.2, false).timeout
+			el += 0.2
+			var seen := cam.is_position_in_frustum(target.global_position) and \
+					(-cam.global_transform.basis.z).angle_to((target.global_position - cam.global_position).normalized()) < deg_to_rad(55)
+			if not seen:
+				break
+	match what:
+		"chair_turn":
+			target.rotation.y += deg_to_rad(150)
+			if not instant:
+				Sounds.play_at("sfx_chair_creak", target.global_position, &"SFX", -14.0)
+		"tape_vanish":
+			target.visible = false
+			var it := target.find_child("Interact", true, false) as Interactable
+			if it:
+				it.enabled = false
+
+## EVENT 06→07: 사라진 테이프가 책상 아래 어둠 속에 있다
+func show_under_desk_tape() -> void:
+	if clue_tape:
+		clue_tape.visible = true
+		var it := clue_tape.find_child("Interact", true, false) as Interactable
+		if it:
+			it.enabled = true
+
+## EVENT 07: 테이프를 집는 순간 책상 반대편에서 소은의 얼굴이 나타났다 사라진다 (공격 없음, 1회)
+func soeun_peek(secs: float) -> void:
+	_soeun()
+	if soeun_node == null or clue_tape == null:
+		return
+	var cam := player.camera
+	var tp := clue_tape.global_position
+	var away := Vector3(tp.x - cam.global_position.x, 0, tp.z - cam.global_position.z).normalized()
+	soeun_node.global_position = Vector3(tp.x, 0.0, tp.z) + away * 0.55
+	soeun_node.look_at(Vector3(cam.global_position.x, 0.0, cam.global_position.z), Vector3.UP, true)
+	soeun_poser.mode = "peek"
+	soeun_node.scale = Vector3.ONE
+	soeun_node.visible = true
+	# 조사 패널이 얼굴을 가리지 않도록 등장하는 동안 숨긴다
+	if hud and hud.inspect_panel:
+		hud.inspect_panel.modulate.a = 0.0
+	await get_tree().create_timer(secs, false).timeout
+	if hud and hud.inspect_panel:
+		var tw := create_tween()
+		tw.tween_property(hud.inspect_panel, "modulate:a", 1.0, 0.6)
+	# 손전등이 한 번 끊기는 사이에 사라진다
+	player.flashlight.spot.visible = false
+	soeun_node.visible = false
+	await get_tree().create_timer(0.12, false).timeout
+	player.flashlight.spot.visible = player.flashlight.is_on
+
+## EVENT 08: 문 밖 괴물
+func monster_breath_door(on: bool) -> void:
+	if on:
+		if _mon_breath == null:
+			_mon_breath = AmbientEmitter.new()
+			_mon_breath.sound_id = "mon_breath"
+			_mon_breath.base_volume_db = -4.0
+			_mon_breath.unit_size = 2.0
+			_mon_breath.bus = &"SFX"
+			add_child(_mon_breath)
+			_mon_breath.global_position = story_fx.point("door_outside")
+		_mon_breath.play()
+	elif _mon_breath:
+		_mon_breath.stop()
+
+func door_handle_rattle() -> void:
+	Sounds.play_at("sfx_handle_rattle", door_inside_point(), &"SFX", -2.0, null, 0.0, "문손잡이가 덜컥거리는 소리")
+	var lev := door_hinge.find_child("stu_door_lever_in", true, false) as Node3D if door_hinge else null
+	if lev:
+		var r0 := lev.rotation.z
+		var tw := create_tween()
+		for k in 4:
+			tw.tween_property(lev, "rotation:z", r0 - deg_to_rad(28), 0.07)
+			tw.tween_property(lev, "rotation:z", r0, 0.09)
+
+func door_bang(strength: float) -> void:
+	Sounds.play_at("sfx_door_bang", door_inside_point(), &"SFX", -4.0 + 5.0 * strength, null, 0.02, "철문을 세게 치는 소리")
+	if door_hinge:
+		var tw := create_tween()
+		tw.tween_property(door_hinge, "rotation:y", deg_to_rad(1.4 * strength), 0.05)
+		tw.tween_property(door_hinge, "rotation:y", deg_to_rad(-0.4 * strength), 0.08)
+		tw.tween_property(door_hinge, "rotation:y", 0.0, 0.12)
+	player.camera_kick(0.35 * strength)
+	player.arms.flinch(0.5 * strength, 0.25)
+
+## 모든 소리가 갑자기 멈춘다 (환경음 버스를 잠깐 끊었다가 천천히 복구)
+func sudden_silence(secs: float) -> void:
+	var idx := AudioServer.get_bus_index(&"Ambience")
+	if idx < 0:
+		return
+	var base := AudioServer.get_bus_volume_db(idx)
+	AudioServer.set_bus_volume_db(idx, -60.0)
+	await get_tree().create_timer(secs, false).timeout
+	var tw := create_tween()
+	tw.tween_method(func(v): AudioServer.set_bus_volume_db(idx, v), -60.0, base, 2.5)

@@ -39,9 +39,9 @@ func _run() -> void:
 	# --- 데이터 ---
 	var pro := DialogueDB.lines.keys().filter(func(k): return String(k).begins_with("PRO_"))
 	check(pro.size() >= 9, "dialogue: prologue lines loaded (EVENT 01~08 대사 포함)", str(pro.size()))
-	check(DialogueDB.text_of("PRO_S05_003") == "정우야?", "dialogue: text lookup")
-	check(DialogueDB.get_line("PRO_S05_003")["playback"]["position"] == "behind_player", "dialogue: '정우야?' is spatial behind player")
-	check(DialogueDB.speaker_name("PRO_S03_001") == "정우", "dialogue: speaker name")
+	check(DialogueDB.text_of("PRO_E05_001") == "정우야?", "dialogue: text lookup")
+	check(DialogueDB.get_line("PRO_E05_001")["playback"]["position"] == "behind_player", "dialogue: '정우야?' is spatial behind player")
+	check(DialogueDB.speaker_name("PRO_E01_001") == "정우", "dialogue: speaker name")
 	check(AudioServer.get_bus_index(&"Breathing") >= 0 and AudioServer.get_bus_index(&"Heartbeat") >= 0 and AudioServer.get_bus_index(&"VoiceTape") >= 0, "audio: bus layout")
 
 	# --- 이동·충돌 ---
