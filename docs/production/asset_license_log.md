@@ -21,3 +21,5 @@
 
 ## 레퍼런스 이미지
 REF 01~21 시트 이미지는 웹 출처가 섞여 있어 `refs_local/`(git 제외)에만 보관한다. 텍스트 지시사항은 `docs/requirements/06_reference_sheets_transcript.md`.
+| `art/textures_source/stu/*.png` | 모니터 UI·시계 문자판·카세트 인서트·달력·보관함 라벨 | ORIGINAL | 자체 생성 (`tools/blender/gen_studio_textures.py`, Noto Sans CJK 폰트 — SIL OFL 1.1) | 가상의 소프트웨어 UI, 실제 제품 복제 아님 |
+| `art/blender/environments/studio/stu_studio.blend` / `game/assets/models/environments/stu_studio.glb` | 작업실 3D | ORIGINAL | 자체 제작 (`tools/blender/build_studio.py`) | 외부 에셋 사용 없음 |

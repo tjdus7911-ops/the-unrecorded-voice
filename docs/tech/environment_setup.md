@@ -14,7 +14,7 @@
 | Blender MCP | ❌ **연결 안 됨** — 이 세션에 Blender MCP 서버 없음, PC의 로컬 MCP 서버 목록도 비어 있음 | ❌ |
 | Godot | ✅ **4.7.2-stable** (GitHub 공식 릴리스) — 헤드리스 임포트·자동 테스트 실행 확인 | ⬜ 미설치 여부 확인 불가 |
 | Godot 렌더 (스크린샷) | ⚠ Vulkan 없음 → Xvfb + OpenGL(Compatibility) 폴백으로 캡처. 최종 화질 판단은 PC Forward+에서 | — |
-| Git LFS | ✅ 3.x, 저장소 로컬 설정 완료 | ⬜ |
+| Git LFS | ⚠ 설정은 완료, 그러나 **이 Claude 세션에서 GitHub LFS 업로드가 권한 오류로 거부됨** (아래 §5) | ⬜ |
 | Unity / Unreal | ❌ 설치하지 않음 (검토만, `engine_selection.md`) | — |
 | GPU | 없음 (CPU 2코어, RAM 7GB) | ❓ |
 
@@ -70,3 +70,13 @@ Claude 데스크톱 앱에서 Blender를 실시간으로 조작하려면 PC에 B
 | F | 손전등 켜기/끄기 (획득 후) |
 | F9 | (디버그) 위험도 0↔1 — 심장 박동·공포 호흡 확인 |
 | Esc | 마우스 잠금 해제 |
+
+## 5. Git LFS 업로드 제한 (2026-11-26)
+
+이 Claude 세션에서 `git push` 시 LFS 객체 업로드가 `LFS: Authorization error`로 거부되었다(재시도 동일). 일반 Git 푸시는 정상.
+우회하지 않고 다음과 같이 운영한다.
+
+- `.blend`, `.glb`, 렌더 PNG, 임시 음원 WAV 등 **바이너리는 커밋하지 않는다** (`.gitignore` 하단 참고).
+- 모든 바이너리는 저장소의 스크립트로 **결정적으로 재생성**된다: `tools/build_all.sh` (Blender bpy 필요)
+- 검토용 결과물(.blend·GLB·렌더)은 채팅으로 직접 전달한다.
+- 해결 방법(택1): ① 사용자 PC에서 `git lfs push`로 업로드 ② 이 세션의 GitHub 연동 권한 확인 후 재시도. 해결되면 `.gitignore`의 해당 블록을 제거하고 LFS로 커밋한다.

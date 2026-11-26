@@ -26,6 +26,7 @@
 - 출처 미확인 이미지는 `refs_local/`(git 제외)에만. 외부 에셋은 `docs/production/asset_license_log.md`에 기록
 - 임시 리소스는 `PH_` 접두사 + 라이선스 로그에 PLACEHOLDER
 - 바이너리는 Git LFS(`.gitattributes`). 빌드 결과물은 커밋 금지
+- ⚠ 현재 Claude 세션의 LFS 업로드가 거부됨 → .blend/.glb/렌더/WAV는 커밋하지 않고 `tools/build_all.sh`로 재생성 (`docs/tech/environment_setup.md` §5)
 - 사용자 승인 전에는 다음 PHASE로 넘어가지 않는다 (현재: PHASE 01)
 
 ## 명명 규칙

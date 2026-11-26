@@ -60,3 +60,9 @@ desktop.ini
 # 현재 Claude 세션에서 GitHub LFS 업로드가 거부되어(2026-11-26) 바이너리를 커밋하지 않는다.
 game/assets/audio/**/PH_*.wav
 art/renders/testbed/
+# 스크립트로 재생성되는 빌드 산출물 (LFS 업로드 복구 전까지 커밋하지 않음 — tools/build_all.sh)
+art/blender/**/*.blend
+game/assets/models/**/*.glb
+game/assets/models/**/*.png
+art/renders/
+art/textures_source/stu/
