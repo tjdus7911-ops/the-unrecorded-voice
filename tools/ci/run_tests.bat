@@ -7,3 +7,4 @@ cd /d "%~dp0\..\..\game"
 %GODOT% --headless --import --path . >nul 2>&1
 %GODOT% --headless --fixed-fps 60 --path . res://scenes/tests/run_tests.tscn
 %GODOT% --headless --fixed-fps 60 --path . res://scenes/tests/run_phase01_tests.tscn
+%GODOT% --headless --fixed-fps 60 --path . res://scenes/tests/run_story_tests.tscn

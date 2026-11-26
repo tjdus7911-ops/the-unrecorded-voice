@@ -54,6 +54,38 @@ func _run() -> void:
 	add_child(lvl)
 	await frames(30)
 	p = lvl.player
+	p.hands_animate = false        # 손 동작 없이 즉시 실행 (손 동작은 별도 테스트)
+
+	# --- 입력 (P0: 마우스 시점) — GUI를 거치는 실제 입력 경로(push_input)로 검사 ---
+	check(GameFlow.state == GameFlow.State.PLAYING, "input: game state PLAYING after level start")
+	var hud_stops := 0
+	for c in lvl.hud.find_children("*", "Control", true, false):
+		if (c as Control).mouse_filter != Control.MOUSE_FILTER_IGNORE:
+			hud_stops += 1
+	check(hud_stops == 0, "input: HUD controls never intercept mouse", "%d blocking" % hud_stops)
+	var yaw0: float = p.get("_yaw")
+	var pitch0: float = p.get("_pitch")
+	var mm_ev := InputEventMouseMotion.new()
+	mm_ev.position = get_viewport().get_visible_rect().size * 0.5      # 캡처 모드처럼 화면 중앙 (조준점 위치)
+	mm_ev.relative = Vector2(180, -60)
+	mm_ev.screen_relative = Vector2(180, -60)
+	get_viewport().push_input(mm_ev)
+	await frames(2)
+	check(absf(float(p.get("_yaw")) - yaw0) > 0.2 and absf(float(p.get("_pitch")) - pitch0) > 0.05,
+			"input: mouse motion at screen center rotates camera (yaw+pitch)",
+			"dyaw %.3f dpitch %.3f" % [float(p.get("_yaw")) - yaw0, float(p.get("_pitch")) - pitch0])
+	GameFlow.pause()
+	await frames(2)
+	check(get_tree().paused and lvl.pause_menu.visible, "pause: ESC menu pauses tree and shows menu")
+	var yaw1: float = p.get("_yaw")
+	get_viewport().push_input(mm_ev)
+	await frames(1)
+	check(is_equal_approx(float(p.get("_yaw")), yaw1), "pause: mouse does not move camera while paused")
+	GameFlow.resume()
+	await frames(2)
+	check(not get_tree().paused and GameFlow.state == GameFlow.State.PLAYING and not lvl.pause_menu.visible, "pause: resume returns to play")
+	p.set("_yaw", yaw0)
+	p.set("_pitch", pitch0)
 
 	# --- 구성 ---
 	check(lvl.stu != null and lvl.cor != null, "level: studio + corridor loaded in one scene (no loading)")
@@ -154,9 +186,19 @@ func _run() -> void:
 	check(not lvl.fx["DeskLamp"].any_light_visible(), "desk lamp: toggle off")
 	lvl.fx["DeskLamp"].press_switch()
 
-	# --- 손전등 획득 (조사 → 가져가기) ---
-	await place(Vector3(2.3, 0.85, 0), 180.0)
-	await look_b(Vector3(2.17, 0.24, 0.85))
+	# --- 손전등 획득: 책상 맨 위 서랍 안 (서랍을 열어야 집을 수 있다) ---
+	var flp: Node3D = lvl.flashlight_prop
+	check(flp != null and flp.get_parent().name == "stu_desk_drawer_0", "flashlight: stored in desk drawer")
+	var fit := flp.find_child("FlashlightInteract", false, false) as Interactable
+	await frames(2)
+	check(fit != null and not fit.enabled, "flashlight: not reachable while drawer closed")
+	var dr_it := lvl.find_child("stu_desk_drawer_0", true, false).find_child("Interact", true, false) as Interactable
+	dr_it.interact(p)
+	await frames(40)
+	check(lvl.drawer_open[0] and fit.enabled, "flashlight: drawer opened → reachable")
+	var fg := flp.global_position
+	await place(Vector3(fg.x, -fg.z - 0.75, 0), 0.0)
+	await look_b(Vector3(fg.x, -fg.z, fg.y))
 	check(p.try_interact() and p.inspect.is_open(), "flashlight: inspect view opens")
 	p.inspect.close(true)
 	await frames(3)

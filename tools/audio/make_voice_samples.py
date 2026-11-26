@@ -32,6 +32,10 @@ LINES = [
     ("jungwoo_adult", "PRO_S03_001", "이 시간에 누구지?", "uneasy"),
     ("jungwoo_adult", "PRO_S05_002", "뭐야?", "flustered"),
     ("jungwoo_adult", "PRO_S06_001", "누구세요?", "fear"),
+    ("jungwoo_adult", "PRO_S06_002", "전기가 나갔나… 손전등. 책상 서랍에 있었는데.", "fear"),
+    ("soeun", "PRO_S07_001", "정우야, 여기야.", "whisper"),
+    ("soeun", "TAPE01_LAUGH_A", "하하하하! 히히.", "joy"),
+    ("jungwoo_child", "TAPE01_LAUGH_B", "아하하하!", "joy"),
     ("soeun", "PRO_S05_001", "정우야, 녹음되고 있어?", "playful"),
     ("soeun", "PRO_S05_003", "정우야?", "whisper"),
     ("soeun", "SMP_SOEUN_01", "나중에 까먹을 수도 있잖아.", "joy"),
@@ -77,6 +81,7 @@ def main():
         out.append({"line_id": lid, "character_id": char, "voice_id": f"vo_{char}", "text": {"ko": text}, "emotion": emo,
                     "audio": {"ko": "res://" + str(dst.relative_to(GAME))}, "status": "PLACEHOLDER_TTS_NONCOMMERCIAL"})
         print(f"  {char:14s} {lid:16s} {text}")
+    tape_playground(out)
     (GAME / "data" / "dialogue" / "voice_samples.json").write_text(json.dumps(
         {"_doc": "임시 TTS 가이드 음성 (비상업 라이선스 모델). 최종 더빙으로 교체 전용. 대사 타이밍·자막 동기화 테스트.",
          "chapter_id": "samples", "lines": [ln for ln in out if ln["line_id"].startswith("SMP_")]}, ensure_ascii=False, indent=1), "utf-8")
@@ -88,6 +93,28 @@ def main():
         if ln["line_id"] in paths:
             ln["audio"]["ko"] = paths[ln["line_id"]]
     pro.write_text(json.dumps(data, ensure_ascii=False, indent=2), "utf-8")
+
+
+def tape_playground(out):
+    """테이프 01 도입부: 놀이터 공기 + 그네 삐걱임 + 아이들 웃음 (모두 임시 합성) → 카세트 녹음 질감(대역 제한·와우).
+    결과를 audio.json의 'tape_playground' ID로 등록한다."""
+    sfx = GAME / "assets" / "audio" / "sfx"
+    laugh_a = GAME / "assets" / "audio" / "voice" / "soeun" / "PH_TAPE01_LAUGH_A.wav"
+    laugh_b = GAME / "assets" / "audio" / "voice" / "jungwoo_child" / "PH_TAPE01_LAUGH_B.wav"
+    swing = sfx / "PH_sfx_swing_creak.wav"
+    dst = sfx / "PH_tape_playground.wav"
+    fc = ("anoisesrc=color=pink:amplitude=0.05:d=6.5,lowpass=f=1800,highpass=f=120[air];"
+          "[0:a]adelay=200|200,volume=0.8[sw];[1:a]adelay=900|900,volume=0.9[la];[2:a]adelay=2300|2300,volume=0.8[lb];"
+          "[air][sw][la][lb]amix=inputs=4:duration=longest:normalize=0,"
+          "vibrato=f=0.7:d=0.04,highpass=f=250,lowpass=f=4200,acompressor=threshold=0.2:ratio=3,"
+          "atrim=0:6.3,afade=t=in:d=0.3,afade=t=out:st=5.6:d=0.7,loudnorm=I=-22:TP=-3")
+    subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", str(swing), "-i", str(laugh_a), "-i", str(laugh_b),
+                    "-filter_complex", fc, "-ac", "1", "-ar", "44100", "-c:a", "pcm_s16le", str(dst)], check=True)
+    cfgp = GAME / "data" / "config" / "audio.json"
+    cfg = json.loads(cfgp.read_text("utf-8"))
+    cfg["sounds"]["tape_playground"] = {"files": ["res://assets/audio/sfx/PH_tape_playground.wav"], "loop": False}
+    cfgp.write_text(json.dumps(cfg, ensure_ascii=False, indent=1), "utf-8")
+    print("  tape_playground (임시 합성)")
 
 
 if __name__ == "__main__":

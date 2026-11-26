@@ -169,6 +169,54 @@
         "fx": []
       },
       "condition": "event:knock_2"
+    },
+    {
+      "line_id": "PRO_S06_002",
+      "character_id": "jungwoo_adult",
+      "voice_id": "vo_jungwoo_adult",
+      "chapter_id": "prologue",
+      "scene_id": "S06_blackout",
+      "text": {
+        "ko": "전기가 나갔나… 손전등. 책상 서랍에 있었는데."
+      },
+      "subtitle": {
+        "ko": "전기가 나갔나… 손전등. 책상 서랍에 있었는데."
+      },
+      "emotion": "fear",
+      "audio": {
+        "ko": "res://assets/audio/voice/jungwoo_adult/PH_PRO_S06_002.wav"
+      },
+      "playback": {
+        "mode": "live",
+        "position": "player",
+        "volume_db": 0.0,
+        "fx": []
+      },
+      "condition": "event:EV06_blackout"
+    },
+    {
+      "line_id": "PRO_S07_001",
+      "character_id": "soeun",
+      "voice_id": "vo_soeun",
+      "chapter_id": "prologue",
+      "scene_id": "S07_silhouette",
+      "text": {
+        "ko": "정우야, 여기야."
+      },
+      "subtitle": {
+        "ko": "정우야, 여기야."
+      },
+      "emotion": "whisper",
+      "audio": {
+        "ko": "res://assets/audio/voice/soeun/PH_PRO_S07_001.wav"
+      },
+      "playback": {
+        "mode": "live",
+        "position": "door_outside",
+        "volume_db": 0.0,
+        "fx": []
+      },
+      "condition": "event:EV07_silhouette"
     }
   ]
 }

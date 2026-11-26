@@ -78,7 +78,7 @@ func play_at(id: String, pos: Vector3, bus := &"SFX", volume_db := 0.0, parent: 
 	p.global_position = pos
 	p.play()
 	p.finished.connect(p.queue_free)
-	if caption_text != "" and captions_enabled:
+	if caption_text != "" and (captions_enabled or GameSettings.sound_captions):
 		caption.emit(caption_text, _direction_to(pos))
 	return p
 

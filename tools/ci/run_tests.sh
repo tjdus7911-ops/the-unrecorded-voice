@@ -12,3 +12,4 @@ cd "$ROOT/game"
 "$GODOT" --headless --import --path . >/dev/null 2>&1 || true
 "$GODOT" --headless --fixed-fps 60 --path . res://scenes/tests/run_tests.tscn
 "$GODOT" --headless --fixed-fps 60 --path . res://scenes/tests/run_phase01_tests.tscn
+"$GODOT" --headless --fixed-fps 60 --path . res://scenes/tests/run_story_tests.tscn

@@ -21,6 +21,8 @@ GameSettings="*res://scripts/systems/game_settings.gd"
 DialogueDB="*res://scripts/data/dialogue_db.gd"
 Inventory="*res://scripts/systems/inventory.gd"
 Sounds="*res://scripts/audio/sound_lib.gd"
+GameFlow="*res://scripts/systems/game_flow.gd"
+SaveGame="*res://scripts/systems/save_game.gd"
 
 [display]
 

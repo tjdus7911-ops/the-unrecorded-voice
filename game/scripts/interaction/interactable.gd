@@ -18,6 +18,22 @@ var inspect_text := ""
 var inspect_visual: Node3D           ## 조사 화면에 띄울 시각 노드 (복제해서 사용)
 var pickup_item: StringName = &""
 var remove_on_pickup: Node           ## 획득 시 월드에서 제거할 노드
+## ---- 1인칭 손 동작 (ViewmodelArms)
+## reach: "" 손 동작 없음 / "grab" 손잡이 잡기 / "press" 검지로 누르기 / "pull" 잡고 당기기(따라감) / "pick" 집기
+var reach := ""
+var reach_target: Node3D             ## 손이 닿을 지점 (없으면 판정 상자 중심)
+var reach_offset := Vector3.ZERO     ## reach_target 기준 월드 오프셋
+var reach_hold := 0.25               ## 닿은 뒤 머무는 시간
+var reach_follow: Callable           ## func(k: float) -> Vector3 : 물체와 함께 움직일 손 위치 (문·서랍)
+var lock_hands := false              ## 조사·운반 중 다른 상호작용 금지용
+
+func reach_point() -> Vector3:
+	if reach_target and is_instance_valid(reach_target):
+		return reach_target.global_position + reach_offset
+	for c in get_children():
+		if c is CollisionShape3D:
+			return (c as CollisionShape3D).global_position + reach_offset
+	return global_position + reach_offset
 
 func _ready() -> void:
 	# 조사 판정 전용 레이어(3). 이동은 막지 않는다 — 물리적 막힘은 각 오브젝트의 충돌체가 담당.

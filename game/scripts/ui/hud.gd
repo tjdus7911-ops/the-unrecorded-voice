@@ -7,7 +7,8 @@ var crosshair: ColorRect
 var prompt: Label
 var subtitle: Label
 var caption: Label
-var inspect_panel: VBoxContainer
+var inspect_panel: PanelContainer
+var inspect_status: Label
 var inspect_title: Label
 var inspect_body: Label
 var inspect_hint: Label
@@ -21,7 +22,7 @@ var _help_timer := 9.0
 var _player: PlayerController
 var _target: Interactable
 
-const HELP_TEXT := "WASD 이동   Shift 달리기   Ctrl/C 앉기   마우스 시점\nE 조사·조작   F 손전등   Q 숨 참기(은신 중)\nF1 조작 안내   F3 성능 표시   Esc 마우스 해제"
+const HELP_TEXT := "WASD 이동   Shift 달리기   Ctrl/C 앉기   마우스 시점\nE 조사·조작   F 손전등   R 녹음기 재생·정지   Q 숨 참기\nF1 조작 안내   F3 성능 표시   Esc 일시정지"
 
 func _label(size: int, color := Color(0.92, 0.9, 0.86, 0.92)) -> Label:
 	var l := Label.new()
@@ -64,20 +65,36 @@ func _ready() -> void:
 	caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	add_child(caption)
 
-	inspect_panel = VBoxContainer.new()
-	inspect_panel.set_anchors_preset(Control.PRESET_CENTER_RIGHT)
-	inspect_panel.position += Vector2(-470, -140)
-	inspect_panel.custom_minimum_size = Vector2(420, 0)
+	# 조사 설명: 화면 왼쪽 아래 어두운 띠 (물체와 겹치지 않게, 글자 크기는 접근성 설정)
+	inspect_panel = PanelContainer.new()
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(0.02, 0.02, 0.025, 0.82)
+	sb.content_margin_left = 30
+	sb.content_margin_right = 30
+	sb.content_margin_top = 22
+	sb.content_margin_bottom = 22
+	inspect_panel.add_theme_stylebox_override("panel", sb)
+	inspect_panel.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
+	inspect_panel.offset_left = 56
+	inspect_panel.offset_bottom = -56
+	inspect_panel.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	inspect_panel.custom_minimum_size = Vector2(560, 0)
 	inspect_panel.visible = false
 	add_child(inspect_panel)
-	inspect_title = _label(24, Color(0.97, 0.95, 0.9))
-	inspect_body = _label(19, Color(0.86, 0.85, 0.82))
+	var iv := VBoxContainer.new()
+	iv.add_theme_constant_override("separation", 10)
+	inspect_panel.add_child(iv)
+	inspect_title = _label(30, Color(0.97, 0.95, 0.9))
+	inspect_title.add_theme_font_override("font", UIKit.font(true))
+	inspect_body = _label(21, Color(0.9, 0.89, 0.86))
 	inspect_body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	inspect_body.custom_minimum_size = Vector2(420, 0)
-	inspect_hint = _label(15, Color(0.7, 0.7, 0.68, 0.9))
-	inspect_panel.add_child(inspect_title)
-	inspect_panel.add_child(inspect_body)
-	inspect_panel.add_child(inspect_hint)
+	inspect_body.custom_minimum_size = Vector2(500, 0)
+	inspect_status = _label(17, Color(0.75, 0.72, 0.66))
+	inspect_hint = _label(16, Color(0.62, 0.61, 0.58))
+	iv.add_child(inspect_title)
+	iv.add_child(inspect_body)
+	iv.add_child(inspect_status)
+	iv.add_child(inspect_hint)
 
 	help = _label(16, Color(0.85, 0.85, 0.82, 0.85))
 	help.position = Vector2(28, 24)
@@ -97,6 +114,9 @@ func _ready() -> void:
 	toast.size = Vector2(600, 30)
 	toast.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	add_child(toast)
+	# HUD는 마우스 입력을 절대 가로채지 않는다 (조준점이 화면 중앙에 있어 캡처 모드의 마우스 이동을 소비하던 버그)
+	for c in find_children("*", "Control", true, false):
+		(c as Control).mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 	DialogueDB.line_started.connect(_on_line)
 	Sounds.caption.connect(_on_caption)
@@ -121,16 +141,36 @@ func _on_item(id: StringName) -> void:
 		show_toast("테이프 %s번을 챙겼다." % String(id).substr(5))
 
 func _on_inspect_open(t: Interactable) -> void:
+	var sizes := [18, 21, 25, 29]
+	inspect_body.add_theme_font_size_override("font_size", sizes[clampi(GameSettings.inspect_text_size, 0, 3)])
+	inspect_title.add_theme_font_size_override("font_size", sizes[clampi(GameSettings.inspect_text_size, 0, 3)] + 9)
 	inspect_title.text = t.inspect_title
 	inspect_body.text = t.inspect_text
-	inspect_hint.text = "마우스: 돌려 보기     E: " + ("가져가기" if t.pickup_item != &"" else "닫기") + "     Esc: 내려놓기"
+	var can := t.pickup_item != &""
+	inspect_status.text = "● 가져갈 수 있다" if can else "○ 살펴보기만 할 수 있다"
+	inspect_hint.text = "마우스 돌려 보기 · 우클릭 뒤집기 · 휠 가까이/멀리\n" + ("E 가져가기 · " if can else "E 내려놓기 · ") + "Esc 내려놓기"
 	inspect_panel.visible = true
 	crosshair.visible = false
 	prompt.visible = false
 
+func _style_subtitle() -> void:
+	var sizes := [22, 26, 32, 38]
+	subtitle.add_theme_font_size_override("font_size", sizes[clampi(GameSettings.subtitle_size, 0, 3)])
+	if GameSettings.subtitle_bg:
+		var sb := StyleBoxFlat.new()
+		sb.bg_color = Color(0, 0, 0, 0.55)
+		sb.content_margin_left = 14
+		sb.content_margin_right = 14
+		sb.content_margin_top = 4
+		sb.content_margin_bottom = 6
+		subtitle.add_theme_stylebox_override("normal", sb)
+	else:
+		subtitle.remove_theme_stylebox_override("normal")
+
 func _on_line(line: Dictionary) -> void:
 	if not GameSettings.subtitles:
 		return
+	_style_subtitle()
 	var id: String = line["line_id"]
 	var who := DialogueDB.speaker_name(id)
 	subtitle.text = (who + ": " if who != "" else "") + DialogueDB.text_of(id)
@@ -157,6 +197,7 @@ func _process(delta: float) -> void:
 		_sub_timer -= delta
 		if _sub_timer <= 0.0:
 			subtitle.text = ""
+	subtitle.visible = subtitle.text != ""
 	if _cap_timer > 0.0:
 		_cap_timer -= delta
 		if _cap_timer <= 0.0:

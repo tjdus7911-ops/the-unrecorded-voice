@@ -1,0 +1,16 @@
+{
+ "_doc": "1인칭 손 포즈 라이브러리. curl=[첫·둘째·끝 마디 굽힘 도], spread=첫 마디 벌림(+는 엄지 쪽에서 멀어짐), twist=첫 마디 비틀기. finger1=엄지 ... finger5=새끼. Blender(build_arms.py)와 Godot(viewmodel_arms.gd)이 같은 데이터를 쓴다.",
+ "poses": {
+  "relaxed":        {"fingers": {"1": {"curl": [5, 10, 12], "spread": 0},  "2": {"curl": [12, 18, 10], "spread": -2}, "3": {"curl": [16, 22, 12]}, "4": {"curl": [20, 26, 14], "spread": 2}, "5": {"curl": [24, 30, 16], "spread": 5}}},
+  "open":           {"fingers": {"1": {"curl": [-5, 0, 0], "spread": -10}, "2": {"curl": [2, 4, 2], "spread": -5}, "3": {"curl": [3, 5, 3]}, "4": {"curl": [4, 6, 3], "spread": 5}, "5": {"curl": [5, 6, 4], "spread": 10}}},
+  "grip_flashlight":{"fingers": {"1": {"curl": [25, 30, 15], "spread": 18, "twist": 10}, "2": {"curl": [68, 72, 35], "spread": -2}, "3": {"curl": [72, 76, 38]}, "4": {"curl": [76, 78, 40], "spread": 2}, "5": {"curl": [80, 80, 42], "spread": 4}}},
+  "press_flashlight":{"fingers": {"1": {"curl": [25, 40, 32], "spread": 18, "twist": 10}, "2": {"curl": [68, 72, 35], "spread": -2}, "3": {"curl": [72, 76, 38]}, "4": {"curl": [76, 78, 40], "spread": 2}, "5": {"curl": [80, 80, 42], "spread": 4}}},
+  "grip_recorder":  {"fingers": {"1": {"curl": [10, 8, 5], "spread": 5}, "2": {"curl": [48, 40, 18], "spread": -2}, "3": {"curl": [52, 44, 20]}, "4": {"curl": [56, 48, 22], "spread": 2}, "5": {"curl": [60, 52, 24], "spread": 4}}},
+  "press_recorder": {"fingers": {"1": {"curl": [18, 26, 30], "spread": 8}, "2": {"curl": [48, 40, 18], "spread": -2}, "3": {"curl": [52, 44, 20]}, "4": {"curl": [56, 48, 22], "spread": 2}, "5": {"curl": [60, 52, 24], "spread": 4}}},
+  "pinch":          {"fingers": {"1": {"curl": [20, 20, 10], "spread": 12, "twist": 15}, "2": {"curl": [35, 35, 15], "spread": -2}, "3": {"curl": [40, 42, 18]}, "4": {"curl": [48, 52, 22], "spread": 2}, "5": {"curl": [55, 58, 26], "spread": 4}}},
+  "point":          {"fingers": {"1": {"curl": [25, 35, 20], "spread": 10}, "2": {"curl": [4, 6, 4], "spread": 0}, "3": {"curl": [78, 90, 50]}, "4": {"curl": [80, 92, 52]}, "5": {"curl": [82, 94, 54]}}},
+  "grab_handle":    {"fingers": {"1": {"curl": [20, 22, 12], "spread": 15}, "2": {"curl": [60, 62, 30]}, "3": {"curl": [64, 66, 32]}, "4": {"curl": [68, 70, 34]}, "5": {"curl": [72, 74, 36]}}},
+  "flat":           {"fingers": {"1": {"curl": [0, 5, 5], "spread": -4}, "2": {"curl": [3, 4, 2]}, "3": {"curl": [3, 4, 2]}, "4": {"curl": [3, 4, 2]}, "5": {"curl": [3, 4, 2]}}},
+  "fist":           {"fingers": {"1": {"curl": [30, 40, 30], "spread": 20}, "2": {"curl": [85, 95, 55]}, "3": {"curl": [88, 98, 58]}, "4": {"curl": [90, 100, 60]}, "5": {"curl": [92, 102, 62]}}}
+ }
+}

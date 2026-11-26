@@ -16,7 +16,7 @@
 - 사운드는 `game/data/config/audio.json` 의 ID로만 재생(`Sounds` autoload). 음성은 대사 JSON의 경로로만 참조
 - 그래픽 확인은 **실제 Godot 화면**으로: `scenes/tests/capture_phase01.tscn` (lavapipe Vulkan + xvfb). 자동 테스트 통과만으로 품질 판단 금지
 - 대사·음성·조명 상태는 `game/data/` JSON으로 관리. 코드에 음성 파일 경로 하드코딩 금지
-- 테스트: `tools/ci/run_tests.sh` 가 통과해야 커밋한다 (시스템 39 + 레벨 43)
+- 테스트: `tools/ci/run_tests.sh` 가 통과해야 커밋한다 (시스템 39 + 레벨 52 + 스토리 36). 입력 변경 시 `tools/ci/input_test_x11.sh`(실제 X11 입력)도 실행
 
 ## 절대 규칙
 - 실행하지 못한 도구를 사용했다고 보고하지 않는다 (예: Blender MCP는 현재 미연결)
@@ -32,6 +32,12 @@
 - 바이너리는 Git LFS(`.gitattributes`). 빌드 결과물은 커밋 금지
 - ⚠ 현재 Claude 세션의 LFS 업로드가 거부됨 → .blend/.glb/렌더/WAV는 커밋하지 않고 `tools/build_all.sh`로 재생성 (`docs/tech/environment_setup.md` §5)
 - 사용자 승인 전에는 다음 PHASE로 넘어가지 않는다 (현재: PHASE 01)
+
+## 구조 메모 (2차 피드백 이후)
+- 마우스 캡처·일시정지 상태는 `GameFlow` autoload만 바꾼다. HUD Control은 항상 `MOUSE_FILTER_IGNORE` (조준점이 마우스 입력을 먹던 버그)
+- 스토리 이벤트는 `game/data/events/*.json` + `EventDirector` — 코드에 이벤트 하드코딩 금지
+- 1인칭 손: `ViewmodelArms` (Blender `tools/blender/build_arms.py`), 손 포즈는 `game/data/characters/hand_poses.json`
+- 저장: `SaveGame` autoload (user://save_01.json), 설정: `GameSettings` (user://settings.cfg)
 
 ## 명명 규칙
 `snake_case`. 접두사: `stu_` 작업실 · `cor_` 상가 복도 · `apt_` 1998 아파트 · `prop_` 소품 · `chr_` 캐릭터 · `gst_` 귀신 · `PH_` 임시 리소스

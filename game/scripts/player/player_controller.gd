@@ -52,13 +52,32 @@ var _height := 1.75
 var _bob_t := 0.0
 var _breath_t := 0.0
 var _interact_target: Interactable
+signal look_moved(rel: Vector2)
+signal recorder_key_pressed
+signal interacted_any
+
+var _lock_until := 0.0
+
 var footsteps: Footsteps
+var arms: ViewmodelArms
+var hands_busy := false
+var hands_animate := true            ## 테스트에서 즉시 동작시키려면 false
+var carrying: Node3D = null          ## 두 손으로 옮기는 물건 (택배)
+var held_recorder: Node3D = null     ## 오른손에 든 녹음기
+var carry_target_fn: Callable        ## 운반 중 E: 내려놓기 시도
 var inspect: InspectSystem
 
 func _ready() -> void:
+	camera.fov = GameSettings.fov
 	footsteps = Footsteps.new()
 	footsteps.name = "Footsteps"
 	add_child(footsteps)
+	arms = ViewmodelArms.new()
+	arms.name = "Arms"
+	arms.player = self
+	arms.camera = camera
+	add_child(arms)
+	flashlight.use_hands.call_deferred(arms)
 	inspect = InspectSystem.new()
 	inspect.name = "Inspect"
 	inspect.player = self
@@ -67,22 +86,37 @@ func _ready() -> void:
 	_height = stand_height
 	_yaw = rotation.y
 	_apply_height()
-	if not Engine.is_editor_hint() and DisplayServer.get_name() != "headless":
-		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+	# 마우스 캡처는 GameFlow가 상태에 따라 관리한다 (여기서 직접 바꾸지 않음)
+
+## 마우스 시점: GUI보다 먼저 받는 _input에서 처리한다.
+## (이전 버그: 화면 중앙의 조준점 ColorRect가 MOUSE_FILTER_STOP이라, 커서가 중앙에 고정된
+##  캡처 모드에서 모든 마우스 이동 이벤트를 GUI가 소비 → _unhandled_input에 도달하지 못함)
+## screen_relative: 창 크기·스트레치 배율과 무관한 화면 픽셀 단위 → 해상도·FPS와 관계없이 같은 감도.
+func _input(event: InputEvent) -> void:
+	if event is InputEventMouseMotion and input_enabled and GameFlow.wants_look():
+		var sens: float = GameSettings.mouse_sensitivity
+		var rel: Vector2 = event.screen_relative
+		_yaw -= rel.x * sens
+		var dy := rel.y * sens * (-1.0 if GameSettings.invert_y else 1.0)
+		_pitch = clampf(_pitch - dy, deg_to_rad(-85), deg_to_rad(85))
+		look_moved.emit(rel)
+
+## 테스트·연출용: 마우스 이동량(화면 픽셀)을 시점에 적용
+func apply_look(rel: Vector2) -> void:
+	var sens: float = GameSettings.mouse_sensitivity
+	_yaw -= rel.x * sens
+	_pitch = clampf(_pitch - rel.y * sens, deg_to_rad(-85), deg_to_rad(85))
 
 func _unhandled_input(event: InputEvent) -> void:
-	if not input_enabled:
+	if not input_enabled or not GameFlow.is_playing():
 		return
-	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
-		var sens: float = GameSettings.mouse_sensitivity
-		_yaw -= event.relative.x * sens
-		_pitch = clampf(_pitch - event.relative.y * sens, deg_to_rad(-85), deg_to_rad(85))
+	if event.is_action_pressed("recorder_play"):
+		if not hands_busy:
+			recorder_key_pressed.emit()
 	elif event.is_action_pressed("flashlight"):
 		flashlight.toggle()
 	elif event.is_action_pressed("interact"):
 		try_interact()
-	elif event.is_action_pressed("pause"):
-		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE if Input.mouse_mode == Input.MOUSE_MODE_CAPTURED else Input.MOUSE_MODE_CAPTURED
 	elif event.is_action_pressed("debug_danger") and OS.is_debug_build():
 		danger = 0.0 if danger > 0.5 else 1.0
 
@@ -219,14 +253,59 @@ func look_at_point(pt: Vector3) -> void:
 	rotation.y = _yaw
 	head.rotation.x = _pitch
 
+## 스토리 연출 중 잠시 상호작용 금지
+func lock_interaction(secs: float) -> void:
+	_lock_until = Time.get_ticks_msec() / 1000.0 + secs
+
 func try_interact() -> bool:
+	if Time.get_ticks_msec() / 1000.0 < _lock_until:
+		return false
+	if hands_busy or carrying:
+		if carrying and carry_target_fn.is_valid():
+			carry_target_fn.call()
+			return true
+		return false
 	head.force_update_transform()
 	interact_ray.force_raycast_update()
 	_update_interact_target()
 	if _interact_target:
-		if _interact_target.inspectable and not _interact_target.action.is_valid():
-			inspect.open(_interact_target)
+		interacted_any.emit()
+		var it := _interact_target
+		var then := func():
+			if it.inspectable and not it.action.is_valid():
+				inspect.open(it)
+			else:
+				it.interact(self)
+		if arms and arms.enabled and it.reach != "" and hands_animate:
+			_reach_then(it, then)
 		else:
-			_interact_target.interact(self)
+			then.call()
 		return true
 	return false
+
+## 상호작용을 실제 손 동작으로: 오른손이 녹음기를 들고 있으면 잠시 내리고, 대상에 손을 뻗어 닿는 순간 동작 실행
+func _reach_then(it: Interactable, then: Callable) -> void:
+	hands_busy = true
+	var rh: ViewmodelArms.Hand = arms.sides["R"]
+	var had_tool := rh.held != null and rh.mode == ViewmodelArms.Mode.HOLD_RECORDER
+	if had_tool:
+		await arms.lower_tool("R")
+	var p := it.reach_point()
+	var fwd := (p - camera.global_position).normalized()
+	var thumb := Vector3.UP
+	var pose := "grab_handle"
+	var hold := it.reach_hold
+	match it.reach:
+		"press":
+			pose = "point"
+			p -= fwd * 0.085          # 검지 끝이 닿도록 손바닥 기준점을 뒤로
+		"pick":
+			pose = "pinch"
+			fwd = (fwd + Vector3.DOWN * 0.5).normalized()
+			thumb = -camera.global_transform.basis.x
+		"grab", "pull":
+			pose = "grab_handle"
+	await arms.reach("R", p, fwd, thumb, pose, then, hold, it.reach_follow)
+	if had_tool and rh.mode != ViewmodelArms.Mode.HOLD_OBJECT:
+		arms.raise_tool("R")
+	hands_busy = false

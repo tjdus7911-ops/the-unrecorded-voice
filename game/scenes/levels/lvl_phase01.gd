@@ -14,6 +14,29 @@ const SPINE := preload("res://shaders/cassette_spine.gdshader")
 @export var spawn_blender := Vector3(2.4, 2.0, 0.0)
 @export var spawn_yaw := -0.24
 @export var enable_thunder := true
+## true: 스토리 진행(프롤로그 이벤트). false: 테스트·검토용 샌드박스 (모든 물건이 처음부터 접근 가능)
+@export var story := true
+## 테스트·영상 캡처용: 메인 씬이 아니어도 스토리를 진행
+@export var force_story := false
+
+var pause_menu: CanvasLayer
+var director: EventDirector
+var story_fx: PrologueStory
+var apt: AptCorridor
+var door_locked := false
+var clock_running := true
+var parcel_on_desk := false
+var parcel_carried := false
+var rain_emitters: Array = []
+var pc_fan_emitter: AmbientEmitter
+var monitor_screen: MeshInstance3D
+var _monitor_mat_orig: Material
+var flashlight_prop: Node3D
+var drawer_open := [false, false, false]
+var debug_menu: CanvasLayer
+var title_ui: CanvasLayer
+var title_cam: Camera3D
+var _title_t := 0.0
 
 var player: PlayerController
 var hud: HUD
@@ -30,6 +53,7 @@ var window_base_energy := 2.4
 var recorder: Node3D
 var recorder_state := "empty"    ## empty / loaded / playing
 var recorder_tape: Node3D
+var recorder_tape_no := ""
 var deck: Node3D
 var deck_open := false
 var parcel: Node3D
@@ -78,11 +102,217 @@ func _ready() -> void:
 	_clock()
 	_props()
 	_locked_doors()
+	_setup_flow()
+	GameSettings.changed.connect(_on_setting)
+	if OS.get_cmdline_user_args().has("--input-probe"):
+		# 실제 OS 입력 검증용: 0.5초마다 상태·시점 값을 출력 (xdotool 테스트)
+		var t := Timer.new()
+		t.wait_time = 0.5
+		t.autostart = true
+		t.process_mode = Node.PROCESS_MODE_ALWAYS
+		t.timeout.connect(func(): print("PROBE state=%d paused=%s mouse_mode=%d yaw=%.3f pitch=%.3f pos=%s focus=%s" % [
+			GameFlow.state, get_tree().paused, Input.mouse_mode, player.get("_yaw"), player.get("_pitch"), player.global_position, get_viewport().gui_get_focus_owner()]))
+		add_child(t)
 	if OS.get_cmdline_user_args().has("--benchmark"):
 		enable_thunder = false
 		var b := Benchmark.new()
 		add_child(b)
 		b.run(self)
+
+# ======================================================================= 진행 흐름 (타이틀 · 일시정지 · 저장)
+func _setup_flow() -> void:
+	pause_menu = load("res://scripts/ui/pause_menu.gd").new()
+	add_child(pause_menu)
+	pause_menu.restart_checkpoint.connect(func():
+		if SaveGame.has_save():
+			SaveGame.pending = SaveGame.read()
+			GameFlow.restart_level("continue")
+		else:
+			GameFlow.restart_level("new"))
+	pause_menu.main_menu.connect(func(): GameFlow.restart_level("title"))
+	var is_main := get_tree().current_scene == self
+	var mode := GameFlow.start_mode
+	if not is_main or GameFlow.skip_title:
+		mode = "new" if mode == "title" else mode
+	if mode == "title":
+		_enter_title()
+		return
+	var story_on := story and (is_main or force_story)
+	if not story_on:
+		story = false
+	player.recorder_key_pressed.connect(recorder_key)
+	if story_on:
+		_setup_story(mode)
+	if mode == "continue" and not SaveGame.pending.is_empty():
+		var st: Dictionary = SaveGame.pending.get("state", {})
+		apply_save_state(st)
+		if director:
+			director.restore(st.get("done", []))
+		SaveGame.pending = {}
+	elif story_on:
+		Inventory.clear()
+		_on_new_game_started()
+	GameFlow.set_state(GameFlow.State.PLAYING)
+
+## 새 게임 시작 시점 (스토리 이벤트 디렉터가 연결)
+func _on_new_game_started() -> void:
+	if director:
+		director.start_new()
+
+func _enter_title() -> void:
+	GameFlow.set_state(GameFlow.State.TITLE)
+	player.input_enabled = false
+	hud.visible = false
+	player.breathing.process_mode = Node.PROCESS_MODE_DISABLED
+	# 타이틀 연출: 천장등 끔 · 책상 스탠드만 · 녹음기에 테이프가 돌아간다
+	fx["StudioCeiling"].switched_on = false
+	fx["StudioCeiling"].set_state(fx["StudioCeiling"].state)
+	if recorder:
+		_load_tape_instant("1")
+		recorder_state = "playing"
+		motor.stream = Sounds.pick("amb_tape_motor")
+		motor.base_volume_db = -20.0
+		motor.play()
+		hiss.stream = Sounds.pick("amb_tape_hiss")
+		hiss.base_volume_db = -24.0
+		hiss.play()
+	title_cam = Camera3D.new()
+	title_cam.fov = 48.0
+	title_cam.near = 0.03
+	add_child(title_cam)
+	title_cam.current = true
+	_title_cam_update(0.0)
+	title_ui = load("res://scripts/ui/title_screen.gd").new()
+	add_child(title_ui)
+	title_ui.new_game.connect(func():
+		SaveGame.pending = {}
+		GameFlow.restart_level("new"))
+	title_ui.continue_game.connect(func():
+		SaveGame.pending = SaveGame.read()
+		GameFlow.restart_level("continue"))
+
+func _title_cam_update(delta: float) -> void:
+	_title_t += delta
+	var focus := recorder.global_position if recorder else b2g(Vector3(2.0, 4.6, 0.9))
+	# 책상 옆에서 녹음기·창문 쪽을 천천히 (40초 주기) 흔들리듯 바라본다
+	var k := sin(_title_t * TAU / 40.0)
+	var k2 := sin(_title_t * TAU / 27.0 + 1.3)
+	var eye := b2g(Vector3(3.05 + 0.22 * k, 3.35 + 0.08 * k2, 1.28 + 0.03 * k2))
+	var look := focus + Vector3(-0.35 + 0.1 * k, 0.12, -0.25)
+	title_cam.global_position = eye
+	title_cam.look_at(look, Vector3.UP)
+
+func _on_setting(key: StringName) -> void:
+	match String(key):
+		"brightness":
+			env.adjustment_brightness = GameSettings.brightness
+		"graphics_quality":
+			GameSettings.apply_quality(env, get_viewport())
+		"fov":
+			player.camera.fov = GameSettings.fov
+
+## 저장: 레벨 상태 스냅샷
+func get_save_state() -> Dictionary:
+	var lights := {}
+	for k in fx:
+		lights[k] = {"state": int(fx[k].state), "on": fx[k].switched_on}
+	return {
+		"player": {"pos": [player.global_position.x, player.global_position.y, player.global_position.z],
+			"yaw": player.get("_yaw"), "pitch": player.get("_pitch")},
+		"items": Inventory.items.map(func(i): return String(i)),
+		"has_flashlight": Inventory.has_flashlight,
+		"lights": lights,
+		"objects": _objects_state(),
+		"done": director.done.keys() if director else [],
+	}
+
+func apply_save_state(st: Dictionary) -> void:
+	Inventory.clear()
+	for i in st.get("items", []):
+		Inventory.items.append(StringName(i))
+	Inventory.has_flashlight = st.get("has_flashlight", false)
+	var pl: Dictionary = st.get("player", {})
+	if pl.has("pos"):
+		player.global_position = Vector3(pl.pos[0], pl.pos[1], pl.pos[2])
+		player.set("_yaw", float(pl.get("yaw", 0.0)))
+		player.set("_pitch", float(pl.get("pitch", 0.0)))
+	for k in st.get("lights", {}):
+		if fx.has(k):
+			fx[k].switched_on = st.lights[k].get("on", true)
+			fx[k].set_state(int(st.lights[k].get("state", 0)))
+	_apply_objects_state(st.get("objects", {}))
+
+func _objects_state() -> Dictionary:
+	return {"door_open": door_open, "door_locked": door_locked, "parcel_open": parcel_open, "parcel_on_desk": parcel_on_desk,
+		"parcel_visible": parcel.visible if parcel else false, "recorder_state": recorder_state,
+		"recorder_held": player.held_recorder != null, "flashlight_taken": flashlight_prop == null or not is_instance_valid(flashlight_prop),
+		"drawer0": drawer_open[0]}
+
+func _apply_objects_state(o: Dictionary) -> void:
+	if o.get("door_open", false) and not door_open and door_hinge:
+		door_hinge.rotation.y = deg_to_rad(100.0)
+		door_open = true
+	door_locked = o.get("door_locked", false)
+	if parcel:
+		parcel.visible = o.get("parcel_visible", true)
+		if o.get("parcel_on_desk", false):
+			parcel.top_level = true
+			parcel.global_transform = _desk_place_transform()
+			parcel_on_desk = true
+		if o.get("parcel_open", false):
+			parcel_open = true
+			for n in ["prop_parcel_seal_tape"]:
+				var sl := parcel.find_child(n, true, false) as Node3D
+				if sl:
+					sl.visible = false
+			var spec := [["prop_parcel_flap_long_a", Vector3(deg_to_rad(205), 0, 0)], ["prop_parcel_flap_long_b", Vector3(deg_to_rad(-205), 0, 0)],
+					["prop_parcel_flap_short_a", Vector3(0, 0, deg_to_rad(195))], ["prop_parcel_flap_short_b", Vector3(0, 0, deg_to_rad(-195))]]
+			for sp in spec:
+				var fl := parcel.find_child(sp[0], true, false) as Node3D
+				if fl:
+					fl.rotation += sp[1]
+			_parcel_contents_ready()
+			if Inventory.has(&"tape_1") or o.get("recorder_state", "empty") != "empty":
+				var t1 := parcel.find_child("prop_tape_1", true, false)
+				if t1:
+					t1.queue_free()
+			if Inventory.has(&"note_prologue"):
+				var mm := parcel.find_child("prop_memo", true, false)
+				if mm:
+					mm.queue_free()
+	if o.get("flashlight_taken", false) and flashlight_prop and is_instance_valid(flashlight_prop):
+		flashlight_prop.queue_free()
+		flashlight_prop = null
+	if o.get("recorder_state", "empty") != "empty" and recorder:
+		_load_tape_instant("1")
+	if o.get("recorder_held", false):
+		_pick_recorder.call_deferred()
+
+func checkpoint(id: String) -> void:
+	if not story:
+		return
+	SaveGame.write(id, get_save_state())
+	if hud:
+		hud.show_toast("자동 저장됨 · " + SaveGame.LABELS.get(id, id))
+
+## 녹음기에 테이프를 애니메이션 없이 바로 넣는다 (타이틀 연출·불러오기)
+func _load_tape_instant(n: String) -> void:
+	var slot := recorder.find_child("prop_recorder_tape_slot", true, false) as Node3D
+	var src := (load(PROPS + "prop_tapes.gltf") as PackedScene).instantiate()
+	var tape := src.find_child("prop_tape_" + n, true, false) as Node3D
+	tape.get_parent().remove_child(tape)
+	src.queue_free()
+	recorder_tape = tape
+	recorder_tape_no = n
+	slot.add_child(tape)
+	tape.transform = Transform3D.IDENTITY
+	_fix_materials(tape)
+	_reels = []
+	for side in ["l", "r"]:
+		var r := tape.find_child("prop_tape_%s_reel_%s" % [n, side], true, false) as Node3D
+		if r:
+			_reels.append(r)
+	recorder_state = "loaded"
 
 # ======================================================================= 환경 · 재질
 func _environment() -> void:
@@ -376,27 +606,34 @@ func _emitter(id: String, pos_b: Vector3, vol: float, unit: float, bus := &"Ambi
 	return e
 
 func _ambience() -> void:
-	_emitter("amb_rain_window", Vector3(2.2, 5.05, 1.5), -4.0, 3.0)
-	_emitter("amb_rain_window", Vector3(3.9, 5.05, 1.5), -4.0, 3.0)
-	_emitter("amb_rain_heavy", Vector3(3.0, 9.0, 2.0), -6.0, 6.0)
+	rain_emitters.append(_emitter("amb_rain_window", Vector3(2.2, 5.05, 1.5), -4.0, 3.0))
+	rain_emitters.append(_emitter("amb_rain_window", Vector3(3.9, 5.05, 1.5), -4.0, 3.0))
+	rain_emitters.append(_emitter("amb_rain_heavy", Vector3(3.0, 9.0, 2.0), -6.0, 6.0))
 	var pc := find_child("stu_spawn_sound_pc_fan", true, false) as Node3D
 	var e := _emitter("amb_pc_fan", Vector3(2.25, 4.5, 0.3), -15.0, 1.2)
+	pc_fan_emitter = e
 	if pc:
 		e.global_position = pc.global_position
 	for i in 6:
 		var x: float = [-3.5, -0.5, 2.5, 5.5, 8.5, 11.5][i]
 		_emitter("amb_fluorescent_buzz" if i == 4 else "amb_fluorescent_hum", Vector3(x, -1.1, 2.42), -20.0 if i != 4 else -14.0, 1.4)
 	_emitter("amb_fluorescent_hum", Vector3(14.95, 2.9, 3.4), -20.0, 1.4)
-	_emitter("amb_rain_muffled", Vector3(15.4, 3.2, 1.2), -10.0, 3.0)
-	_emitter("amb_rain_muffled", Vector3(-4.8, -1.1, 1.5), -14.0, 3.0)
+	rain_emitters.append(_emitter("amb_rain_muffled", Vector3(15.4, 3.2, 1.2), -10.0, 3.0))
+	rain_emitters.append(_emitter("amb_rain_muffled", Vector3(-4.8, -1.1, 1.5), -14.0, 3.0))
 	if fx.has("CorLight4"):
 		fx["CorLight4"].flickered.connect(func(on): if on and randf() < 0.35:
 			Sounds.play_at("sfx_flicker_zap", b2g(Vector3(8.5, -1.1, 2.4)), &"SFX", -12.0))
 
 func _process(delta: float) -> void:
+	if title_cam and title_cam.current:
+		_title_cam_update(delta)
+	if flashlight_prop and is_instance_valid(flashlight_prop) and flashlight_prop.get_parent() and flashlight_prop.get_parent().name == "stu_desk_drawer_0":
+		var fit := flashlight_prop.find_child("FlashlightInteract", false, false) as Interactable
+		if fit:
+			fit.enabled = drawer_open[0]
 	# 벽시계 초침: 1초마다 한 칸 + 째깍 소리 (시계 위치에서)
 	_tick += delta
-	if _tick >= 1.0 and clock_second:
+	if _tick >= 1.0 and clock_second and clock_running:
 		_tick -= 1.0
 		clock_second.rotate_object_local(Vector3.UP, -deg_to_rad(6.0))
 		if clock_minute:
@@ -404,7 +641,7 @@ func _process(delta: float) -> void:
 		_tock = not _tock
 		Sounds.play_at("sfx_clock_tick", clock_second.global_position, &"SFX", -15.0, null, 0.0, "", 1.0)
 	# 천둥
-	if enable_thunder:
+	if enable_thunder and (story_fx == null or story_fx.rain_on):
 		_thunder_t -= delta
 		if _thunder_t <= 0.0:
 			_thunder_t = randf_range(28.0, 60.0)
@@ -504,9 +741,30 @@ func _door() -> void:
 	it.prompt_fn = func(): return "문 닫기" if door_open else "문 열기"
 	it.action = toggle_door
 	it.max_distance = 2.2
+	# 손: 안쪽 레버를 잡고 내렸다가 문이 열리는 동안 잠깐 따라간다
+	var lever := door_hinge.find_child("stu_door_lever_in", true, false) as Node3D
+	if lever:
+		it.reach = "grab"
+		it.reach_target = lever
+		it.reach_hold = 0.45
+		it.reach_follow = func(_k: float) -> Vector3: return lever.global_position
 
 func toggle_door() -> void:
 	if door_busy or door_hinge == null:
+		return
+	if door_locked and not door_open:
+		# 잠김: 손잡이만 덜컥거린다
+		Sounds.play_at("sfx_door_locked", door_hinge.global_position + Vector3(0.6, 1.0, 0.0), &"SFX", -2.0, null, 0.03, "잠긴 문이 덜컥거리는 소리")
+		var lev := door_hinge.find_child("stu_door_lever_in", true, false) as Node3D
+		if lev:
+			var r0 := lev.rotation
+			var tw0 := create_tween()
+			for k in 2:
+				tw0.tween_property(lev, "rotation:z", r0.z - deg_to_rad(25), 0.08)
+				tw0.tween_property(lev, "rotation:z", r0.z, 0.1)
+		if story_fx:
+			story_fx.tried_door = true
+		_notify("door_locked_try")
 		return
 	door_busy = true
 	stats.interactions += 1
@@ -521,6 +779,23 @@ func toggle_door() -> void:
 		get_tree().create_timer(0.45).timeout.connect(func(): Sounds.play_at("sfx_door_close", pos, &"SFX", 0.0, null, 0.03, "문 닫히는 소리"))
 	tw.tween_callback(func():
 		door_open = not door_open
+		door_busy = false
+		if door_open:
+			_notify("door_opened"))
+
+## 문이 저절로 쾅 닫힌다 (스토리 연출)
+func slam_door(instant := false) -> void:
+	if door_hinge == null or not door_open:
+		return
+	door_open = false
+	if instant:
+		door_hinge.rotation.y = 0.0
+		return
+	door_busy = true
+	var tw := create_tween()
+	tw.tween_property(door_hinge, "rotation:y", 0.0, 0.32).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	tw.tween_callback(func():
+		Sounds.play_at("sfx_door_close", door_hinge.global_position + Vector3(0.6, 1.0, 0.0), &"SFX", 4.0, null, 0.0, "문이 쾅 닫히는 소리")
 		door_busy = false)
 
 func knock() -> void:
@@ -534,11 +809,17 @@ func _switches_and_lamps() -> void:
 	var sw := find_child("stu_light_switch", true, false) as Node3D
 	if sw:
 		var it := Interactable.attach_to(sw, "전등 스위치", 0.03, 0.1)
+		it.reach = "press"
+		it.reach_target = sw.find_child("stu_light_switch_rocker_0", true, false) as Node3D
+		it.reach_hold = 0.12
 		it.prompt_fn = func(): return "전등 끄기" if fx["StudioCeiling"].switched_on else "전등 켜기"
 		it.action = func():
 			stats.interactions += 1
 			fx["StudioCeiling"].press_switch()
 			Sounds.play_at("sfx_light_switch", sw.global_position, &"SFX", -4.0, null, 0.05, "스위치 소리")
+			_notify("switch", "on" if fx["StudioCeiling"].switched_on else "off")
+			if fx["StudioCeiling"].switched_on and not fx["StudioCeiling"].is_emitting():
+				hud.show_toast("…켜지지 않는다.")
 			for k in 2:
 				var r := sw.find_child("stu_light_switch_rocker_%d" % k, true, false) as Node3D
 				if r:
@@ -554,6 +835,8 @@ func _switches_and_lamps() -> void:
 	cs.shape = bs
 	lamp_it.add_child(cs)
 	lamp_it.prompt_fn = func(): return "스탠드 끄기" if fx["DeskLamp"].switched_on else "스탠드 켜기"
+	lamp_it.reach = "press"
+	lamp_it.reach_hold = 0.1
 	lamp_it.action = func():
 		stats.interactions += 1
 		fx["DeskLamp"].press_switch()
@@ -565,12 +848,23 @@ func _furniture() -> void:
 		if dr == null:
 			continue
 		var base := dr.position
-		var it := Interactable.attach_to(dr, "서랍 열기", 0.01)
+		# 판정 상자는 서랍 앞판에만 (열린 서랍 안의 물건을 가리지 않게)
+		var front := dr.find_child("stu_desk_drawer_%d_front" % i, true, false) as Node3D
+		var it := Interactable.attach_to(front if front else dr, "서랍 열기", 0.01)
 		var open := [false]
+		var idx := i
+		var pull := dr.find_child("stu_desk_drawer_%d_pull" % i, true, false) as Node3D
+		if pull:
+			it.reach = "pull"
+			it.reach_target = pull
+			it.reach_hold = 0.42
+			it.reach_follow = func(_k: float) -> Vector3: return pull.global_position
 		it.prompt_fn = func(): return "서랍 닫기" if open[0] else "서랍 열기"
 		it.action = func():
 			stats.interactions += 1
 			open[0] = not open[0]
+			drawer_open[idx] = open[0]
+			_notify("drawer", str(idx))
 			var tw := create_tween().set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 			tw.tween_property(dr, "position", base + (Vector3(0, 0, 0.3) if open[0] else Vector3.ZERO), 0.45)
 			Sounds.play_at("sfx_drawer_open" if open[0] else "sfx_drawer_close", dr.global_position, &"SFX", -6.0)
@@ -580,6 +874,12 @@ func _furniture() -> void:
 			continue
 		var base_r := cd.rotation.y
 		var it := Interactable.attach_to(cd, "수납장 열기", 0.01)
+		var knob := cd.find_child("stu_cabinet_door_%d_knob" % i, true, false) as Node3D
+		if knob:
+			it.reach = "pull"
+			it.reach_target = knob
+			it.reach_hold = 0.35
+			it.reach_follow = func(_k: float) -> Vector3: return knob.global_position
 		var open := [false]
 		var sign_ := 1.0 if i == 0 else -1.0
 		it.prompt_fn = func(): return "수납장 닫기" if open[0] else "수납장 열기"
@@ -637,21 +937,42 @@ func _place(scene_name: String, marker: String, offset := Vector3.ZERO) -> Node3
 	return inst
 
 func _props() -> void:
-	# 손전등 — 수납장 위. 정전 때 찾게 되는 위치 (요구사항 03 §2)
-	var fl := _place("prop_flashlight", "stu_spawn_prop_flashlight", Vector3(0, 0.0285, 0))
+	# 손전등 — 책상 맨 위 서랍 안 (요구사항 08 EVENT 06). 서랍이 열려 있을 때만 집을 수 있다
+	var fl: Node3D = null
+	var dr0 := find_child("stu_desk_drawer_0", true, false) as Node3D
+	if dr0 and ResourceLoader.exists(PROPS + "prop_flashlight.gltf"):
+		fl = (load(PROPS + "prop_flashlight.gltf") as PackedScene).instantiate() as Node3D
+		dr0.add_child(fl)
+		_fix_materials(fl)
+		var box := Interactable.local_aabb(dr0)
+		fl.position = Vector3(box.get_center().x + 0.02, box.position.y + 0.03, box.get_center().z - 0.02)
+		fl.rotation = Vector3(0, deg_to_rad(80), deg_to_rad(90))
+		for c in fl.find_children("*", "CollisionObject3D", true, false):
+			c.queue_free()
+	else:
+		fl = _place("prop_flashlight", "stu_spawn_prop_flashlight", Vector3(0, 0.0285, 0))
+	flashlight_prop = fl
 	if fl:
 		var it := Interactable.attach_to(fl, "손전등", 0.02, 0.08)
+		it.name = "FlashlightInteract"
+		it.reach = "pick"
 		it.inspectable = true
 		it.inspect_visual = fl
 		it.inspect_title = "손전등"
-		it.inspect_text = "검은 금속 손전등. 손잡이 홈의 도장이 군데군데 벗겨져 있다.\n위쪽 버튼으로 켜고 끈다."
+		it.inspect_text = "손잡이 도장이 벗겨진 검은 금속 손전등.\n위쪽 버튼으로 켜고 끈다."
 		it.pickup_item = &"flashlight"
 	# 녹음기 (책상) — 테이프를 넣고 재생
 	recorder = _place("prop_recorder", "stu_spawn_prop_recorder")
 	if recorder:
 		var it := Interactable.attach_to(recorder, "녹음기", 0.015, 0.08)
-		it.prompt_fn = _recorder_prompt
-		it.action = _recorder_use
+		it.name = "RecorderInteract"
+		it.prompt_fn = func(): return "녹음기 들기" if _hands_on() else _recorder_prompt()
+		it.action = func():
+			if _hands_on():
+				_pick_recorder()
+			else:
+				_recorder_use()
+		it.reach = "pick"
 		motor = AmbientEmitter.new()
 		motor.bus = &"SFX"
 		motor.unit_size = 1.0
@@ -677,15 +998,27 @@ func _props() -> void:
 	if parcel:
 		var it := Interactable.attach_to(parcel, "택배 상자", 0.015)
 		it.name = "ParcelInteract"
-		it.prompt_fn = func(): return "상자 열기" if not parcel_open else "택배 상자"
-		it.action = _parcel_open
+		it.prompt_fn = func():
+			if parcel_open:
+				return "택배 상자"
+			return "상자 열기" if (parcel_on_desk or not story) else "상자 들기"
+		it.action = func():
+			if parcel_open:
+				return
+			if story and _hands_on() and not parcel_on_desk:
+				_parcel_pick_up()
+			elif _hands_on():
+				_parcel_open_hands()
+			else:
+				_parcel_open()
 		var wb := parcel.find_child("prop_parcel_waybill", true, false) as Node3D
 		if wb:
 			var wit := Interactable.attach_to(wb, "운송장", 0.01, 0.03)
 			wit.inspectable = true
 			wit.inspect_visual = wb
 			wit.inspect_title = "운송장"
-			wit.inspect_text = "받는 분: 서정우 님 — 이 작업실 주소.\n보내는 분 칸이 비어 있다."
+			wit.inspect_text = "받는 분: 서정우 — 이 작업실 주소.\n보내는 분 칸은 비어 있다."
+			wit.reach = "pick"
 	# 어둠 속 단서 1: 책상 아래 떨어진 라벨 없는 카세트
 	var mk := find_child("stu_spawn_clue_under_desk", true, false) as Node3D
 	if mk and ResourceLoader.exists(PROPS + "prop_cassette_shelf.gltf"):
@@ -697,7 +1030,8 @@ func _props() -> void:
 		it.inspectable = true
 		it.inspect_visual = c
 		it.inspect_title = "라벨 없는 카세트테이프"
-		it.inspect_text = "책상 아래 어둠 속에 떨어져 있었다.\n케이스 등에 아무것도 적혀 있지 않다."
+		it.inspect_text = "책상 아래에 떨어져 있었다.\n케이스 어디에도 글씨가 없다."
+		it.reach = "pick"
 		it.pickup_item = &"cassette_unlabeled"
 	# 어둠 속 단서 2: 불이 나간 하행 계단참의 열쇠 꾸러미
 	var keys := _place("prop_keys", "cor_spawn_clue_dark_landing")
@@ -706,7 +1040,8 @@ func _props() -> void:
 		it.inspectable = true
 		it.inspect_visual = keys
 		it.inspect_title = "열쇠 꾸러미"
-		it.inspect_text = "불 꺼진 계단참에 떨어져 있었다. 파란 플라스틱 태그에는 아무것도 적혀 있지 않다."
+		it.inspect_text = "불 꺼진 계단참에 떨어져 있었다.\n파란 태그에는 아무것도 적혀 있지 않다."
+		it.reach = "pick"
 		it.pickup_item = &"keys_stairwell"
 
 func _parcel_open() -> void:
@@ -743,16 +1078,19 @@ func _parcel_contents_ready() -> void:
 		it.inspectable = true
 		it.inspect_visual = t
 		it.inspect_title = "카세트테이프 %d번" % n
-		it.inspect_text = "C-60 카세트. 라벨에 손으로 쓴 숫자 '%d'.\n창 너머로 감긴 테이프가 보인다." % n
-		it.pickup_item = StringName("tape_%d" % n)
+		it.inspect_text = ("라벨에 손글씨로 '%d'.\n투명 창 너머로 감긴 테이프가 보인다." % n) if n == 1 else ("라벨에 손글씨로 '%d'.\n1번부터 들어 보자." % n)
+		it.reach = "pick"
+		# 프롤로그에서는 1번 테이프만 가져간다 (나머지는 상자에 둔다)
+		it.pickup_item = StringName("tape_%d" % n) if (n == 1 or not story) else &""
 	var memo := parcel.find_child("prop_memo", true, false) as Node3D
 	if memo:
 		var it := Interactable.attach_to(memo, "메모", 0.005, 0.03)
 		it.inspectable = true
 		it.inspect_visual = memo
 		it.inspect_title = "손으로 쓴 메모"
-		it.inspect_text = "잡음을 제거하지 말아 주세요.\n그 안에 목소리가 있습니다."
+		it.inspect_text = "\"잡음을 제거하지 말아 주세요.\n그 안에 목소리가 있습니다.\""
 		it.pickup_item = &"note_prologue"
+		it.reach = "pick"
 
 func _held_tape() -> String:
 	for n in range(1, 8):
@@ -802,19 +1140,35 @@ func _insert_tape(n: String) -> void:
 	tape.get_parent().remove_child(tape)
 	src.queue_free()
 	recorder_tape = tape
-	slot.add_child(tape)
-	tape.transform = Transform3D.IDENTITY
-	tape.position = Vector3(0, 0.07, 0)
 	_fix_materials(tape)
+	var by_hand := _hands_on() and player.held_recorder != null and not Inventory.has_flashlight
+	if by_hand:
+		# 왼손이 테이프를 집어 녹음기 도어로 가져온다 (도어가 먼저 열림)
+		add_child(tape)
+		var d0 := door.rotation.x
+		Sounds.play_at("sfx_cassette_door", recorder.global_position, &"SFX", -6.0)
+		var twd := create_tween()
+		twd.tween_property(door, "rotation:x", d0 - deg_to_rad(55), 0.3).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		player.arms.press_thumb("R")
+		await _hand_bring(tape, slot)
+		tape.get_parent().remove_child(tape)
+		slot.add_child(tape)
+		tape.transform = Transform3D.IDENTITY
+		tape.position = Vector3(0, 0.01, 0)
+	else:
+		slot.add_child(tape)
+		tape.transform = Transform3D.IDENTITY
+		tape.position = Vector3(0, 0.07, 0)
 	_reels = []
 	for side in ["l", "r"]:
 		var r := tape.find_child("prop_tape_%s_reel_%s" % [n, side], true, false) as Node3D
 		if r:
 			_reels.append(r)
-	var base_r := door.rotation.x
+	var base_r := door.rotation.x if not by_hand else door.rotation.x + deg_to_rad(55)
 	var tw := create_tween()
-	tw.tween_callback(func(): Sounds.play_at("sfx_cassette_door", recorder.global_position, &"SFX", -6.0))
-	tw.tween_property(door, "rotation:x", base_r - deg_to_rad(55), 0.3).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	if not by_hand:
+		tw.tween_callback(func(): Sounds.play_at("sfx_cassette_door", recorder.global_position, &"SFX", -6.0))
+		tw.tween_property(door, "rotation:x", base_r - deg_to_rad(55), 0.3).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	tw.tween_property(tape, "position", Vector3.ZERO, 0.45).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
 	tw.tween_callback(func(): Sounds.play_at("sfx_cassette_insert", recorder.global_position, &"SFX", -4.0, null, 0.0, "테이프 넣는 소리"))
 	tw.tween_interval(0.25)
@@ -823,10 +1177,40 @@ func _insert_tape(n: String) -> void:
 		Sounds.play_at("sfx_cassette_door", recorder.global_position, &"SFX", -4.0)
 		Inventory.items.erase(StringName("tape_" + n))
 		recorder_state = "loaded"
-		hud.show_toast("테이프 %s번을 넣었다." % n))
+		recorder_tape_no = n
+		_notify("tape_inserted", n)
+		hud.show_toast("테이프 %s번을 넣었다.  R: 재생" % n))
+
+## 왼손으로 물건을 집어 target 노드 위치로 가져간다 (target 바로 위 → 안으로)
+func _hand_bring(obj: Node3D, target: Node3D) -> void:
+	var arms := player.arms
+	var start := Transform3D(Basis(Vector3.RIGHT, deg_to_rad(-20)), Vector3(-0.22, -0.42, -0.30))
+	obj.top_level = true
+	obj.global_transform = arms.global_transform * start
+	var F := Vector3(0.35, 0.85, -0.4).normalized()
+	var R := Vector3(0.0, 0.3, 1.0)
+	R = (R - F * R.dot(F)).normalized()
+	arms.attach_at("L", obj, start, start.origin - F * 0.12, F, R)
+	var h: ViewmodelArms.Hand = arms.sides["L"]
+	h.mode = ViewmodelArms.Mode.HOLD_OBJECT
+	h.pose_want = "pinch"
+	h.pos = arms.hold_pos_for(start, "L")
+	var tw := create_tween()
+	tw.tween_method(func(k: float):
+		var tgt := arms.global_transform.affine_inverse() * target.global_transform * Transform3D(Basis(), Vector3(0, 0.07, 0))
+		arms.hold_object_at("L", start.interpolate_with(tgt, k), 30.0), 0.0, 1.0, 0.7).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	tw.tween_method(func(k: float):
+		var tgt := arms.global_transform.affine_inverse() * target.global_transform * Transform3D(Basis(), Vector3(0, 0.07 * (1.0 - k) + 0.01 * k, 0))
+		arms.hold_object_at("L", tgt, 40.0), 0.0, 1.0, 0.35)
+	await tw.finished
+	arms.detach("L")
+	arms.set_mode("L", ViewmodelArms.Mode.HIDDEN)
 
 func _play_tape() -> void:
 	recorder_state = "playing"
+	if player.held_recorder and _hands_on():
+		player.arms.press_thumb("R")
+	_notify("recorder_play", recorder_tape_no)
 	_press("prop_recorder_btn_play", recorder, Vector3(0, 0, -0.003))
 	Sounds.play_at("sfx_deck_button", recorder.global_position, &"SFX", -4.0, null, 0.0, "재생 버튼")
 	motor.stream = Sounds.pick("amb_tape_motor")
@@ -834,12 +1218,16 @@ func _play_tape() -> void:
 	hiss.stream = Sounds.pick("amb_tape_hiss")
 	hiss.play()
 	# 테이프 음성 (VoiceTape 버스: 대역 제한·미세 왜곡) — 임시 TTS 가이드 음성
-	get_tree().create_timer(1.6).timeout.connect(func():
-		if recorder_state == "playing":
-			_play_line_at("PRO_S05_001", recorder))
+	if director == null:
+		get_tree().create_timer(1.6, false).timeout.connect(func():
+			if recorder_state == "playing":
+				_play_line_at("PRO_S05_001", recorder))
 
 func _stop_tape() -> void:
 	recorder_state = "loaded"
+	if player.held_recorder and _hands_on():
+		player.arms.press_thumb("R")
+	_notify("recorder_stop")
 	_press("prop_recorder_btn_stop", recorder, Vector3(0, 0, -0.003))
 	Sounds.play_at("sfx_tape_stop", recorder.global_position, &"SFX", -4.0, null, 0.0, "정지 버튼")
 	motor.stop()
@@ -874,3 +1262,288 @@ func _deck_toggle() -> void:
 	Sounds.play_at("sfx_cassette_door", deck.global_position, &"SFX", -5.0, null, 0.0, "카세트 도어")
 	var tw := create_tween()
 	tw.tween_property(door, "rotation:x", base_x + (deg_to_rad(25.0) if deck_open else 0.0), 0.35).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+
+
+# ======================================================================= 스토리 (프롤로그 EVENT 01~08)
+func _hands_on() -> bool:
+	return player != null and player.arms != null and player.arms.enabled and player.hands_animate
+
+func _notify(sig: String, arg := "") -> void:
+	if director:
+		director.notify(sig, arg)
+
+func _setup_story(mode: String) -> void:
+	story_fx = PrologueStory.new()
+	story_fx.name = "PrologueStory"
+	story_fx.lvl = self
+	add_child(story_fx)
+	director = EventDirector.new()
+	director.name = "EventDirector"
+	director.story = story_fx
+	director.player = player
+	story_fx.director = director
+	add_child(director)
+	director.load_file("res://data/events/prologue_events.json")
+	Inventory.item_added.connect(func(id):
+		_notify("item:" + String(id))
+		if id == &"flashlight":
+			_notify("flashlight_pickup"))
+	player.flashlight.toggled.connect(func(on): _notify("flashlight_on" if on else "flashlight_off"))
+	player.inspect.opened.connect(func(t): _notify("inspect:" + t.inspect_title))
+	player.interacted_any.connect(func(): _notify("interact"))
+	if parcel and mode == "new":
+		parcel.visible = false
+		var pit := parcel.find_child("ParcelInteract", false, false) as Interactable
+		if pit:
+			pit.enabled = false
+		for c in parcel.find_children("*", "Interactable", true, false):
+			(c as Interactable).enabled = false
+	if OS.is_debug_build():
+		debug_menu = load("res://scripts/ui/debug_menu.gd").new()
+		debug_menu.lvl = self
+		add_child(debug_menu)
+
+## EVENT 02: 노크와 함께 문 앞에 택배가 놓인다
+func show_parcel_at_door() -> void:
+	if parcel == null or parcel_on_desk or parcel_carried:
+		return
+	parcel.visible = true
+	for c in parcel.find_children("*", "Interactable", true, false):
+		var it := c as Interactable
+		it.enabled = it.name == "ParcelInteract" or it.inspect_title == "운송장"
+
+func in_studio(p: Vector3) -> bool:
+	return p.x > 0.05 and p.x < 5.95 and p.z < -0.05 and p.z > -4.95
+
+func clamp_to_studio(p: Vector3) -> Vector3:
+	return Vector3(clampf(p.x, 0.5, 5.5), p.y, clampf(p.z, -4.5, -0.5))
+
+func door_inside_point() -> Vector3:
+	return b2g(Vector3(0.95, 0.5, 1.1))
+
+## 3D 위치에서 대사 재생 (등 뒤 목소리·문 너머 목소리). 자막은 DialogueDB 신호로.
+func play_line_world(line_id: String, pos: Vector3, at_player := false, bus := "Voice") -> void:
+	var stream := DialogueDB.audio_of(line_id)
+	DialogueDB.line_started.emit(DialogueDB.get_line(line_id))
+	if stream == null:
+		return
+	if at_player:
+		var p2 := AudioStreamPlayer.new()
+		p2.stream = stream
+		p2.bus = &"Voice"
+		add_child(p2)
+		p2.play()
+		p2.finished.connect(p2.queue_free)
+		return
+	var p := AudioStreamPlayer3D.new()
+	p.stream = stream
+	p.bus = StringName(bus) if AudioServer.get_bus_index(StringName(bus)) >= 0 else &"Voice"
+	p.unit_size = 2.0
+	p.max_db = 4.0
+	p.volume_db = 1.0
+	p.attenuation_filter_cutoff_hz = 9000.0
+	add_child(p)
+	p.global_position = pos
+	p.play()
+	p.finished.connect(p.queue_free)
+
+func play_tape_sound(id: String, db: float) -> void:
+	var s := Sounds.pick(id)
+	if s == null or recorder == null:
+		return
+	var p := AudioStreamPlayer3D.new()
+	p.stream = s
+	p.bus = &"VoiceTape" if AudioServer.get_bus_index(&"VoiceTape") >= 0 else &"SFX"
+	p.unit_size = 1.5
+	p.volume_db = db
+	recorder.add_child(p)
+	p.play()
+	p.finished.connect(p.queue_free)
+
+## 조명 상태 문자열 → LightFixture
+func set_light(name: String, st: String, instant := false) -> void:
+	if not fx.has(name):
+		return
+	var f: LightFixture = fx[name]
+	match st:
+		"normal":
+			f.switched_on = true
+			f.set_state(LightFixture.State.NORMAL)
+		"flicker":
+			f.switched_on = true
+			f.set_state(LightFixture.State.FLICKER)
+		"flicker_once":
+			if instant:
+				return
+			f._set_lit(false)
+			get_tree().create_timer(0.09, false).timeout.connect(func(): f._set_lit(true, 0.6))
+			get_tree().create_timer(0.16, false).timeout.connect(func(): f._set_lit(false))
+			get_tree().create_timer(0.30, false).timeout.connect(func(): f._apply())
+		"story_off":
+			f.set_state(LightFixture.State.STORY_OFF)
+		"dead":
+			f.set_state(LightFixture.State.DEAD)
+		"needs_power":
+			f.set_state(LightFixture.State.NEEDS_POWER)
+		"restore":
+			f.set_state(LightFixture.State.NORMAL)
+
+func set_rain(on: bool, fade: float) -> void:
+	for e in rain_emitters:
+		var em := e as AmbientEmitter
+		if fade <= 0.0:
+			em.playing = on
+			continue
+		if on and not em.playing:
+			em.play()
+		var tw := create_tween()
+		tw.tween_property(em, "volume_db", em.base_volume_db if on else -60.0, fade)
+		if not on:
+			tw.tween_callback(em.stop)
+	var r := find_child("Rain", false, false) as GPUParticles3D
+	if r:
+		r.emitting = on
+	# 유리의 빗물은 남지만 흐름을 멈춘다
+	for mi in find_children("*", "MeshInstance3D", true, false):
+		var m := (mi as MeshInstance3D).material_override as ShaderMaterial
+		if m and m.shader == RAIN_GLASS:
+			m.set_shader_parameter("rain_amount", 0.6 if on else 0.15)
+
+func _find_monitor() -> void:
+	if monitor_screen == null:
+		monitor_screen = find_child("stu_monitor_screen", true, false) as MeshInstance3D
+		if monitor_screen == null:
+			var n := find_child("stu_monitor_screen", true, false)
+			if n:
+				for c in n.find_children("*", "MeshInstance3D", true, false):
+					monitor_screen = c
+					break
+		if monitor_screen:
+			_monitor_mat_orig = monitor_screen.material_override
+
+func set_monitor_noise(on: bool) -> void:
+	_find_monitor()
+	if monitor_screen == null:
+		return
+	if on:
+		var sh := Shader.new()
+		sh.code = """shader_type spatial;
+render_mode unshaded;
+float h(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
+void fragment() {
+	vec2 g = floor(UV * vec2(320.0, 200.0));
+	float n = h(g + floor(TIME * 30.0));
+	float band = smoothstep(0.0, 0.08, abs(fract(UV.y * 3.0 - TIME * 0.7) - 0.5));
+	ALBEDO = vec3(n * 0.55 * (0.6 + 0.4 * band));
+}"""
+		var m := ShaderMaterial.new()
+		m.shader = sh
+		monitor_screen.material_override = m
+	else:
+		monitor_screen.material_override = _monitor_mat_orig
+
+func set_monitor_off() -> void:
+	_find_monitor()
+	if monitor_screen:
+		var m := StandardMaterial3D.new()
+		m.albedo_color = Color(0.015, 0.015, 0.017)
+		m.roughness = 0.15
+		monitor_screen.material_override = m
+
+func set_pc_fan(on: bool) -> void:
+	if pc_fan_emitter:
+		if on:
+			pc_fan_emitter.play()
+		else:
+			pc_fan_emitter.stop()
+
+## ---- 택배: 두 손으로 들어 책상에 내려놓기
+func _parcel_pick_up() -> void:
+	if player.carrying or parcel == null:
+		return
+	parcel_carried = true
+	var size := Interactable.local_aabb(parcel).size
+	for c in parcel.find_children("*", "Interactable", true, false):
+		(c as Interactable).enabled = false
+	Sounds.play_at("sfx_cardboard_flap", parcel.global_position, &"SFX", -8.0)
+	player.carrying = parcel
+	player.carry_target_fn = _parcel_try_place
+	await player.arms.carry_begin(parcel, size)
+	_notify("parcel_picked")
+	hud.show_toast("책상 위에 올려놓자.  [E] 내려놓기", 4.0)
+
+func _desk_place_transform() -> Transform3D:
+	var desk := find_child("stu_desk", true, false) as Node3D
+	var box := Interactable.local_aabb(desk) if desk else AABB()
+	# 책상 상판 왼쪽 빈 곳 (녹음기·키보드와 겹치지 않게)
+	var top := desk.global_transform * Vector3(box.position.x + box.size.x * 0.22, box.end.y, box.get_center().z + 0.05) if desk else b2g(Vector3(1.4, 4.6, 0.76))
+	return Transform3D(Basis(Vector3.UP, deg_to_rad(-12)), top + Vector3(0, 0.001, 0))
+
+func _parcel_try_place() -> void:
+	if not player.carrying:
+		return
+	var t := _desk_place_transform()
+	if player.global_position.distance_to(t.origin) > 1.7:
+		hud.show_toast("책상 근처에서 내려놓자.", 2.0)
+		return
+	var size := Interactable.local_aabb(parcel).size
+	await player.arms.carry_end(t, size)
+	Sounds.play_at("sfx_cardboard_flap", t.origin, &"SFX", -6.0)
+	player.carrying = null
+	player.carry_target_fn = Callable()
+	parcel_carried = false
+	parcel_on_desk = true
+	var pit := parcel.find_child("ParcelInteract", false, false) as Interactable
+	if pit:
+		pit.enabled = true
+	for c in parcel.find_children("*", "Interactable", true, false):
+		if (c as Interactable).inspect_title == "운송장":
+			(c as Interactable).enabled = true
+	_notify("parcel_placed")
+
+## 두 손으로 테이프를 뜯고 덮개를 연다 (손 동작과 소리·덮개 애니메이션 동기화)
+func _parcel_open_hands() -> void:
+	if parcel_open or player.hands_busy:
+		return
+	player.hands_busy = true
+	var seal := parcel.find_child("prop_parcel_seal_tape", true, false) as Node3D
+	var p := seal.global_position if seal else parcel.global_position + Vector3(0, 0.25, 0)
+	var fwd := (p - player.camera.global_position).normalized()
+	await player.arms.reach("R", p + Vector3(0, 0.02, 0), (fwd + Vector3.DOWN).normalized(), -player.camera.global_transform.basis.x,
+			"pinch", _parcel_open, 1.6, func(k: float) -> Vector3: return p + player.camera.global_transform.basis.x * (0.18 * k) + Vector3(0, 0.03 * k, 0))
+	player.hands_busy = false
+
+## ---- 녹음기: 오른손에 들고 R 키로 조작
+func _pick_recorder() -> void:
+	if recorder == null or player.held_recorder:
+		return
+	recorder.top_level = true
+	player.held_recorder = recorder
+	var it := recorder.find_child("RecorderInteract", false, false) as Interactable
+	if it:
+		it.enabled = false
+	Sounds.play_at("sfx_pickup", recorder.global_position, &"SFX", -6.0)
+	player.arms.hold_recorder(recorder)
+	hud.show_toast("R 키: 녹음기 사용 (테이프 넣기 · 재생 · 정지)", 4.0)
+
+## 플레이어 R 키
+func recorder_key() -> void:
+	if recorder == null:
+		return
+	if not player.held_recorder and story:
+		hud.show_toast("녹음기는 책상 위에 있다.", 2.0)
+		return
+	if player.hands_busy:
+		return
+	_recorder_use()
+
+func enter_apartment() -> void:
+	if apt == null:
+		apt = AptCorridor.new()
+		apt.name = "AptCorridor1998"
+		add_child(apt)
+	player.global_position = apt.point("apt_spawn")
+	player.set("_yaw", apt.spawn_yaw)
+	player.set("_pitch", 0.0)
+	player.footsteps.surface_zones.append({"aabb": apt.bounds(), "surface": "tile"})
+	set_rain(false, 0.0)

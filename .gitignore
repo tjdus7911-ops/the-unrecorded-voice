@@ -77,3 +77,5 @@ art/textures_source/
 builds/
 game/assets/fonts/*.otf
 # ↑ 한글 폰트 서브셋(OFL)은 프로젝트 ZIP에 포함 — LFS 복구 후 커밋
+# MakeHuman CC0 base.obj (LFS 대상 확장자) — 프로젝트 ZIP에 포함. 원본: github.com/makehumancommunity/makehuman (makehuman/data/3dobjs/base.obj)
+art/third_party/makehuman/base.obj

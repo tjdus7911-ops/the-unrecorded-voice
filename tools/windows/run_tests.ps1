@@ -2,7 +2,7 @@
 param([Parameter(Mandatory = $true)][string]$GodotPath)
 $root = Resolve-Path (Join-Path $PSScriptRoot "..\..")
 $fail = 0
-foreach ($t in @("run_tests", "run_phase01_tests")) {
+foreach ($t in @("run_tests", "run_phase01_tests", "run_story_tests")) {
     Write-Host "=== $t ==="
     & $GodotPath --headless --fixed-fps 60 --path "$root\game" "res://scenes/tests/$t.tscn" 2>&1 | Select-String -Pattern "PASS|FAIL|passed"
     if ($LASTEXITCODE -ne 0) { $fail++ }

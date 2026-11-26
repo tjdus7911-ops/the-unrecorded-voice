@@ -13,7 +13,7 @@
 ## design/ — 기획 해석·결정
 - `decisions.md` — 결정 기록
 - `open_questions.md` — 미확정 항목 (임의 확정 금지)
-- `sound_bible.md` — 오디오 버스, 음성 ID, 대사 스키마, 호흡·심장 박동 파라미터
+- `sound_bible.md` · `horror_event_system.md` — 오디오 버스, 음성 ID, 대사 스키마, 호흡·심장 박동 파라미터
 - `space_studio.md` — 작업실 평면 설계 · `space_corridor.md` — 외부 복도 설계
 
 ## tech/
@@ -27,5 +27,6 @@
 ## production/
 - `dev_log.md` — 개발 로그
 - `asset_license_log.md` — 에셋 출처·라이선스
+- `status_report_2026-11-26.md` — 플레이 테스트 피드백 반영 결과·구현 상태(완료/부분/미구현) 답변
 - `performance_report.md` — 실제 실행 성능 측정 (FPS·드로우콜·메모리)
 - `phase01_review.md` — 실제 게임 화면 검토와 개선 기록

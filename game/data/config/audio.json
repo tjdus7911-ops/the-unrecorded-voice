@@ -208,6 +208,37 @@
    "files": [
     "res://assets/audio/sfx/PH_sfx_elevator_ding.wav"
    ]
+  },
+  "sfx_power_down": {
+   "files": [
+    "res://assets/audio/sfx/PH_sfx_power_down.wav"
+   ]
+  },
+  "sfx_door_lock": {
+   "files": [
+    "res://assets/audio/sfx/PH_sfx_door_lock.wav"
+   ]
+  },
+  "sfx_door_unlock": {
+   "files": [
+    "res://assets/audio/sfx/PH_sfx_door_unlock.wav"
+   ]
+  },
+  "sfx_fluorescent_start": {
+   "files": [
+    "res://assets/audio/sfx/PH_sfx_fluorescent_start.wav"
+   ]
+  },
+  "sfx_swing_creak": {
+   "files": [
+    "res://assets/audio/sfx/PH_sfx_swing_creak.wav"
+   ]
+  },
+  "tape_playground": {
+   "files": [
+    "res://assets/audio/sfx/PH_tape_playground.wav"
+   ],
+   "loop": false
   }
  }
 }

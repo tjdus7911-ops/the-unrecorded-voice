@@ -16,6 +16,7 @@ var flashlight_pickup: PickupItem
 var clue_cassette: PickupItem
 
 func _ready() -> void:
+	GameFlow.set_state(GameFlow.State.PLAYING)
 	_build_environment()
 	_build_shell()
 	_build_lights()

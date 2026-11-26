@@ -81,6 +81,22 @@ func _ready() -> void:
 	_rig.visible = Inventory.has_flashlight       # 손전등을 얻기 전에는 손에 들고 있지 않다
 	Inventory.item_added.connect(func(id): if id == &"flashlight": _rig.visible = true)
 
+## 1인칭 손이 있으면 손전등(모델+빛)을 왼손에 쥐어 준다 — 빛의 방향이 손을 따른다
+var arms: ViewmodelArms
+func use_hands(a: ViewmodelArms) -> void:
+	if a == null or not a.enabled:
+		return
+	arms = a
+	_rig.top_level = true
+	if _model:
+		_model.position = Vector3(0, 0, 0.15)       # 원점 = 쥐는 위치 (꼬리에서 15 cm)
+	spot.position = Vector3(0, 0, -0.11)
+	if Inventory.has_flashlight:
+		arms.hold_flashlight(_rig)
+	Inventory.item_added.connect(func(id):
+		if id == &"flashlight" and arms:
+			arms.hold_flashlight(_rig))
+
 func toggle() -> bool:
 	if not Inventory.has_flashlight:
 		return false
@@ -134,10 +150,13 @@ func _process(delta: float) -> void:
 	var q := global_transform.basis.get_rotation_quaternion().slerp(target.basis.get_rotation_quaternion(), w)
 	global_transform = Transform3D(Basis(q), global_position.lerp(target.origin, w))
 
+	if arms:
+		arms.tremble = _tremble
 	# 공포 시 손의 미세한 떨림 (카메라 흔들림 설정을 따른다)
 	_noise_t += delta
 	var amp := _tremble * 0.0035 * float(GameSettings.camera_shake)
-	_rig.rotation = Vector3(sin(_noise_t * 23.0) * amp * 3.0, sin(_noise_t * 17.3 + 1.3) * amp * 3.0, 0.0)
+	if not arms:
+		_rig.rotation = Vector3(sin(_noise_t * 23.0) * amp * 3.0, sin(_noise_t * 17.3 + 1.3) * amp * 3.0, 0.0)
 
 	if is_on:
 		var e := light_energy * _flicker_override
@@ -150,6 +169,11 @@ func _process(delta: float) -> void:
 				set_on(false)
 
 func _play_press_anim() -> void:
+	if arms:
+		# 엄지로 스위치를 누르는 손 동작
+		var h: ViewmodelArms.Hand = arms.sides["L"]
+		h.pose_want = "press_flashlight"
+		get_tree().create_timer(0.14).timeout.connect(func(): h.pose_want = "grip_flashlight")
 	# 전원 버튼을 누르는 손의 짧은 움직임 (최종 모델의 버튼 애니메이션으로 교체)
 	var tw := create_tween()
 	tw.tween_property(_rig, "position", Vector3(0, -0.006, 0.004), 0.05)

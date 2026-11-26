@@ -1,0 +1,141 @@
+{
+ "_doc": "프롤로그 공포 이벤트 (요구사항 08). 이벤트는 스토리 진행·플레이어 행동으로만 발생한다 (무작위 없음). 핵심 이벤트는 시간 경과만으로 실행하지 않는다 — 'fallback_after'는 플레이어가 조건(뒤돌아보기 등)을 놓쳤을 때 이야기가 멈추지 않게 하는 안전장치이며, 이미 필요한 행동(정지 버튼 등)을 한 뒤에만 동작한다. 스키마: docs/design/horror_event_system.md",
+ "chapter_id": "prologue",
+ "events": [
+  {
+   "id": "EV01_normal_studio", "chapter_id": "prologue", "scene_id": "S01_studio",
+   "trigger": {"type": "game_start"}, "requires": [], "delay": 0.0,
+   "lights": {"StudioCeiling": "normal", "DeskLamp": "normal", "FloorLamp": "normal"},
+   "breathing": "calm", "heartbeat": 0.0,
+   "actions": [
+    {"t": 1.2, "do": "hint", "text": "WASD 이동 · 마우스로 둘러보기", "secs": 5},
+    {"t": 7.0, "do": "hint", "text": "E 조사하기 · Shift 달리기 · Ctrl 앉기", "secs": 5}
+   ],
+   "end": "immediate", "repeatable": false, "checkpoint": "game_start", "next": "EV02_knock"
+  },
+  {
+   "id": "EV02_knock", "chapter_id": "prologue", "scene_id": "S03_knock",
+   "trigger": {"type": "tutorial_complete", "moved_m": 4.0, "looked_deg": 120, "interactions": 1, "min_time": 12.0,
+               "conditions": ["player_in_studio", "door_closed"]},
+   "requires": ["EV01_normal_studio"], "delay": 1.5,
+   "characters": [{"id": "unknown", "presence": "sound_only", "position": "door_outside"}],
+   "actions": [
+    {"t": 0.0, "do": "spawn", "what": "parcel_at_door"},
+    {"t": 0.0, "do": "sound_at", "id": "sfx_knock_3", "at": "door_outside", "db": 0.0, "caption": "문 두드리는 소리"},
+    {"t": 2.6, "do": "voice", "line": "PRO_S03_001", "at": "player"},
+    {"t": 2.6, "do": "breathing", "state": "uneasy"},
+    {"t": 9.0, "do": "hint_if", "cond": "door_closed", "text": "누군가 문을 두드렸다. 문을 열어 보자.", "secs": 4}
+   ],
+   "end": "immediate", "repeatable": false, "next": "EV02b_parcel"
+  },
+  {
+   "id": "EV02b_parcel", "chapter_id": "prologue", "scene_id": "S04_parcel",
+   "trigger": {"type": "signal", "name": "parcel_picked"}, "requires": ["EV02_knock"], "delay": 0.0,
+   "actions": [{"t": 0.6, "do": "hint", "text": "책상 위에 올려놓자.", "secs": 3.5}],
+   "end": "immediate", "checkpoint": "parcel_obtained", "next": "EV03_tape_play"
+  },
+  {
+   "id": "EV03_tape_play", "chapter_id": "prologue", "scene_id": "S05_first_play",
+   "trigger": {"type": "signal", "name": "recorder_play", "arg": "1"}, "requires": ["EV02b_parcel"], "delay": 0.0,
+   "characters": [{"id": "soeun", "presence": "sound_only", "position": "recorder"}],
+   "actions": [
+    {"t": 0.6, "do": "tape_audio", "id": "tape_playground", "db": -6.0},
+    {"t": 6.2, "do": "voice", "line": "PRO_S05_001", "at": "recorder"},
+    {"t": 9.4, "do": "lights", "set": {"StudioCeiling": "flicker_once"}},
+    {"t": 9.4, "do": "sound_at", "id": "sfx_flicker_zap", "at": "ceiling", "db": -10.0}
+   ],
+   "end": {"after": 10.5}, "checkpoint": "tape1_played", "next": "EV04_voice_behind"
+  },
+  {
+   "id": "EV04_voice_behind", "chapter_id": "prologue", "scene_id": "S05_behind",
+   "trigger": {"type": "signal", "name": "recorder_stop"}, "requires": ["EV03_tape_play"], "delay": 3.0,
+   "characters": [{"id": "soeun", "presence": "sound_only", "position": "behind_player", "behavior": "voice_only"}],
+   "lock_interaction": 1.2,
+   "actions": [
+    {"t": 0.0, "do": "voice_behind", "line": "PRO_S05_003", "distance": 2.2},
+    {"t": 0.35, "do": "breathing_oneshot", "kind": "gasp"},
+    {"t": 0.4, "do": "breathing", "state": "fear"},
+    {"t": 0.4, "do": "heartbeat", "level": 0.55},
+    {"t": 0.4, "do": "tremble", "amount": 0.5}
+   ],
+   "end": "immediate", "next": "EV05_anomaly"
+  },
+  {
+   "id": "EV05_anomaly", "chapter_id": "prologue", "scene_id": "S05_anomaly",
+   "trigger": {"type": "look_at", "target": "behind_voice", "max_deg": 45, "fallback_after": 9.0},
+   "requires": ["EV04_voice_behind"], "delay": 0.2,
+   "actions": [
+    {"t": 0.0, "do": "clock_stop"},
+    {"t": 0.0, "do": "rain", "on": false, "fade": 1.8},
+    {"t": 0.4, "do": "monitor_noise", "on": true},
+    {"t": 0.6, "do": "lights", "set": {"StudioCeiling": "flicker"}},
+    {"t": 1.4, "do": "voice", "line": "PRO_S05_002", "at": "player"},
+    {"t": 2.2, "do": "door_lock", "locked": true},
+    {"t": 14.0, "do": "hint_if", "cond": "not_tried_door", "text": "문… 문을 확인해 보자.", "secs": 4}
+   ],
+   "end": "immediate", "next": "EV06_blackout"
+  },
+  {
+   "id": "EV06_blackout", "chapter_id": "prologue", "scene_id": "S06_blackout",
+   "trigger": {"type": "signal", "name": "door_locked_try"}, "requires": ["EV05_anomaly"], "delay": 0.5,
+   "actions": [
+    {"t": 0.0, "do": "sound_at", "id": "sfx_power_down", "at": "ceiling", "db": -2.0, "caption": "전기가 나가는 소리"},
+    {"t": 0.05, "do": "lights", "set": {"StudioCeiling": "story_off", "DeskLamp": "story_off", "FloorLamp": "story_off"}},
+    {"t": 0.05, "do": "monitor_noise", "on": false},
+    {"t": 0.05, "do": "monitor_off"},
+    {"t": 0.05, "do": "pc_fan", "on": false},
+    {"t": 0.3, "do": "heartbeat", "level": 0.75},
+    {"t": 0.3, "do": "breathing", "state": "fear"},
+    {"t": 2.4, "do": "voice", "line": "PRO_S06_002", "at": "player"},
+    {"t": 6.0, "do": "hint", "text": "책상 서랍에 손전등이 있었다.", "secs": 4},
+    {"t": 6.0, "do": "guide_light", "on": true}
+   ],
+   "end": "immediate", "next": "EV06b_flashlight"
+  },
+  {
+   "id": "EV06b_flashlight", "chapter_id": "prologue", "scene_id": "S06_flashlight",
+   "trigger": {"type": "signal", "name": "flashlight_pickup"}, "requires": ["EV06_blackout"], "delay": 0.3,
+   "actions": [
+    {"t": 0.0, "do": "guide_light", "on": false},
+    {"t": 0.6, "do": "hint", "text": "F 키로 손전등을 켜고 끈다.", "secs": 5},
+    {"t": 1.0, "do": "heartbeat", "level": 0.45}
+   ],
+   "end": "immediate", "checkpoint": "flashlight_obtained", "next": "EV07_silhouette"
+  },
+  {
+   "id": "EV07_silhouette", "chapter_id": "prologue", "scene_id": "S07_silhouette",
+   "trigger": {"type": "near", "target": "door_inside", "radius": 2.0, "conditions": ["has_flashlight"]},
+   "requires": ["EV06b_flashlight"], "delay": 0.4,
+   "characters": [{"id": "soeun_child", "presence": "shadow_only", "position": "corridor_beyond_door", "behavior": "pass_by", "can_attack": false}],
+   "actions": [
+    {"t": 0.0, "do": "door_gap_light", "on": true},
+    {"t": 0.2, "do": "shadow_pass"},
+    {"t": 0.2, "do": "child_steps"},
+    {"t": 0.9, "do": "breathing_oneshot", "kind": "gasp"},
+    {"t": 2.4, "do": "voice", "line": "PRO_S07_001", "at": "door_outside"},
+    {"t": 4.6, "do": "sound_at", "id": "sfx_knock_3", "at": "door_outside", "db": -2.0, "caption": "문 두드리는 소리"},
+    {"t": 6.6, "do": "voice", "line": "PRO_S06_001", "at": "player"},
+    {"t": 8.2, "do": "door_lock", "locked": false},
+    {"t": 8.2, "do": "sound_at", "id": "sfx_door_unlock", "at": "door_inside", "db": -4.0, "caption": "잠금이 풀리는 소리"}
+   ],
+   "end": {"after": 8.4}, "next": "EV08_transition"
+  },
+  {
+   "id": "EV08_transition", "chapter_id": "prologue", "scene_id": "S08_transition",
+   "trigger": {"type": "signal", "name": "door_opened"}, "requires": ["EV07_silhouette"], "delay": 0.25,
+   "characters": [{"id": "soeun_child", "presence": "observe_far", "position": "apt_corridor_end", "behavior": "appear_vanish", "can_attack": false}],
+   "lock_interaction": 6.0,
+   "actions": [
+    {"t": 0.0, "do": "flashlight_glitch", "secs": 0.9},
+    {"t": 0.3, "do": "fade", "to": 1.0, "secs": 0.35},
+    {"t": 0.8, "do": "teleport", "to": "apt_spawn"},
+    {"t": 1.3, "do": "sound_at", "id": "sfx_fluorescent_start", "at": "apt_light", "db": -2.0, "caption": "형광등이 켜지는 소리"},
+    {"t": 1.6, "do": "fade", "to": 0.0, "secs": 1.4},
+    {"t": 3.4, "do": "soeun_far", "secs": 1.3},
+    {"t": 3.5, "do": "breathing_oneshot", "kind": "gasp"},
+    {"t": 6.2, "do": "title_card", "title": "TAPE 01", "subtitle": "평범했던 하루", "secs": 5.0}
+   ],
+   "end": {"after": 11.5}, "checkpoint": "apt_entered", "next": ""
+  }
+ ]
+}

@@ -286,6 +286,50 @@ def elevator_ding():
     return (np.sin(2 * np.pi * 1318 * t) * 0.6 + np.sin(2 * np.pi * 2636 * t) * 0.2) * np.exp(-t / 0.6)
 
 
+def mix(*xs):
+    """길이가 다른 신호를 0으로 채워 더한다."""
+    n = max(len(x) for x in xs)
+    out = np.zeros(n)
+    for x in xs:
+        out[:len(x)] += x
+    return out
+
+
+def power_down():
+    """정전: 차단 '툭' + 형광등 안정기·전기 웅웅거림이 낮아지며 꺼짐."""
+    d = 2.2
+    t = t_(d)
+    f = 120 * np.exp(-t / 0.5) + 30
+    hum = np.sin(np.cumsum(2 * np.pi * f / SR)) * 0.35 * np.exp(-t / 0.6)
+    hum += bp(noise(d), 80, 400) * 0.15 * np.exp(-t / 0.4)
+    out = np.zeros(int(d * SR))
+    place(out, mix(lp(noise(0.25), 300) * env_exp(0.25, 0.04) * 1.2, click(0.1, 1800, 4, 300, 1.0) * 0.6), 0.0)
+    place(out, hum, 0.02)
+    return out
+
+
+def deadbolt(lock=True):
+    """철문 데드볼트: 금속 걸림 두 번 (잠김은 더 묵직하게)."""
+    out = np.zeros(int(0.7 * SR))
+    a = mix(modal([620, 1340, 2410], [0.05, 0.03, 0.02], [1, 0.5, 0.3], 0.3), click(0.05, 2600, 6, 700, 0.8))
+    b = mix(modal([480, 1100, 1980], [0.08, 0.05, 0.03], [1, 0.6, 0.3], 0.4), lp(noise(0.4), 300) * env_exp(0.4, 0.03) * 0.6)
+    place(out, a * 0.6, 0.0)
+    place(out, b * (1.0 if lock else 0.7), 0.16)
+    return out
+
+
+def fluorescent_start():
+    """오래된 형광등 점등: 스타터 '틱-틱' 깜빡임 + 안정기 웅 소리가 커짐."""
+    d = 3.0
+    out = np.zeros(int(d * SR))
+    for k, at in enumerate((0.0, 0.42, 0.7, 1.15)):
+        place(out, mix(click(0.05, 3200, 6, 900, 1.0) * 0.7, bp(noise(0.08), 2000, 7000) * env_exp(0.08, 0.02) * 0.4), at)
+    t = t_(d - 1.2)
+    hum = fluorescent_hum(6.0, 0.6)[:len(t)] * np.minimum(t / 0.4, 1)
+    place(out, hum * 0.8, 1.2)
+    return out
+
+
 def main():
     print("ambience:")
     reg("amb_rain_window", save("ambience", "amb_rain_window", rain_on_glass(), 0.8, loop=True), loop=True)
@@ -326,6 +370,17 @@ def main():
     reg("sfx_drawer_open", save("sfx", "sfx_drawer_open", drawer(True), 0.7))
     reg("sfx_drawer_close", save("sfx", "sfx_drawer_close", drawer(False), 0.7))
     reg("sfx_elevator_ding", save("sfx", "sfx_elevator_ding", elevator_ding(), 0.5))
+    print("story:")
+    reg("sfx_power_down", save("sfx", "sfx_power_down", power_down(), 0.8))
+    reg("sfx_door_lock", save("sfx", "sfx_door_lock", deadbolt(True), 0.8))
+    reg("sfx_door_unlock", save("sfx", "sfx_door_unlock", deadbolt(False), 0.75))
+    reg("sfx_fluorescent_start", save("sfx", "sfx_fluorescent_start", fluorescent_start(), 0.7))
+    # 그네 삐걱임 (테이프 01 운동장 소리 — 아이들 웃음은 make_voice_samples.py가 합성해 tape_playground로 섞음)
+    sw = np.zeros(int(6.0 * SR))
+    for k in range(5):
+        place(sw, creak(0.5, 26, 18) * 0.5, 0.3 + k * 1.15)
+        place(sw, creak(0.45, 18, 25) * 0.35, 0.85 + k * 1.15)
+    reg("sfx_swing_creak", save("sfx", "sfx_swing_creak", sw, 0.6))
     cfg = {"_doc": "사운드 ID → 파일 (PH_ = 합성 임시 음원). tools/audio/make_sfx.py 생성. 교체 시 이 파일만 수정.", "sounds": REG}
     (GAME / "data" / "config" / "audio.json").write_text(json.dumps(cfg, ensure_ascii=False, indent=1), "utf-8")
 
