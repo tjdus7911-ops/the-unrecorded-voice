@@ -18,6 +18,12 @@ else
   "$BIN" "$@" -- --quality-low --input-probe > "$LOG" 2>&1 &
 fi
 GPID=$!
+SHOTS="${SHOTS:-}"
+shot() { [ -n "$SHOTS" ] && mkdir -p "$SHOTS" && ffmpeg -loglevel error -y -f x11grab -video_size 1280x720 -i :77 -frames:v 1 "$SHOTS/$1.png"; }
+if [ -n "${RECORD:-}" ]; then
+  ffmpeg -loglevel error -y -f x11grab -framerate 10 -video_size 1280x720 -i :77 -c:v libx264 -preset veryfast -pix_fmt yuv420p "$RECORD" &
+  FPID=$!
+fi
 wait_for() { # $1 패턴, $2 초
   for _ in $(seq 1 "$2"); do grep -q "$1" "$LOG" && return 0; sleep 1; done; echo "TIMEOUT waiting: $1"; return 1; }
 last() { grep PROBE "$LOG" | tail -1; }
@@ -27,9 +33,11 @@ check() { if [[ "$1" == "1" ]]; then echo "  PASS  $2"; pass=$((pass+1)); else e
 
 wait_for "PROBE state=1" 240; sleep 6
 check "$(last | grep -q 'mouse_mode=0' && echo 1)" "title: cursor visible on title screen"
+shot 01_title
 xdotool key Return           # 포커스된 '새 게임'
 wait_for "PROBE state=2" 300; sleep 8
 check "$(last | grep -q 'mouse_mode=2' && echo 1)" "play: cursor captured after new game"
+shot 02_play
 y0=$(yaw)
 for i in $(seq 1 10); do xdotool mousemove_relative -- 40 0; sleep 0.3; done
 sleep 4
@@ -42,6 +50,7 @@ p1=$(last | sed -E 's/.*pitch=([-0-9.]+).*/\1/')
 check "$(python3 -c "print(1 if abs($p1-($p0))>0.1 else 0)")" "play: real mouse Y motion pitches view ($p0 -> $p1)"
 xdotool key Escape; sleep 5
 check "$(last | grep -q 'state=4 paused=true mouse_mode=0' && echo 1)" "pause: ESC pauses, cursor visible"
+shot 03_pause
 y2=$(yaw); for i in $(seq 1 5); do xdotool mousemove_relative -- 40 0; sleep 0.3; done; sleep 3; y3=$(yaw)
 check "$(python3 -c "print(1 if abs($y3-($y2))<0.001 else 0)")" "pause: mouse does not rotate view while paused"
 xdotool key Escape; sleep 6      # ESC로 복귀
@@ -50,11 +59,16 @@ xdotool key Escape; sleep 5; xdotool key Return; sleep 6      # 다시 일시정
 check "$(last | grep -q 'state=2 paused=false mouse_mode=2' && echo 1)" "resume(계속하기): back to play, cursor recaptured"
 y4=$(yaw); for i in $(seq 1 10); do xdotool mousemove_relative -- -40 0; sleep 0.3; done; sleep 4; y5=$(yaw)
 check "$(python3 -c "print(1 if abs($y5-($y4))>0.2 else 0)")" "resume: mouse look works again ($y4 -> $y5)"
-# 게임 종료: ESC → 아래로 4칸 → Enter → 확인(예: 왼쪽) → Enter
+# 설정 화면 → 돌아가기 → 게임 종료: ESC → 아래 1칸(설정) → Enter → 촬영 → ESC → 아래 3칸 → Enter → 확인(예) → Enter
 xdotool key Escape; sleep 4
-for i in 1 2 3 4; do xdotool key Down; sleep 0.8; done
+xdotool key Down; sleep 0.8; xdotool key Return; sleep 5
+shot 04_settings_display
+check "$(last | grep -q 'state=4' && echo 1)" "settings: opens from pause menu (still paused)"
+xdotool key Escape; sleep 3
+for i in 1 2 3; do xdotool key Down; sleep 0.8; done
 xdotool key Return; sleep 3; xdotool key Left; sleep 1; xdotool key Return
 for _ in $(seq 1 60); do kill -0 $GPID 2>/dev/null || break; sleep 1; done
 if kill -0 $GPID 2>/dev/null; then check 0 "quit: game process exits from pause menu"; kill $GPID; else check 1 "quit: game process exits from pause menu"; fi
+[ -n "${FPID:-}" ] && kill -INT $FPID 2>/dev/null && sleep 2
 kill $XPID 2>/dev/null
 echo "== X11 input test: $pass passed, $fail failed =="

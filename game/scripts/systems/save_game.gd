@@ -62,5 +62,5 @@ func last_info() -> Dictionary:
 	if d.is_empty():
 		return {}
 	var sec := int(Time.get_unix_time_from_system() - float(d.get("time", 0)))
-	var ago := "방금" if sec < 60 else ("%d분 전" % (sec / 60) if sec < 3600 else "%d시간 전" % (sec / 3600))
+	var ago := tr("방금") if sec < 60 else (tr("%d분 전") % (sec / 60) if sec < 3600 else tr("%d시간 전") % (sec / 3600))
 	return {"label": d.get("label", ""), "ago": ago, "checkpoint": d.get("checkpoint", "")}

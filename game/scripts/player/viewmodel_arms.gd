@@ -557,7 +557,7 @@ func raise_tool(side: String) -> void:
 	set_mode(side, h.mode if h.mode != Mode.REACH else (Mode.HOLD_RECORDER if side == "R" else Mode.HOLD_FLASHLIGHT))
 
 ## ------------------------------------------------------------------ 두 손 운반 (택배 상자)
-const CARRY_T := Transform3D(Basis(Vector3.RIGHT, deg_to_rad(8)), Vector3(0.0, -0.34, -0.50))
+const CARRY_T := Transform3D(Basis(Vector3.RIGHT, deg_to_rad(8)), Vector3(0.0, -0.30, -0.46))
 var carry_box: Node3D
 var carry_T := Transform3D()
 var carry_size := Vector3(0.4, 0.3, 0.3)

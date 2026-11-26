@@ -9,10 +9,14 @@
       "chapter_id": "prologue",
       "scene_id": "S03_knock",
       "text": {
-        "ko": "이 시간에 누구지?"
+        "ko": "이 시간에 누구지?",
+        "en": "Who could it be at this hour?",
+        "ja": "こんな時間に誰だ？"
       },
       "subtitle": {
-        "ko": "이 시간에 누구지?"
+        "ko": "이 시간에 누구지?",
+        "en": "Who could it be at this hour?",
+        "ja": "こんな時間に誰だ？"
       },
       "emotion": "uneasy",
       "audio": {
@@ -33,10 +37,14 @@
       "chapter_id": "prologue",
       "scene_id": "S04_tapes",
       "text": {
-        "ko": "잡음을 제거하지 말아 주세요."
+        "ko": "잡음을 제거하지 말아 주세요.",
+        "en": "Please don't remove the noise.",
+        "ja": "ノイズを消さないでください。"
       },
       "subtitle": {
-        "ko": "잡음을 제거하지 말아 주세요."
+        "ko": "잡음을 제거하지 말아 주세요.",
+        "en": "Please don't remove the noise.",
+        "ja": "ノイズを消さないでください。"
       },
       "emotion": "neutral",
       "audio": {
@@ -54,10 +62,14 @@
       "chapter_id": "prologue",
       "scene_id": "S04_tapes",
       "text": {
-        "ko": "그 안에 목소리가 있습니다."
+        "ko": "그 안에 목소리가 있습니다.",
+        "en": "There is a voice inside it.",
+        "ja": "その中に声があります。"
       },
       "subtitle": {
-        "ko": "그 안에 목소리가 있습니다."
+        "ko": "그 안에 목소리가 있습니다.",
+        "en": "There is a voice inside it.",
+        "ja": "その中に声があります。"
       },
       "emotion": "neutral",
       "audio": {
@@ -75,10 +87,14 @@
       "chapter_id": "prologue",
       "scene_id": "S05_first_play",
       "text": {
-        "ko": "정우야, 녹음되고 있어?"
+        "ko": "정우야, 녹음되고 있어?",
+        "en": "Jeong-woo, is it recording?",
+        "ja": "ジョンウ、録音されてる？"
       },
       "subtitle": {
-        "ko": "정우야, 녹음되고 있어?"
+        "ko": "정우야, 녹음되고 있어?",
+        "en": "Jeong-woo, is it recording?",
+        "ja": "ジョンウ、録音されてる？"
       },
       "emotion": "playful",
       "audio": {
@@ -102,10 +118,14 @@
       "chapter_id": "prologue",
       "scene_id": "S05_first_play",
       "text": {
-        "ko": "...뭐야?"
+        "ko": "...뭐야?",
+        "en": "...What?",
+        "ja": "…なんだ？"
       },
       "subtitle": {
-        "ko": "...뭐야?"
+        "ko": "...뭐야?",
+        "en": "...What?",
+        "ja": "…なんだ？"
       },
       "emotion": "flustered",
       "audio": {
@@ -126,10 +146,14 @@
       "chapter_id": "prologue",
       "scene_id": "S05_first_play",
       "text": {
-        "ko": "정우야?"
+        "ko": "정우야?",
+        "en": "Jeong-woo?",
+        "ja": "ジョンウ？"
       },
       "subtitle": {
-        "ko": "정우야?"
+        "ko": "정우야?",
+        "en": "Jeong-woo?",
+        "ja": "ジョンウ？"
       },
       "emotion": "whisper",
       "audio": {
@@ -153,10 +177,14 @@
       "chapter_id": "prologue",
       "scene_id": "S06_anomaly",
       "text": {
-        "ko": "누구세요?"
+        "ko": "누구세요?",
+        "en": "Who's there?",
+        "ja": "誰ですか？"
       },
       "subtitle": {
-        "ko": "누구세요?"
+        "ko": "누구세요?",
+        "en": "Who's there?",
+        "ja": "誰ですか？"
       },
       "emotion": "fear",
       "audio": {
@@ -177,10 +205,14 @@
       "chapter_id": "prologue",
       "scene_id": "S06_blackout",
       "text": {
-        "ko": "전기가 나갔나… 손전등. 책상 서랍에 있었는데."
+        "ko": "전기가 나갔나… 손전등. 책상 서랍에 있었는데.",
+        "en": "Power's out... The flashlight. It was in the desk drawer.",
+        "ja": "停電か…懐中電灯。机の引き出しにあったはずだ。"
       },
       "subtitle": {
-        "ko": "전기가 나갔나… 손전등. 책상 서랍에 있었는데."
+        "ko": "전기가 나갔나… 손전등. 책상 서랍에 있었는데.",
+        "en": "Power's out... The flashlight. It was in the desk drawer.",
+        "ja": "停電か…懐中電灯。机の引き出しにあったはずだ。"
       },
       "emotion": "fear",
       "audio": {
@@ -201,10 +233,14 @@
       "chapter_id": "prologue",
       "scene_id": "S07_silhouette",
       "text": {
-        "ko": "정우야, 여기야."
+        "ko": "정우야, 여기야.",
+        "en": "Jeong-woo, over here.",
+        "ja": "ジョンウ、こっちだよ。"
       },
       "subtitle": {
-        "ko": "정우야, 여기야."
+        "ko": "정우야, 여기야.",
+        "en": "Jeong-woo, over here.",
+        "ja": "ジョンウ、こっちだよ。"
       },
       "emotion": "whisper",
       "audio": {

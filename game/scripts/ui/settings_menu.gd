@@ -147,6 +147,26 @@ func _section(t: String) -> void:
 
 ## ---------------------------------------------------------------- 탭
 func _display_tab() -> void:
+	var langs := []
+	var cur := 0
+	for i in GameSettings.LANGUAGES.size():
+		langs.append(GameSettings.LANGUAGES[i][1])
+		if GameSettings.LANGUAGES[i][0] == GameSettings.text_language:
+			cur = i
+	var lo := OptionButton.new()
+	for l in langs:
+		lo.add_item(l)
+	lo.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+	lo.select(cur)
+	lo.item_selected.connect(func(i):
+		GameSettings.set_value(&"text_language", GameSettings.LANGUAGES[i][0])
+		_show_tab(0))
+	_row("언어 (화면·자막)", lo)
+	var vo := OptionButton.new()
+	vo.add_item("한국어")
+	vo.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+	vo.select(0)
+	_row("음성 언어", vo, "다른 언어 음성 준비 중")
 	_row("화면 모드", _option("window_mode", ["전체 화면", "창 모드", "테두리 없는 창"], GameSettings.window_mode))
 	var res := []
 	for r in GameSettings.RESOLUTIONS:
@@ -174,7 +194,7 @@ func _controls_tab() -> void:
 		b.pressed.connect(func():
 			_waiting_action = pair[0]
 			b.text = "… 새 키 입력")
-		_row(pair[1], b)
+		_row(tr(pair[1]), b)
 	var fixed := [["마우스", "둘러보기"], ["E / 마우스 왼쪽", "조사 중 가져가기"], ["ESC", "일시정지 / 조사 닫기"], ["F1", "조작 안내"]]
 	for p in fixed:
 		_row(p[1], UIKit.label(p[0], 18, UIKit.DIM))

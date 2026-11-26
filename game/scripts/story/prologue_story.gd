@@ -267,7 +267,7 @@ func _title_card(title: String, sub: String, secs: float) -> void:
 	fv.spacing_glyph = 9
 	t.add_theme_font_override("font", fv)
 	t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	var s := UIKit.label(sub, 46, UIKit.TEXT, true)
+	var s := UIKit.label(tr(sub), 46, UIKit.TEXT, true)
 	s.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_card.add_child(t)
 	_card.add_child(s)

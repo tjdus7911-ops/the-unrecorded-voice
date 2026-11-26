@@ -9,7 +9,8 @@ const DIR := "res://data/dialogue"
 
 var lines := {}        ## line_id -> Dictionary
 var characters := {}   ## character_id -> Dictionary
-var locale := "ko"
+var locale := "ko"          ## 자막(텍스트) 언어 — GameSettings.text_language
+var voice_locale := "ko"    ## 음성 언어 — GameSettings.voice_language (자막과 독립)
 
 func _ready() -> void:
 	_load_characters()
@@ -39,14 +40,19 @@ func get_line(id: String) -> Dictionary:
 
 func text_of(id: String) -> String:
 	var l := get_line(id)
-	return l.get("subtitle", l.get("text", {})).get(locale, "")
+	var d: Dictionary = l.get("subtitle", l.get("text", {}))
+	return d.get(locale, d.get("ko", ""))
 
 func speaker_name(id: String) -> String:
 	var l := get_line(id)
-	return characters.get(l.get("character_id", ""), {}).get("display_name", {}).get(locale, "")
+	var d: Dictionary = characters.get(l.get("character_id", ""), {}).get("display_name", {})
+	return d.get(locale, d.get("ko", ""))
 
 func audio_of(id: String) -> AudioStream:
-	var path: String = get_line(id).get("audio", {}).get(locale, "")
+	var a: Dictionary = get_line(id).get("audio", {})
+	var path: String = a.get(voice_locale, "")
+	if path == "":
+		path = a.get("ko", "")       # 해당 언어 음성이 아직 없으면 한국어 음성 (자막은 선택 언어)
 	if path != "" and ResourceLoader.exists(path):
 		return load(path)
 	return null

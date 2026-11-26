@@ -98,6 +98,39 @@ func _run() -> void:
 	p = lvl.player
 	await t(1.5)
 	var B := func(x: float, y: float, z: float) -> Vector3: return lvl.b2g(Vector3(x, y, z))
+	if OS.get_cmdline_user_args().has("--debug-inspect"):
+		lvl.parcel.visible = true
+		lvl.parcel.top_level = true
+		lvl.parcel.global_transform = lvl._desk_place_transform()
+		lvl.parcel_on_desk = true
+		lvl._parcel_open()
+		await t(3.5)
+		var dt0: Transform3D = lvl._desk_place_transform()
+		p.global_position = dt0.origin + Vector3(0.05, -dt0.origin.y, 0.72)
+		await t(0.3)
+		for nm in ["prop_memo", "prop_tape_1"]:
+			var o := lvl.parcel.find_child(nm, true, false) as Node3D
+			await lookw(o.global_position, 0.4)
+			await press("interact")
+			await t(1.6)
+			await shot("dbg_" + nm)
+			await mouse(-150, 60)
+			await t(0.6)
+			await shot("dbg_rot_" + nm)
+			await press("interact")
+			await t(1.0)
+		await lookw(lvl.recorder.global_position, 0.4)
+		await press("interact")
+		await t(1.2)
+		await press("recorder_play")
+		await t(0.75)
+		await shot("dbg_insert")
+		await t(2.5)
+		await press("recorder_play")
+		await t(1.0)
+		await shot("dbg_play")
+		get_tree().quit()
+		return
 	if OS.get_cmdline_user_args().has("--debug-carry"):
 		lvl.show_parcel_at_door()
 		var pp: Vector3 = lvl.parcel.global_position

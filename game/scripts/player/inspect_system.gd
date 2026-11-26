@@ -9,7 +9,7 @@ extends Node3D
 signal opened(target: Interactable)
 signal closed(target: Interactable, picked: bool)
 
-const VIEW_POS := Vector3(0.015, -0.045, -0.30)     ## 손에 든 물체 중심 (카메라 루트 공간)
+const VIEW_POS := Vector3(-0.035, -0.015, -0.29)    ## 손에 든 물체 중심 (카메라 루트 공간) — 화면 중앙 가까이, 설명 패널과 겹치지 않게
 
 var player: PlayerController
 var active: Interactable

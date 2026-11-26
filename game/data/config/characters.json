@@ -1,16 +1,112 @@
 {
   "_doc": "캐릭터·음성 ID 레지스트리. 승인된 voice_id는 전 챕터에서 변경 금지. docs/design/sound_bible.md 참고",
   "characters": [
-    {"character_id": "jungwoo_adult", "ref": "REF 11", "display_name": {"ko": "정우"}, "voice_id": "vo_jungwoo_adult", "age": 37, "voice_brief": "낮고 차분하며 약간 지친 30대 남성", "voice_status": "unassigned"},
-    {"character_id": "jungwoo_child", "ref": "REF 12", "display_name": {"ko": "어린 정우"}, "voice_id": "vo_jungwoo_child", "age": 9, "voice_brief": "자연스럽고 장난기 있는 남자아이", "voice_status": "unassigned"},
-    {"character_id": "soeun", "ref": "REF 13/14", "display_name": {"ko": "소은"}, "voice_id": "vo_soeun", "age": 9, "voice_brief": "밝고 순수하며 호기심 많은 여자아이. 기억 속 모습에서도 괴물처럼 왜곡하지 않음", "voice_status": "unassigned"},
-    {"character_id": "mansu", "ref": "REF 15", "display_name": {"ko": "박만수"}, "voice_id": "vo_mansu", "age": 58, "voice_brief": "나이가 들고 거칠며 소극적인 남성", "voice_status": "unassigned"},
-    {"character_id": "youngsik", "ref": "REF 16", "display_name": {"ko": "최영식"}, "voice_id": "vo_youngsik", "age": 46, "voice_brief": "권위적이고 냉정한 중년 남성", "voice_status": "unassigned"}
+    {
+      "character_id": "jungwoo_adult",
+      "ref": "REF 11",
+      "display_name": {
+        "ko": "정우",
+        "en": "Jeong-woo",
+        "ja": "ジョンウ"
+      },
+      "voice_id": "vo_jungwoo_adult",
+      "age": 37,
+      "voice_brief": "낮고 차분하며 약간 지친 30대 남성",
+      "voice_status": "unassigned"
+    },
+    {
+      "character_id": "jungwoo_child",
+      "ref": "REF 12",
+      "display_name": {
+        "ko": "어린 정우",
+        "en": "Young Jeong-woo",
+        "ja": "幼いジョンウ"
+      },
+      "voice_id": "vo_jungwoo_child",
+      "age": 9,
+      "voice_brief": "자연스럽고 장난기 있는 남자아이",
+      "voice_status": "unassigned"
+    },
+    {
+      "character_id": "soeun",
+      "ref": "REF 13/14",
+      "display_name": {
+        "ko": "소은",
+        "en": "So-eun",
+        "ja": "ソウン"
+      },
+      "voice_id": "vo_soeun",
+      "age": 9,
+      "voice_brief": "밝고 순수하며 호기심 많은 여자아이. 기억 속 모습에서도 괴물처럼 왜곡하지 않음",
+      "voice_status": "unassigned"
+    },
+    {
+      "character_id": "mansu",
+      "ref": "REF 15",
+      "display_name": {
+        "ko": "박만수",
+        "en": "Man-su",
+        "ja": "マンス"
+      },
+      "voice_id": "vo_mansu",
+      "age": 58,
+      "voice_brief": "나이가 들고 거칠며 소극적인 남성",
+      "voice_status": "unassigned"
+    },
+    {
+      "character_id": "youngsik",
+      "ref": "REF 16",
+      "display_name": {
+        "ko": "최영식",
+        "en": "Young-sik",
+        "ja": "ヨンシク"
+      },
+      "voice_id": "vo_youngsik",
+      "age": 46,
+      "voice_brief": "권위적이고 냉정한 중년 남성",
+      "voice_status": "unassigned"
+    }
   ],
   "ghosts": [
-    {"ghost_id": "watchman", "ref": "REF 17", "name": {"ko": "순찰자"}, "origin": "mansu", "flashlight_reaction": "detects_light", "breath": "낮고 거친 숨소리"},
-    {"ghost_id": "bystander", "ref": "REF 18", "name": {"ko": "방관자"}, "origin": "residents", "flashlight_reaction": "freezes_when_lit_and_watched", "breath": "여러 사람의 호흡이 겹침"},
-    {"ghost_id": "keeper", "ref": "REF 19", "name": {"ko": "관리인"}, "origin": "youngsik", "flashlight_reaction": "none", "breath": "느리고 무거운 호흡"},
-    {"ghost_id": "static", "ref": "REF 20", "name": {"ko": "잡음"}, "origin": "jungwoo_adult", "flashlight_reaction": "interferes_flicker", "breath": "역재생된 호흡과 아날로그 잡음"}
+    {
+      "ghost_id": "watchman",
+      "ref": "REF 17",
+      "name": {
+        "ko": "순찰자"
+      },
+      "origin": "mansu",
+      "flashlight_reaction": "detects_light",
+      "breath": "낮고 거친 숨소리"
+    },
+    {
+      "ghost_id": "bystander",
+      "ref": "REF 18",
+      "name": {
+        "ko": "방관자"
+      },
+      "origin": "residents",
+      "flashlight_reaction": "freezes_when_lit_and_watched",
+      "breath": "여러 사람의 호흡이 겹침"
+    },
+    {
+      "ghost_id": "keeper",
+      "ref": "REF 19",
+      "name": {
+        "ko": "관리인"
+      },
+      "origin": "youngsik",
+      "flashlight_reaction": "none",
+      "breath": "느리고 무거운 호흡"
+    },
+    {
+      "ghost_id": "static",
+      "ref": "REF 20",
+      "name": {
+        "ko": "잡음"
+      },
+      "origin": "jungwoo_adult",
+      "flashlight_reaction": "interferes_flicker",
+      "breath": "역재생된 호흡과 아날로그 잡음"
+    }
   ]
 }

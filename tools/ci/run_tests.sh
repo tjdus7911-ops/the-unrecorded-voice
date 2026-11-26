@@ -13,3 +13,4 @@ cd "$ROOT/game"
 "$GODOT" --headless --fixed-fps 60 --path . res://scenes/tests/run_tests.tscn
 "$GODOT" --headless --fixed-fps 60 --path . res://scenes/tests/run_phase01_tests.tscn
 "$GODOT" --headless --fixed-fps 60 --path . res://scenes/tests/run_story_tests.tscn
+"$GODOT" --headless --fixed-fps 60 --path . res://scenes/tests/run_i18n_tests.tscn

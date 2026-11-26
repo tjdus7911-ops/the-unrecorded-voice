@@ -88,8 +88,8 @@ func _settings() -> void:
 func _unsaved_note() -> String:
 	var info: Dictionary = SaveGame.last_info()
 	if info.is_empty():
-		return "저장된 진행 내용이 없습니다. 지금까지의 진행은 사라집니다."
-	return "마지막 자동 저장: '%s' (%s). 그 이후의 진행은 저장되지 않습니다." % [info.get("label", ""), info.get("ago", "")]
+		return tr("저장된 진행 내용이 없습니다. 지금까지의 진행은 사라집니다.")
+	return tr("마지막 자동 저장: '%s' (%s). 그 이후의 진행은 저장되지 않습니다.") % [tr(info.get("label", "")), info.get("ago", "")]
 
 func _confirm(msg: String, then: Callable) -> void:
 	_list.visible = false

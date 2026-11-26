@@ -73,7 +73,7 @@ func _ready() -> void:
 		cont.mouse_default_cursor_shape = Control.CURSOR_ARROW
 	else:
 		var info := SaveGame.last_info()
-		var note := UIKit.label("  %s · %s" % [info.get("label", ""), info.get("ago", "")], 15, UIKit.DISABLED)
+		var note := UIKit.label("  %s · %s" % [tr(info.get("label", "")), info.get("ago", "")], 15, UIKit.DISABLED)
 		_menu.add_child(note)
 		_menu.move_child(note, 2)
 	var fill := Control.new()

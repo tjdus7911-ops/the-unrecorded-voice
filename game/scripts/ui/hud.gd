@@ -129,7 +129,7 @@ func bind_player(p: PlayerController) -> void:
 	p.inspect.closed.connect(func(_t, _p): inspect_panel.visible = false; crosshair.visible = true)
 
 func show_toast(text: String, secs := 2.5) -> void:
-	toast.text = text
+	toast.text = tr(text)
 	_toast_timer = secs
 
 func _on_item(id: StringName) -> void:
@@ -138,17 +138,17 @@ func _on_item(id: StringName) -> void:
 	if names.has(id):
 		show_toast(names[id])
 	elif String(id).begins_with("tape_"):
-		show_toast("테이프 %s번을 챙겼다." % String(id).substr(5))
+		show_toast(tr("테이프 %s번을 챙겼다.") % String(id).substr(5))
 
 func _on_inspect_open(t: Interactable) -> void:
 	var sizes := [18, 21, 25, 29]
 	inspect_body.add_theme_font_size_override("font_size", sizes[clampi(GameSettings.inspect_text_size, 0, 3)])
 	inspect_title.add_theme_font_size_override("font_size", sizes[clampi(GameSettings.inspect_text_size, 0, 3)] + 9)
-	inspect_title.text = t.inspect_title
-	inspect_body.text = t.inspect_text
+	inspect_title.text = tr(t.inspect_title)
+	inspect_body.text = tr(t.inspect_text)
 	var can := t.pickup_item != &""
-	inspect_status.text = "● 가져갈 수 있다" if can else "○ 살펴보기만 할 수 있다"
-	inspect_hint.text = "마우스 돌려 보기 · 우클릭 뒤집기 · 휠 가까이/멀리\n" + ("E 가져가기 · " if can else "E 내려놓기 · ") + "Esc 내려놓기"
+	inspect_status.text = tr("● 가져갈 수 있다") if can else tr("○ 살펴보기만 할 수 있다")
+	inspect_hint.text = tr("마우스 돌려 보기 · 우클릭 뒤집기 · 휠 가까이/멀리\n") + (tr("E 가져가기 · ") if can else tr("E 내려놓기 · ")) + tr("Esc 내려놓기")
 	inspect_panel.visible = true
 	crosshair.visible = false
 	prompt.visible = false
@@ -177,7 +177,7 @@ func _on_line(line: Dictionary) -> void:
 	_sub_timer = 0.08 * subtitle.text.length() + 1.8
 
 func _on_caption(text: String, dir: String) -> void:
-	caption.text = "[%s%s]" % [text, (" · " + dir) if dir != "" else ""]
+	caption.text = "[%s%s]" % [tr(text), (" · " + tr(dir)) if dir != "" else ""]
 	_cap_timer = 2.5
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -192,7 +192,7 @@ func _process(delta: float) -> void:
 		var t := _target
 		prompt.visible = t != null and is_instance_valid(t)
 		if prompt.visible:
-			prompt.text = "[E] " + t.current_prompt()
+			prompt.text = "[E] " + tr(t.current_prompt())
 	if _sub_timer > 0.0:
 		_sub_timer -= delta
 		if _sub_timer <= 0.0:

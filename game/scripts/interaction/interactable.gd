@@ -8,7 +8,12 @@ signal interacted(by: Node)
 
 @export var prompt := "조사하기"
 @export var max_distance := 2.0
-@export var enabled := true
+## 비활성화되면 판정 레이어도 끈다 — 꺼진 상자 판정이 안쪽 물건(메모·테이프)을 가리지 않게
+@export var enabled := true:
+	set(v):
+		enabled = v
+		if is_inside_tree():
+			collision_layer = 4 if v else 0
 
 var action: Callable                 ## E 키 동작 (없으면 조사)
 var prompt_fn: Callable              ## 상황에 따라 바뀌는 안내 문구
@@ -37,7 +42,7 @@ func reach_point() -> Vector3:
 
 func _ready() -> void:
 	# 조사 판정 전용 레이어(3). 이동은 막지 않는다 — 물리적 막힘은 각 오브젝트의 충돌체가 담당.
-	collision_layer = 4
+	collision_layer = 4 if enabled else 0
 
 func can_interact(player: Node3D) -> bool:
 	return enabled and player.global_position.distance_to(global_position) <= max_distance + 1.0
@@ -76,7 +81,10 @@ static func local_aabb(node: Node3D) -> AABB:
 	var inv := node.global_transform.affine_inverse()
 	var out := AABB()
 	var first := true
-	for mi in node.find_children("*", "MeshInstance3D", true, false):
+	var meshes: Array = node.find_children("*", "MeshInstance3D", true, false)
+	if node is MeshInstance3D:
+		meshes.append(node)       # 노드 자신이 메시인 경우 (서랍 앞판 등)
+	for mi in meshes:
 		var m := mi as MeshInstance3D
 		if m.mesh == null or not m.is_visible_in_tree():
 			continue

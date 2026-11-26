@@ -23,6 +23,10 @@ var volumes := {
 	&"Music": 1.0,
 }
 var breathing_intensity := 1.0    ## 호흡·심장 박동 음량 0~1
+## ---- 언어 (UI·자막과 음성을 따로 고른다)
+const LANGUAGES := [["ko", "한국어"], ["en", "English"], ["ja", "日本語"]]
+var text_language := "ko"
+var voice_language := "ko"        ## 현재 음성은 한국어만 존재 (다른 언어 음성 파일이 생기면 자동 사용)
 ## ---- 화면
 var window_mode := 0              ## 0 전체 화면 / 1 창 모드 / 2 테두리 없는 창
 var resolution := 2               ## RESOLUTIONS 인덱스 (창 모드에서 적용)
@@ -45,7 +49,7 @@ var reduce_flashes := false       ## 조명 깜빡임·섬광 완화
 var inspect_text_size := 1        ## 조사 설명 글자 크기 0~3
 var dynamic_range_compression := false
 
-const GAME_KEYS := ["window_mode", "resolution", "vsync", "fps_limit", "fov", "brightness", "graphics_quality",
+const GAME_KEYS := ["text_language", "voice_language", "window_mode", "resolution", "vsync", "fps_limit", "fov", "brightness", "graphics_quality",
 	"mouse_sensitivity", "invert_y", "subtitles", "subtitle_size", "subtitle_bg", "sound_captions",
 	"camera_shake", "reduce_flashes", "inspect_text_size", "breathing_intensity", "dynamic_range_compression"]
 
@@ -55,9 +59,32 @@ func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	_headless = DisplayServer.get_name() == "headless"
 	_ensure_actions()
+	_font_fallbacks()
 	load_settings()
 	apply_all()
 	apply_display()
+	apply_language()
+
+## 한국어 서브셋 폰트에 일본어 서브셋을 폴백으로 연결 (가나·한자 표시)
+func _font_fallbacks() -> void:
+	var jp_path := "res://assets/fonts/NotoSansJP-Regular-subset.otf"
+	if not ResourceLoader.exists(jp_path):
+		return
+	var jp: Font = load(jp_path)
+	for p in ["res://assets/fonts/NotoSansKR-Regular-subset.otf", "res://assets/fonts/NotoSansKR-Medium-subset.otf"]:
+		if ResourceLoader.exists(p):
+			var f: Font = load(p)
+			if not f.fallbacks.has(jp):
+				var fb := f.fallbacks
+				fb.append(jp)
+				f.fallbacks = fb
+
+func apply_language() -> void:
+	TranslationServer.set_locale(text_language)
+	var db := get_node_or_null("/root/DialogueDB")
+	if db:
+		db.locale = text_language
+		db.voice_locale = voice_language
 
 func set_value(key: StringName, value: Variant) -> void:
 	if key in volumes:
@@ -67,6 +94,8 @@ func set_value(key: StringName, value: Variant) -> void:
 	apply_all()
 	if String(key) in ["window_mode", "resolution", "vsync", "fps_limit"]:
 		apply_display()
+	if String(key) in ["text_language", "voice_language"]:
+		apply_language()
 	save_settings()
 	changed.emit(key)
 
@@ -121,7 +150,7 @@ func key_for(action: String) -> String:
 			var code: int = e.physical_keycode if e.physical_keycode != 0 else e.keycode
 			return OS.get_keycode_string(DisplayServer.keyboard_get_keycode_from_physical(code) if e.physical_keycode != 0 else code)
 		if e is InputEventMouseButton:
-			return "마우스 %d" % e.button_index
+			return tr("마우스 %d") % e.button_index
 	return "-"
 
 func rebind(action: String, physical: int) -> void:

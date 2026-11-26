@@ -293,7 +293,7 @@ func checkpoint(id: String) -> void:
 		return
 	SaveGame.write(id, get_save_state())
 	if hud:
-		hud.show_toast("자동 저장됨 · " + SaveGame.LABELS.get(id, id))
+		hud.show_toast(tr("자동 저장됨 · ") + tr(SaveGame.LABELS.get(id, id)))
 
 ## 녹음기에 테이프를 애니메이션 없이 바로 넣는다 (타이틀 연출·불러오기)
 func _load_tape_instant(n: String) -> void:
@@ -906,7 +906,7 @@ func _locked_doors() -> void:
 		bs.size = Vector3(0.9 if spec[0] != "셔터" else 2.2, 2.0, 0.12)
 		cs.shape = bs
 		it.add_child(cs)
-		it.prompt = ("%s호 문" % spec[0]) if spec[0] != "셔터" else "셔터"
+		it.prompt = (tr("%s호 문") % spec[0]) if spec[0] != "셔터" else "셔터"
 		it.action = func():
 			Sounds.play_at("sfx_door_locked", it.global_position, &"SFX", -4.0, null, 0.05, "잠긴 문")
 			hud.show_toast("잠겨 있다.")
@@ -1074,11 +1074,11 @@ func _parcel_contents_ready() -> void:
 		var t := parcel.find_child("prop_tape_%d" % n, true, false) as Node3D
 		if t == null:
 			continue
-		var it := Interactable.attach_to(t, "테이프 %d" % n, 0.003, 0.03)
+		var it := Interactable.attach_to(t, tr("테이프 %d") % n, 0.003, 0.03)
 		it.inspectable = true
 		it.inspect_visual = t
-		it.inspect_title = "카세트테이프 %d번" % n
-		it.inspect_text = ("라벨에 손글씨로 '%d'.\n투명 창 너머로 감긴 테이프가 보인다." % n) if n == 1 else ("라벨에 손글씨로 '%d'.\n1번부터 들어 보자." % n)
+		it.inspect_title = tr("카세트테이프 %d번") % n
+		it.inspect_text = (tr("라벨에 손글씨로 '%d'.\n투명 창 너머로 감긴 테이프가 보인다.") % n) if n == 1 else (tr("라벨에 손글씨로 '%d'.\n1번부터 들어 보자.") % n)
 		it.reach = "pick"
 		# 프롤로그에서는 1번 테이프만 가져간다 (나머지는 상자에 둔다)
 		it.pickup_item = StringName("tape_%d" % n) if (n == 1 or not story) else &""
@@ -1101,7 +1101,7 @@ func _held_tape() -> String:
 func _recorder_prompt() -> String:
 	match recorder_state:
 		"empty":
-			return ("테이프 %s 넣기" % _held_tape()) if _held_tape() != "" else "녹음기 (테이프 없음)"
+			return (tr("테이프 %s 넣기") % _held_tape()) if _held_tape() != "" else "녹음기 (테이프 없음)"
 		"loaded":
 			return "재생"
 		_:
@@ -1179,7 +1179,7 @@ func _insert_tape(n: String) -> void:
 		recorder_state = "loaded"
 		recorder_tape_no = n
 		_notify("tape_inserted", n)
-		hud.show_toast("테이프 %s번을 넣었다.  R: 재생" % n))
+		hud.show_toast(tr("테이프 %s번을 넣었다.  R: 재생") % n))
 
 ## 왼손으로 물건을 집어 target 노드 위치로 가져간다 (target 바로 위 → 안으로)
 func _hand_bring(obj: Node3D, target: Node3D) -> void:
