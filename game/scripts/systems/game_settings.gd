@@ -50,12 +50,13 @@ var inspect_text_size := 1        ## 조사 설명 글자 크기 0~3
 var crosshair_mode := 0           ## 조준점: 0 항상 작은 점 · 1 상호작용 때만(손 아이콘) · 2 끔 (요구사항 13)
 var interaction_hints := false    ## 상호작용 힌트: 켜면 손 아이콘 옆에 물건 이름 + 바라보는 물건 은은한 강조
 var objective_hints := true       ## 현재 목표 표시 (요구사항 12 §4)
+var objective_marker := 0         ## 목표 위치 안내 (요구사항 21): 0 항상 표시 · 1 막힐 때만 표시 · 2 표시 안 함
 var dynamic_range_compression := false
 
 const SETTINGS_VERSION := 2
 const GAME_KEYS := ["text_language", "voice_language", "window_mode", "resolution", "vsync", "fps_limit", "fov", "brightness", "graphics_quality",
 	"mouse_sensitivity", "invert_y", "subtitles", "subtitle_size", "subtitle_bg", "sound_captions",
-	"camera_shake", "reduce_flashes", "inspect_text_size", "crosshair_mode", "interaction_hints", "objective_hints", "breathing_intensity", "dynamic_range_compression"]
+	"camera_shake", "reduce_flashes", "inspect_text_size", "crosshair_mode", "interaction_hints", "objective_hints", "objective_marker", "breathing_intensity", "dynamic_range_compression"]
 
 var _headless := false
 

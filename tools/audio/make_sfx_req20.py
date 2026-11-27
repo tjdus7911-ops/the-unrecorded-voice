@@ -44,8 +44,29 @@ def tape_start_crackle():
     return out
 
 
+def tape_playground_bed():
+    """TAPE 01 녹음 속 놀이터 소리 (6.3초): 바깥 공기 + 그네 삐걱임. 사람 목소리·웃음은 합성하지 않는다
+    (예전 TTS_tape_playground.wav는 합성 실패로 무음이었다 — 요구사항 20 사운드 전수 검수에서 발견)."""
+    import soundfile as sf
+    d = 6.3
+    n = int(d * SR)
+    air = S.lp(S.hp(S.pink(d), 120), 1800)[:n] * 0.35
+    creak, sr = sf.read(str(S.GAME / "assets" / "audio" / "sfx" / "PH_sfx_swing_creak.wav"))
+    if creak.ndim > 1:
+        creak = creak.mean(axis=1)
+    out = air.copy()
+    at = int(0.2 * SR)
+    m = min(len(creak), n - at)
+    out[at:at + m] += creak[:m] * 0.8
+    t = np.arange(n) / SR
+    env = np.minimum(1.0, t / 0.3) * np.minimum(1.0, (d - t) / 0.7)
+    return out * np.clip(env, 0, 1)
+
+
 def main():
     reg = {}
+    reg["tape_playground"] = {"files": [S.save("sfx", "tape_playground_bed", tape_playground_bed(), 0.5)], "loop": False,
+                              "note": "요구사항 20: 녹음 속 놀이터 공기·그네 (자체 합성, 음성 없음)"}
     reg["sfx_tape_start_crackle"] = {
         "files": [S.save("sfx", f"sfx_tape_start_crackle_{i}", tape_start_crackle(), 0.55) for i in range(3)],
         "note": "요구사항 20: PLAY 직후 0.65~0.85초 — 끝난 뒤에 첫 대사가 시작된다 (prologue_story tape_sequence)"}

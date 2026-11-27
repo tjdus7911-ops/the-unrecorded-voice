@@ -279,9 +279,10 @@
   },
   "tape_playground": {
    "files": [
-    "res://assets/audio/sfx/TTS_tape_playground.wav"
+    "res://assets/audio/sfx/PH_tape_playground_bed.wav"
    ],
-   "loop": false
+   "loop": false,
+   "note": "요구사항 20: 녹음 속 놀이터 공기·그네 (자체 합성, 음성 없음)"
   },
   "sfx_child_laugh": {
    "files": [

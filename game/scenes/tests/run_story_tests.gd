@@ -6,6 +6,7 @@ extends Node
 var lvl: Node3D
 var p: PlayerController
 var passed := 0
+var save_fl: Dictionary = {}
 var failed := 0
 
 ## 오디오가 실제로 믹싱되는지 (헤드리스 Dummy 드라이버는 믹싱하지 않아 원샷이 끝나지 않는다 → 소리 검수는 --write-movie 실행에서)
@@ -123,6 +124,22 @@ func _run() -> void:
 	p.interacted_any.emit()
 	# ---------------- EVENT 02
 	check(await wait_done("EV02_knock", 25), "EV02: knock ×3 after tutorial")
+	# 요구사항 21: 노크 → 출입문에 노란 핀 / 설정별 표시
+	await secs(0.4)
+	var om: ObjectiveDirector = lvl.objectives
+	check(om.active_id == "pro_door_knock" and om.current_point().distance_to(lvl.door_inside_point()) < 1.6, "req21: knock → marker on the studio door", om.active_id)
+	check(lvl.objective_marker.want_visible and lvl.objective_marker.mouse_filter == Control.MOUSE_FILTER_IGNORE, "req21: marker shown (always mode), ignores mouse")
+	check(lvl.objective_marker.find_children("*", "CollisionObject3D", true, false).is_empty(), "req21: marker has no physics body (never blocks the interact ray)")
+	GameSettings.objective_marker = 2
+	await secs(0.3)
+	check(not lvl.objective_marker.want_visible, "req21: setting 'off' hides the marker")
+	GameSettings.objective_marker = 1
+	await secs(0.3)
+	check(not lvl.objective_marker.want_visible, "req21: setting 'only when stuck' waits before showing")
+	om._active_since -= 60.0
+	await secs(0.3)
+	check(lvl.objective_marker.want_visible, "req21: 'only when stuck' shows after being stuck")
+	GameSettings.objective_marker = 0
 	check(lvl.parcel.visible and not lvl.door_open, "EV02: parcel outside, door still closed (player opens it)")
 	lvl.toggle_door()
 	await secs(1.2)
@@ -155,6 +172,7 @@ func _run() -> void:
 	var t1it := lvl.parcel.find_child("prop_tape_1", true, false).find_child("Interact", true, false) as Interactable
 	p.inspect.open(t1it)
 	await secs(0.4)
+	check(lvl.objective_hidden() and not lvl.objective_marker.want_visible, "req21: marker hidden on the inspect screen")
 	p.inspect.close(true)
 	check(Inventory.has(&"tape_1"), "tapes: TAPE 01 taken from the box")
 	# ---------------- EVENT 04
@@ -234,6 +252,7 @@ func _run() -> void:
 	GameFlow.pause()
 	await frames(10)
 	check(get_tree().paused, "P0: ESC pauses during the voice line")
+	check(lvl.objective_hidden(), "req21: marker hidden in the pause menu")
 	# 요구사항 20: 일시정지 중에는 게임 소리(효과음·환경음·음성)가 모두 멈춘다 (UI 소리만 예외) → 재개하면 이어서
 	_snap("PAUSED")
 	var live_in_pause: Array = Sounds.active_players().filter(func(e): return e[2] != "UI")
@@ -271,6 +290,7 @@ func _run() -> void:
 	check(lvl.point_lit(dr.global_position + Vector3(0, 0.05, 0.25)), "P0: drawer usable in the dark before the flashlight")
 	Inventory.add(&"flashlight")
 	check(await wait_done("EV06b_flashlight", 6), "save: checkpoint 'flashlight_obtained'")
+	save_fl = SaveGame.read()
 	p.flashlight.set_on(true)
 	await frames(3)
 	check(p.flashlight.is_on and p.flashlight.spot.visible, "EV06: F toggles the flashlight")
@@ -393,6 +413,21 @@ func _run() -> void:
 	for k in d.presences:
 		any_danger = any_danger or (d.presences[k] as GhostPresence).is_dangerous() or d.presences[k].can_attack
 	check(d.presences.has("soeun") and d.presences.has("noise_silhouette") and not any_danger, "ghosts: presences are staging-only (no attack)")
+	# ---------------- 요구사항 21: 목표 위치 안내 순서 (실제로 활성화된 목표 기록)
+	var oh: Array = lvl.objectives.history.map(func(e): return e[1]).filter(func(x): return x != "")
+	print("OBJECTIVES ", oh)
+	var want := ["pro_door_knock", "pro_parcel", "pro_desk", "pro_box_open", "pro_tape1", "pro_recorder", "pro_play",
+		"pro_drawer", "pro_door_exit", "pro_escape", "t01_corridor_east", "t01_corridor",
+		"t01_eject_tape1", "t01_next_tape", "t01_insert_tape2"]
+	# (이 테스트는 서랍을 열지 않고 손전등을 넣고, 놀이터로 순간이동하므로 pro_flashlight·t01_exit_building·t01_playground·t01_stairs는 story_tour 실제 플레이에서 확인)
+	var k := 0
+	for id in oh:
+		if k < want.size() and id == want[k]:
+			k += 1
+	check(k == want.size(), "req21: markers appear in story order (%d/%d)" % [k, want.size()], str(oh))
+	check(lvl.objectives.active_id == "" and not lvl.objective_marker.visible, "req21: no marker left after the last objective is done")
+	for bad in ["soeun", "monster", "noise", "hidden", "photo"]:
+		check(not oh.any(func(x): return String(x).contains(bad)), "req21: no marker for '%s'" % bad)
 	# ---------------- 이어하기 (저장 → 레벨 재시작 → 복원)
 	var saved := SaveGame.read()
 	lvl.queue_free()
@@ -413,5 +448,19 @@ func _run() -> void:
 	Engine.time_scale = 1.0
 	check(Sounds.loop_oneshot_warnings.is_empty(), "req20: no looping sound was fired as a one-shot", str(Sounds.loop_oneshot_warnings))
 	check(Sounds.duplicate_starts.is_empty(), "req20: no sound effect stacked twice at the same moment", str(Sounds.duplicate_starts))
+	# 요구사항 21: 손전등을 얻은 시점의 저장에서 이어하면 목표(출입문)가 그대로 복원된다
+	if not save_fl.is_empty():
+		lvl.queue_free()
+		await frames(5)
+		Inventory.clear()
+		SaveGame.pending = save_fl
+		GameFlow.start_mode = "continue"
+		lvl = load("res://scenes/levels/lvl_phase01.tscn").instantiate()
+		lvl.force_story = true
+		lvl.enable_thunder = false
+		add_child(lvl)
+		await frames(40)
+		await secs(1.0)
+		check(lvl.objectives.active_id == "pro_door_exit", "req21: continue restores the current objective (door after flashlight)", lvl.objectives.active_id)
 	print("== %d passed, %d failed ==" % [passed, failed])
 	get_tree().quit(1 if failed > 0 else 0)

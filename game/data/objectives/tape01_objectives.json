@@ -1,0 +1,117 @@
+{
+ "_doc": "요구사항 21 — TAPE 01 (1998 아파트) 목표 위치 안내. 새 공간에서는 필수 이동 경로, 단서가 있는 공간은 '입구'에만 표시 (안쪽은 직접 탐색). 소은·괴물 위치에는 표시하지 않는다. 작업실 복귀 후에는 다음 테이프. (요구사항 19 개편 때 장면에 맞춰 갱신)",
+ "objectives": [
+  {
+   "id": "t01_corridor_east",
+   "after": [
+    "EV10_transition"
+   ],
+   "until_started": [
+    "T01_frag1_swing"
+   ],
+   "when": [
+    "in_apartment",
+    "!apt_outside",
+    "apt_in_corridor"
+   ],
+   "target": "apt_corridor_east",
+   "_note": "복도 안에서는 출구(계단실 쪽 동쪽 끝)를 먼저 — 모퉁이 너머 현관은 벽에 가려 보이지 않으므로"
+  },
+  {
+   "id": "t01_exit_building",
+   "after": [
+    "EV10_transition"
+   ],
+   "until_started": [
+    "T01_frag1_swing"
+   ],
+   "when": [
+    "in_apartment",
+    "!apt_outside"
+   ],
+   "target": "apt_entrance"
+  },
+  {
+   "id": "t01_playground",
+   "after": [
+    "EV10_transition"
+   ],
+   "until_started": [
+    "T01_frag1_swing"
+   ],
+   "when": [
+    "in_apartment"
+   ],
+   "target": "apt_playground_entry"
+  },
+  {
+   "id": "t01_stairs",
+   "after": [
+    "T01_frag1_swing"
+   ],
+   "until_started": [
+    "T01_frag2_steps"
+   ],
+   "when": [
+    "in_apartment"
+   ],
+   "target": "apt_stair_entry"
+  },
+  {
+   "id": "t01_corridor",
+   "after": [
+    "T01_frag2_nobody"
+   ],
+   "until_started": [
+    "T01_frag3_recording"
+   ],
+   "when": [
+    "in_apartment"
+   ],
+   "target": "apt_corridor_entry"
+  },
+  {
+   "id": "t01_eject_tape1",
+   "after": [
+    "T01_end"
+   ],
+   "until": [
+    "T02_tape_inserted"
+   ],
+   "when": [
+    "!in_apartment",
+    "tape_1_in_recorder"
+   ],
+   "target": "recorder"
+  },
+  {
+   "id": "t01_next_tape",
+   "after": [
+    "T01_end"
+   ],
+   "until": [
+    "T02_tape_inserted"
+   ],
+   "when": [
+    "!in_apartment",
+    "!has_tape_2",
+    "!tape_2_in_recorder"
+   ],
+   "target": "tape_2"
+  },
+  {
+   "id": "t01_insert_tape2",
+   "after": [
+    "T01_end"
+   ],
+   "until": [
+    "T02_tape_inserted"
+   ],
+   "when": [
+    "!in_apartment",
+    "has_tape_2"
+   ],
+   "target": "recorder"
+  }
+ ]
+}

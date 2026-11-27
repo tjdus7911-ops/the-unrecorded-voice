@@ -1386,6 +1386,119 @@ func _notify(sig: String, arg := "") -> void:
 	if director:
 		director.notify(sig, arg)
 
+# ======================================================================= 요구사항 21 목표 위치 안내
+var objectives: ObjectiveDirector
+var objective_marker: ObjectiveMarker
+
+func _tape_node(n: String) -> Node3D:
+	if parcel == null or not is_instance_valid(parcel):
+		return null
+	var t := parcel.find_child("prop_tape_" + n, true, false) as Node3D
+	if t and t.is_visible_in_tree():
+		return t
+	return null
+
+## 목표 조건 (ObjectiveDirector 가 읽는다 — 진행 조건에는 쓰지 않음)
+func objective_cond(name: String) -> bool:
+	match name:
+		"door_open":
+			return door_open
+		"parcel_carried":
+			return parcel_carried
+		"parcel_on_desk":
+			return parcel_on_desk
+		"parcel_open":
+			return parcel_open
+		"has_tape_1":
+			return Inventory.has(&"tape_1")
+		"has_tape_2":
+			return Inventory.has(&"tape_2")
+		"tape_1_in_recorder":
+			return recorder_tape != null and recorder_tape_no == "1"
+		"tape_2_in_recorder":
+			return recorder_tape != null and recorder_tape_no == "2"
+		"drawer_0_open":
+			return drawer_open[0]
+		"has_flashlight":
+			return Inventory.has_flashlight
+		"blackout":
+			return lighting == "blackout" or lighting == "emergency"
+		"in_apartment":
+			return in_apartment
+		"apt_outside":
+			return in_apartment and apt and (apt.to_local(player.global_position)).z > 1.1     # Blender y < -1.1 (건물 밖)
+		"apt_in_corridor":
+			if not (in_apartment and apt):
+				return false
+			var lp := apt.to_local(player.global_position)
+			return lp.x < 23.9 and lp.z < -0.0 and lp.y < 1.5         # 1층 외부 복도 (Blender x < 23.9, y > 0)
+	if story_fx:
+		return story_fx.check(name)
+	return false
+
+## 목표 마커 위치 (핀 끝). 없으면 INF
+func objective_point(name: String) -> Vector3:
+	match name:
+		"door":
+			var lev := door_hinge.find_child("stu_door_lever_in", true, false) as Node3D if door_hinge else null
+			if door_open:
+				return door_inside_point() + Vector3(0, 0.9, 0)
+			return lev.global_position + Vector3(0, 0.2, 0) if lev else door_inside_point() + Vector3(0, 1.2, 0)
+		"parcel":
+			if parcel and is_instance_valid(parcel) and parcel.is_visible_in_tree():
+				var bb := Interactable.local_aabb(parcel)
+				var top := parcel.global_transform * bb.get_center()
+				return top + Vector3(0, bb.size.y * 0.5 + 0.1, 0)
+		"desk":
+			return _desk_place_transform().origin + Vector3(0, 0.22, 0)
+		"tape_1", "tape_2":
+			var t := _tape_node(name.trim_prefix("tape_"))
+			if t:
+				return t.global_position + Vector3(0, 0.07, 0)
+		"recorder":
+			if recorder:
+				return recorder.global_position + Vector3(0, 0.12, 0)
+		"recorder_play":
+			if recorder:
+				var btn := recorder.find_child("prop_recorder_btn_play", true, false) as Node3D
+				return (btn.global_position if btn else recorder.global_position) + Vector3(0, 0.07, 0)
+		"drawer_0":
+			var dr := find_child("stu_desk_drawer_0", true, false) as Node3D
+			if dr:
+				var pull := dr.find_child("stu_desk_drawer_0_pull", true, false) as Node3D
+				return (pull.global_position if pull else dr.global_position) + Vector3(0, 0.13, 0)
+		"flashlight":
+			if flashlight_prop and is_instance_valid(flashlight_prop):
+				return flashlight_prop.global_transform * Interactable.local_aabb(flashlight_prop).get_center() + Vector3(0, 0.07, 0)
+		"escape":
+			return b2g(Vector3(10.6, -1.15, 1.5))
+		"apt_corridor_east":
+			if apt:
+				return apt.to_global(AptCorridor.b(Vector3(23.7, 0.85, 1.7)))
+		"apt_entrance":
+			if apt:
+				return apt.to_global(AptCorridor.b(Vector3(25.1, -0.6, 1.4)))
+		"apt_playground_entry":
+			if apt:
+				return apt.to_global(AptCorridor.b(Vector3(11.0, -6.3, 0.7)))
+		"apt_stair_entry":
+			if apt:
+				return apt.to_global(AptCorridor.b(Vector3(25.5, 1.2, 1.5)))
+		"apt_corridor_entry":
+			if apt:
+				return apt.to_global(AptCorridor.b(Vector3(23.0, 0.85, 1.6)))
+	return Vector3.INF
+
+## 마커를 숨길 때: 메뉴·팝업·조사 화면·연출 중(조작 불가)·암전(화면 검게)·타이틀
+func objective_hidden() -> bool:
+	if GameFlow.state != GameFlow.State.PLAYING or ConfirmDialogUI.open_count > 0:
+		return true
+	if not player.input_enabled or (title_cam and title_cam.current):
+		return true
+	if story_fx and story_fx._fade and story_fx._fade.color.a > 0.05:
+		return true
+	return false
+
 func _setup_story(mode: String) -> void:
 	story_fx = PrologueStory.new()
 	story_fx.name = "PrologueStory"
@@ -1399,6 +1512,19 @@ func _setup_story(mode: String) -> void:
 	add_child(director)
 	director.load_file("res://data/events/prologue_events.json")
 	director.load_file("res://data/events/tape01_events.json")
+	# 요구사항 21: 목표 위치 안내 (노란 핀) — 이벤트 상태를 읽기만 한다
+	objectives = ObjectiveDirector.new()
+	objectives.name = "ObjectiveDirector"
+	objectives.events = director
+	objectives.lvl = self
+	objectives.load_file("res://data/objectives/prologue_objectives.json")
+	objectives.load_file("res://data/objectives/tape01_objectives.json")
+	objective_marker = ObjectiveMarker.new()
+	objective_marker.name = "ObjectiveMarker"
+	objective_marker.exclude = [player.get_rid()]
+	hud.add_child(objective_marker)
+	objectives.marker = objective_marker
+	add_child(objectives)
 	if OS.is_debug_build():
 		var dbg := StoryDebugOverlay.new()
 		dbg.lvl = self

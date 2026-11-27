@@ -16,7 +16,7 @@
 - 사운드는 `game/data/config/audio.json` 의 ID로만 재생(`Sounds` autoload). 음성은 대사 JSON의 경로로만 참조
 - 그래픽 확인은 **실제 Godot 화면**으로: `scenes/tests/capture_phase01.tscn` (lavapipe Vulkan + xvfb). 자동 테스트 통과만으로 품질 판단 금지
 - 대사·음성·조명 상태는 `game/data/` JSON으로 관리. 코드에 음성 파일 경로 하드코딩 금지
-- 테스트: `tools/ci/run_tests.sh` 가 통과해야 커밋한다 (시스템 39 + 레벨 52 + 스토리 95 + 현지화 14). 입력·UI 변경 시 `tools/ci/input_test_x11.sh`·`tools/ci/popup_test_x11.sh`(실제 X11 입력)도 실행
+- 테스트: `tools/ci/run_tests.sh` 가 통과해야 커밋한다 (시스템 39 + 레벨 55 + 스토리 117 + 현지화 14). 입력·UI 변경 시 `tools/ci/input_test_x11.sh`·`tools/ci/popup_test_x11.sh`(실제 X11 입력)도 실행
 - **수정할 때마다 새 게임부터 현재 마지막 구간까지 전체 회귀 테스트** (요구사항 18): 스토리 테스트가 새 게임→TAPE 02 삽입→이어하기와 진행 불가 상황(녹음기 안 멈춤·재생 중 밖으로 나감·문 여러 번·ESC·Alt+Tab)을 한 번에 돈다
 
 ## 절대 규칙
@@ -25,7 +25,7 @@
 - 소은은 플레이어를 공격하지 않는다. 소은 음성은 괴물처럼 왜곡하지 않는다
 - 1998년 공간에 시대 착오 물건(스마트폰, 디지털 도어락, CCTV 모니터, 평면 TV) 금지
 - 카툰·과도한 로우폴리·큐브 가구·플라스틱 재질·보라/네온 조명·과도한 노이즈 금지
-- 단서에 빛나는 외곽선·위치 아이콘 금지
+- 단서에 빛나는 외곽선 금지. 위치 아이콘은 요구사항 21의 '진행 필수 다음 행동' 노란 핀만 (숨은 단서·귀신·괴물에는 금지)
 - 손전등 배터리 무제한 (구조만 존재)
 - 유료 결제·서비스 가입은 사용자 확인 후. API 키·비밀번호는 커밋 금지 (`.env`는 무시됨)
 - 출처 미확인 이미지는 `refs_local/`(git 제외)에만. 외부 에셋은 `docs/production/asset_license_log.md`에 기록
@@ -48,11 +48,22 @@
 - 확인 팝업은 `ConfirmDialogUI.ask()` 하나로 (중앙 카드, 기본 '아니오', 중복 방지)
 - 이벤트가 플레이어 행동을 기다리면 `fallback_after`/`skip_if_started`로 영구 정지를 막는다. 개발 빌드 F9 = 이벤트 디버그 표시
 
+## 사운드 규칙 (요구사항 20)
+- 반복(loop) 음원은 AmbientEmitter·전용 재생기로만. `Sounds.play/play_at`으로 틀면 1.2초로 잘리고 경고가 남는다 (스토리 테스트가 0건 확인)
+- 녹음기 '테이프 속' 소리는 `play_tape_sound`/`_play_line_at`(meta `tuv_tape`) — 정지 시 일시정지, 재생 시 이어짐, 공간 전환 시 정리
+- 재생 순서는 이벤트 액션 `tape_sequence` (앞 소리가 끝난 뒤 다음). 공간 전환은 `_space_mute`, 일시정지는 `GameFlow._pause_sounds`
+- 헤드리스는 오디오를 믹싱하지 않는다 → 소리 검수는 `tools/ci/sound_audit.sh` (xvfb + Movie Maker, 약 5분)
+
+## 목표 위치 마커 (요구사항 21)
+- `data/objectives/*.json` + `ObjectiveDirector`(이벤트 상태를 읽기만) + `ObjectiveMarker`(HUD 노란 핀, 26 px, 마우스·레이 무관)
+- 레벨은 `objective_cond(name)` / `objective_point(name)` / `objective_hidden()` 만 제공. 위에서부터 조건 맞는 첫 목표 1개만
+- 귀신·괴물·숨은 단서에는 목표를 만들지 않는다. 다른 공간의 단서는 그 공간 입구에. 설정 `objective_marker` 0 항상/1 막힐 때만/2 끔
+
 ## 요구사항 16 (공식 스토리) 구조
 - 이벤트: `data/events/prologue_events.json`(EV01~EV10b) + `tape01_events.json`(T01_*) — EventDirector가 여러 파일을 이어 읽는다. 이벤트 완료 = 마지막 액션 실행 뒤
 - 연출 실행: `PrologueStory`(액션 분기) → `StoryStaging`(복도 소은·소음 실루엣·따라오는 발소리·순차 소등·TAPE 01) — 캐릭터는 시야 밖/조명이 꺼진 순간에만 나타나고 사라진다
 - 테이프 순서: `lvl.tapes_done` / `next_tape()` — 다음 차례 테이프만 상자에서 가져갈 수 있고, 다 들은 테이프는 녹음기에서 꺼내 상자 제자리로
-- 대본에 없는 대사 추가 금지. 임시 결정은 `docs/design/open_questions.md` Q-14~17
+- 대본에 없는 대사 추가 금지. 임시 결정은 `docs/design/open_questions.md` Q-14~21
 
 ## 명명 규칙
 `snake_case`. 접두사: `stu_` 작업실 · `cor_` 상가 복도 · `apt_` 1998 아파트 · `prop_` 소품 · `chr_` 캐릭터 · `gst_` 귀신 · `PH_` 임시 리소스

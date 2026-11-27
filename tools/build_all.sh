@@ -19,8 +19,8 @@ python3 tools/blender/draw_plan.py art/blender/environments/studio/stu_studio.bl
 python3 tools/audio/make_placeholders.py
 python3 tools/audio/make_sfx.py
 python3 tools/audio/make_sfx_req17.py              # 요구사항 17: 노크·철문 쾅·래치·낙하음·카세트 잡음 (audio.json에 병합)
-python3 tools/audio/make_sfx_req20.py              # 요구사항 20: 녹음기 PLAY 직후 짧은 지지직 (0.65~0.85초)
 [ -d "${TUV_SUPERTONIC:-/home/claude/ext_tts/sherpa-onnx-supertonic-3-tts-int8-2026-05-11}" ] && python3 tools/audio/make_voice_supertonic.py || echo "Supertonic 모델 없음 — 음성 생략 (tools/audio/make_voice_supertonic.py 주석 참고)"
+python3 tools/audio/make_sfx_req20.py              # (음성 생성 뒤 — tape_playground를 덮어쓰지 않게) 요구사항 20: 녹음기 PLAY 직후 짧은 지지직 (0.65~0.85초)
 python3 tools/audio/export_voice_list.py
 python3 tools/audio/export_sfx_list.py
 python3 tools/docs/make_layout_maps.py

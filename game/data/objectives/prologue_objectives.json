@@ -1,0 +1,17 @@
+{
+ "_doc": "요구사항 21 목표 위치 안내 — 위에서부터 조건이 맞는 첫 목표 하나만 노란 핀으로 표시. 표의 순서: 노크→출입문 · 택배 발견→택배 상자 · 가져옴→책상 · 개봉→TAPE 01 · 획득→녹음기 · 삽입→재생 버튼 · 정전→서랍 · 손전등·잠금 해제→출입문 · 추격→탈출 방향 · 복귀→다음 테이프. 귀신·괴물·숨은 단서에는 표시하지 않는다.",
+ "objectives": [
+  {"id": "pro_door_knock", "after": ["EV02_knock"], "until": ["EV02c_parcel"], "when": ["!door_open"], "target": "door"},
+  {"id": "pro_parcel", "after": ["EV02_knock"], "until": ["EV02c_parcel"], "target": "parcel"},
+  {"id": "pro_desk", "after": ["EV02c_parcel"], "until_started": ["EV04_first_recording"], "when": ["parcel_carried"], "target": "desk"},
+  {"id": "pro_parcel_again", "after": ["EV02c_parcel"], "until_started": ["EV04_first_recording"], "when": ["!parcel_on_desk"], "target": "parcel"},
+  {"id": "pro_box_open", "after": ["EV02c_parcel"], "until_started": ["EV04_first_recording"], "when": ["!parcel_open"], "target": "parcel"},
+  {"id": "pro_tape1", "after": ["EV02c_parcel"], "until_started": ["EV04_first_recording"], "when": ["!has_tape_1", "!tape_1_in_recorder"], "target": "tape_1"},
+  {"id": "pro_recorder", "after": ["EV02c_parcel"], "until_started": ["EV04_first_recording"], "when": ["has_tape_1"], "target": "recorder"},
+  {"id": "pro_play", "after": ["EV02c_parcel"], "until_started": ["EV04_first_recording"], "when": ["tape_1_in_recorder"], "target": "recorder_play"},
+  {"id": "pro_drawer", "after_started": ["EV06_blackout"], "until": ["EV06b_flashlight"], "when": ["blackout", "!drawer_0_open", "!has_flashlight"], "target": "drawer_0"},
+  {"id": "pro_flashlight", "after_started": ["EV06_blackout"], "until": ["EV06b_flashlight"], "when": ["drawer_0_open", "!has_flashlight"], "target": "flashlight"},
+  {"id": "pro_door_exit", "after": ["EV06b_flashlight"], "until_started": ["EV08_soeun_corridor"], "when": ["!player_in_corridor"], "target": "door"},
+  {"id": "pro_escape", "after_started": ["EV09b_chase"], "until_started": ["EV10_transition"], "target": "escape", "stuck_secs": 6}
+ ]
+}

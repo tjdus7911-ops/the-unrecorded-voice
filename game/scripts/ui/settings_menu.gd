@@ -3,7 +3,7 @@ extends Control
 
 signal closed
 
-const TABS := ["화면", "조작", "사운드", "접근성"]
+const TABS := ["화면", "조작", "사운드", "접근성", "게임플레이"]
 
 var _tab_buttons: Array[Button] = []
 var _content: VBoxContainer
@@ -87,6 +87,7 @@ func _show_tab(i: int) -> void:
 		1: _controls_tab()
 		2: _sound_tab()
 		3: _access_tab()
+		4: _gameplay_tab()
 
 ## ---------------------------------------------------------------- 행 생성
 func _row(title: String, ctl: Control, note := "") -> void:
@@ -213,6 +214,10 @@ func _sound_tab() -> void:
 	_row("효과음", _vol("SFX"))
 	_row("호흡·심장 박동", _slider(func(): return GameSettings.breathing_intensity,
 		func(x): GameSettings.set_value(&"breathing_intensity", x), 0.0, 1.0, 0.05))
+
+## 요구사항 21: 목표 위치 안내 (노란 위치 핀)
+func _gameplay_tab() -> void:
+	_row("목표 위치 안내", _option("objective_marker", ["항상 표시", "막힐 때만 표시", "표시 안 함"], GameSettings.objective_marker))
 
 func _access_tab() -> void:
 	_row("자막 표시", _check("subtitles"))

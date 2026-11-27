@@ -27,7 +27,7 @@ func shot(name: String) -> void:
 	await RenderingServer.frame_post_draw
 	shots += 1
 	get_viewport().get_texture().get_image().save_png("%s/%02d_%s.png" % [out, shots, name])
-	print("SHOT ", name)
+	print("SHOT ", name, "  objective=", lvl.objectives.active_id if lvl and lvl.get("objectives") else "", " marker_tip=", lvl.objective_marker.screen_tip() if lvl and lvl.get("objective_marker") else null)
 
 func _lookw_once(pos: Vector3, dur: float) -> void:
 	var d := pos - p.camera.global_position
