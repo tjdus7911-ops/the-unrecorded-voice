@@ -5,6 +5,7 @@ extends Node
 const CONFIG := "res://data/config/audio.json"
 
 var _lib := {}            ## id -> Array[AudioStream]
+var _meta := {}           ## id -> audio.json 항목 (impact_at 등 부가 정보)
 var _last := {}           ## id -> 마지막으로 고른 인덱스 (연속 반복 방지)
 var captions_enabled := false
 
@@ -18,6 +19,7 @@ func _ready() -> void:
 	var data: Dictionary = JSON.parse_string(f.get_as_text())
 	for id in data.get("sounds", {}):
 		var entry: Dictionary = data["sounds"][id]
+		_meta[id] = entry
 		var arr: Array = []
 		for p in entry.get("files", []):
 			if ResourceLoader.exists(p):
@@ -30,6 +32,10 @@ func _ready() -> void:
 						(s as AudioStreamWAV).loop_end = int((s as AudioStreamWAV).get_length() * (s as AudioStreamWAV).mix_rate)
 				arr.append(s)
 		_lib[id] = arr
+
+## audio.json 항목의 부가 정보 (예: sfx_door_slam의 impact_at = 충격 지점 초)
+func meta(id: String) -> Dictionary:
+	return _meta.get(id, {})
 
 func has(id: String) -> bool:
 	return _lib.has(id) and not (_lib[id] as Array).is_empty()
@@ -73,7 +79,7 @@ func play_at(id: String, pos: Vector3, bus := &"SFX", volume_db := 0.0, parent: 
 	p.max_db = 3.0
 	p.attenuation_filter_cutoff_hz = 12000.0
 	p.pitch_scale = 1.0 + randf_range(-pitch_var, pitch_var)
-	var host := parent if parent else get_tree().current_scene
+	var host: Node = parent if parent else (get_tree().current_scene if get_tree().current_scene else get_tree().root)
 	host.add_child(p)
 	p.global_position = pos
 	p.play()

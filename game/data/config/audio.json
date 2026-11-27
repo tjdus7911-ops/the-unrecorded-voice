@@ -288,6 +288,62 @@
     "res://assets/audio/sfx/TTS_child_laugh.wav"
    ],
    "loop": false
+  },
+  "sfx_knock_hit": {
+   "files": [
+    "res://assets/audio/sfx/PH_sfx_knock_hit_0.wav",
+    "res://assets/audio/sfx/PH_sfx_knock_hit_1.wav",
+    "res://assets/audio/sfx/PH_sfx_knock_hit_2.wav",
+    "res://assets/audio/sfx/PH_sfx_knock_hit_3.wav",
+    "res://assets/audio/sfx/PH_sfx_knock_hit_4.wav",
+    "res://assets/audio/sfx/PH_sfx_knock_hit_5.wav",
+    "res://assets/audio/sfx/PH_sfx_knock_hit_6.wav",
+    "res://assets/audio/sfx/PH_sfx_knock_hit_7.wav"
+   ],
+   "note": "게임이 3번을 강도·간격을 달리해 조합 (lvl_phase01.knock)"
+  },
+  "sfx_knock_late_hit": {
+   "files": [
+    "res://assets/audio/sfx/PH_sfx_knock_late_hit_0.wav",
+    "res://assets/audio/sfx/PH_sfx_knock_late_hit_1.wav",
+    "res://assets/audio/sfx/PH_sfx_knock_late_hit_2.wav",
+    "res://assets/audio/sfx/PH_sfx_knock_late_hit_3.wav",
+    "res://assets/audio/sfx/PH_sfx_knock_late_hit_4.wav"
+   ]
+  },
+  "sfx_door_slam": {
+   "files": [
+    "res://assets/audio/sfx/PH_sfx_door_slam_0.wav",
+    "res://assets/audio/sfx/PH_sfx_door_slam_1.wav",
+    "res://assets/audio/sfx/PH_sfx_door_slam_2.wav"
+   ],
+   "impact_at": 0.14
+  },
+  "sfx_latch": {
+   "files": [
+    "res://assets/audio/sfx/PH_sfx_latch_0.wav",
+    "res://assets/audio/sfx/PH_sfx_latch_1.wav",
+    "res://assets/audio/sfx/PH_sfx_latch_2.wav"
+   ]
+  },
+  "sfx_object_drop": {
+   "files": [
+    "res://assets/audio/sfx/PH_sfx_object_drop.wav"
+   ]
+  },
+  "sfx_tape_glitch": {
+   "files": [
+    "res://assets/audio/sfx/PH_sfx_tape_glitch_0.wav",
+    "res://assets/audio/sfx/PH_sfx_tape_glitch_1.wav",
+    "res://assets/audio/sfx/PH_sfx_tape_glitch_2.wav",
+    "res://assets/audio/sfx/PH_sfx_tape_glitch_3.wav"
+   ]
+  },
+  "amb_apt_1998": {
+   "files": [
+    "res://assets/audio/ambience/PH_amb_apt_1998.ogg"
+   ],
+   "loop": true
   }
  }
 }

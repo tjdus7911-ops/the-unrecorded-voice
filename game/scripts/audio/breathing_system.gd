@@ -17,7 +17,11 @@ const STATE_PARAMS := {
 	&"trembling": {"rate": 0.45, "depth": 1.1},
 	&"hold":      {"rate": 0.0,  "depth": 0.0},
 	&"tearful":   {"rate": 0.35, "depth": 1.2},
+	&"uneasy":    {"rate": 0.30, "depth": 0.8},   ## 정전·탐색: 약간 불안 (요구사항 17 §07) — walk 음원 사용
+	&"irregular": {"rate": 0.42, "depth": 1.0},   ## 괴물 발견: 불규칙해지기 시작 — fear 음원 사용
 }
+## 음원이 따로 없는 상태는 가까운 음원 풀을 쓴다
+const POOL_ALIAS := {&"uneasy": &"walk", &"irregular": &"fear", &"trembling": &"walk"}
 
 @export var crossfade_time := 0.8
 @export var duck_db := -9.0
@@ -72,12 +76,18 @@ func update_from_player(player: PlayerController, delta: float) -> void:
 		target = &"hold"   # 숨 참기 — 지속시간·한계 처리는 귀신 AI 단계에서 연결 (Q-08)
 	elif player.is_exhausted:
 		target = &"exhausted"
+	elif player.is_running and player.danger >= 0.5:
+		target = &"run"                  # 추격 중 달리기: 거친 호흡
 	elif player.danger >= 0.5:
 		target = &"fear"
+	elif player.danger >= 0.25:
+		target = &"irregular"
 	elif player.is_running:
 		target = &"run"
 	elif player.horizontal_speed() > 0.3:
 		target = &"walk"
+	elif player.unease >= 0.3:
+		target = &"uneasy"
 	else:
 		target = &"calm"
 	set_state(target)
@@ -132,10 +142,10 @@ func current_stream() -> AudioStream:
 	return _players[_active].stream
 
 func _intensity(s: StringName) -> int:
-	return [&"hold", &"calm", &"walk", &"trembling", &"tearful", &"fear", &"run", &"exhausted"].find(s)
+	return [&"hold", &"calm", &"uneasy", &"walk", &"trembling", &"irregular", &"tearful", &"fear", &"run", &"exhausted"].find(s)
 
 func _pick(s: StringName) -> AudioStream:
-	var list: Array = pools.get(s, [])
+	var list: Array = pools.get(s, pools.get(POOL_ALIAS.get(s, s), []))
 	if list.is_empty():
 		return null
 	var candidates := list.filter(func(a): return not _history.has(a))

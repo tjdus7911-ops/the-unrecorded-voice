@@ -91,9 +91,11 @@ func _unsaved_note() -> String:
 		return tr("저장된 진행 내용이 없습니다. 지금까지의 진행은 사라집니다.")
 	return tr("마지막 자동 저장: '%s' (%s). 그 이후의 진행은 저장되지 않습니다.") % [tr(info.get("label", "")), info.get("ago", "")]
 
-func _confirm(msg: String, then: Callable) -> void:
+func _confirm(msg: String, then: Callable, title := "") -> void:
+	if is_instance_valid(_sub):
+		return                                   # 중복 팝업 방지
 	_list.visible = false
-	_sub = ConfirmDialogUI.ask(_root, msg, _unsaved_note())
+	_sub = ConfirmDialogUI.ask(_root, msg, _unsaved_note(), "예", "아니오", title)
 	_sub.answered.connect(func(yes):
 		_list.visible = true
 		if yes:
@@ -102,14 +104,14 @@ func _confirm(msg: String, then: Callable) -> void:
 			(_list.get_child(3) as Button).grab_focus.call_deferred())
 
 func _restart() -> void:
-	_confirm("마지막 체크포인트에서 다시 시작할까요?", func():
+	_confirm("마지막 체크포인트에서 다시 시작하시겠습니까?", func():
 		visible = false
-		restart_checkpoint.emit())
+		restart_checkpoint.emit(), "다시 시작")
 
 func _to_menu() -> void:
-	_confirm("메인 메뉴로 돌아갈까요?", func():
+	_confirm("메인 메뉴로 돌아가시겠습니까?", func():
 		visible = false
-		main_menu.emit())
+		main_menu.emit(), "메인 메뉴")
 
 func _quit() -> void:
-	_confirm("게임을 종료할까요?", GameFlow.quit_game)
+	_confirm("게임을 종료하시겠습니까?", GameFlow.quit_game, "게임 종료")

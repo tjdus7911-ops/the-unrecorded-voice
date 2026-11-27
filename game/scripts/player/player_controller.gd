@@ -45,6 +45,7 @@ var is_exhausted := false
 var is_hiding := false
 ## 0~1 위험도. 귀신 AI·스크립트 이벤트가 설정한다 (심장 박동·호흡·손 떨림에 반영).
 var danger := 0.0
+var unease := 0.0              ## 불안 (호흡만, 심장 박동 없음) — 정전·탐색 (요구사항 17 §07)
 
 var _yaw := 0.0
 var _pitch := 0.0

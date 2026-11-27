@@ -1,5 +1,5 @@
 {
- "_doc": "프롤로그 EVENT 01~10 (요구사항 16 공식 대본). 요구사항 11 흐름 대체. 공식 대본에 없는 대사는 넣지 않는다.",
+ "_doc": "프롤로그 EVENT 01~10 (요구사항 16 공식 대본 + 요구사항 17 수정: 전체 정전·손전등으로 본 소은·실제 괴물 추격). 공식 대본에 없는 대사는 넣지 않는다.",
  "chapter_id": "prologue",
  "events": [
   {
@@ -31,7 +31,7 @@
      "tutorial": true
     },
     {
-     "t": 10.5,
+     "t": 7.5,
      "do": "hint",
      "text": "E 조사·조작 · Shift 달리기 · Ctrl 앉기",
      "secs": 5,
@@ -48,19 +48,20 @@
    "scene_id": "E02_knock",
    "trigger": {
     "type": "tutorial_complete",
-    "moved_m": 4.0,
-    "looked_deg": 120,
-    "interactions": 1,
-    "min_time": 16.0,
+    "moved_m": 2.5,
+    "looked_deg": 90,
+    "interactions": 0,
+    "min_time": 3.0,
     "conditions": [
      "player_in_studio",
      "door_closed"
-    ]
+    ],
+    "fallback_after": 12.0
    },
    "requires": [
     "EV01_normal_studio"
    ],
-   "delay": 1.0,
+   "delay": 0.4,
    "actions": [
     {
      "t": 0.0,
@@ -69,22 +70,14 @@
     },
     {
      "t": 0.0,
-     "do": "sound_at",
-     "id": "sfx_knock_3",
-     "at": "door_outside",
-     "db": 0.0,
-     "caption": "똑. 똑. 똑."
+     "do": "knock",
+     "style": "normal"
     },
     {
      "t": 2.2,
      "do": "voice",
      "line": "PRO_E02_001",
      "at": "player"
-    },
-    {
-     "t": 2.4,
-     "do": "breathing",
-     "state": "uneasy"
     }
    ],
    "end": "immediate",
@@ -113,11 +106,6 @@
      "do": "voice",
      "line": "PRO_E02_002",
      "at": "player"
-    },
-    {
-     "t": 0.6,
-     "do": "breathing",
-     "state": "calm"
     }
    ],
    "end": "immediate",
@@ -206,8 +194,12 @@
    "chapter_id": "prologue",
    "scene_id": "E05_locked",
    "trigger": {
-    "type": "signal",
-    "name": "door_locked_try"
+    "type": "condition",
+    "cond": "tried_locked_door",
+    "fallback_after": 40.0,
+    "conditions": [
+     "door_locked"
+    ]
    },
    "requires": [
     "EV04_first_recording"
@@ -240,15 +232,38 @@
      "do": "quiet",
      "db": -14.0,
      "fade": 3.0
-    },
-    {
-     "t": 3.6,
-     "do": "breathing",
-     "state": "uneasy"
     }
    ],
    "end": "immediate",
    "repeatable": false
+  },
+  {
+   "id": "EV05a_tape_autostop",
+   "chapter_id": "prologue",
+   "scene_id": "E05_locked",
+   "trigger": {
+    "type": "time",
+    "secs": 9.0,
+    "conditions": [
+     "recorder_playing"
+    ]
+   },
+   "requires": [
+    "EV05_locked_door"
+   ],
+   "delay": 0.0,
+   "actions": [
+    {
+     "t": 0.0,
+     "do": "recorder_autostop"
+    }
+   ],
+   "end": "immediate",
+   "repeatable": false,
+   "_note": "진행 안전장치(P0 2026-11-27): 플레이어가 녹음기를 멈추지 않으면 테이프가 끝까지 돌아 스스로 멈춘다 (철컥). 멈췄으면 발동하지 않음",
+   "skip_if_started": [
+    "EV05b_voice_behind"
+   ]
   },
   {
    "id": "EV05b_voice_behind",
@@ -268,21 +283,6 @@
      "do": "voice_behind",
      "line": "PRO_E05_002",
      "distance": 2.0
-    },
-    {
-     "t": 3.3,
-     "do": "breathing_oneshot",
-     "kind": "gasp"
-    },
-    {
-     "t": 3.4,
-     "do": "breathing",
-     "state": "fear"
-    },
-    {
-     "t": 3.4,
-     "do": "heartbeat",
-     "level": 0.55
     }
    ],
    "end": "immediate",
@@ -385,11 +385,6 @@
      "kind": "gasp"
     },
     {
-     "t": 2.0,
-     "do": "heartbeat",
-     "level": 0.6
-    },
-    {
      "t": 4.2,
      "do": "voice",
      "line": "PRO_E06_001",
@@ -399,6 +394,17 @@
      "t": 5.0,
      "do": "guide_light",
      "on": true
+    },
+    {
+     "t": 2.4,
+     "do": "tension",
+     "unease": 0.35,
+     "danger": 0.0
+    },
+    {
+     "t": 1.55,
+     "do": "corridor_power",
+     "on": false
     }
    ],
    "end": "immediate",
@@ -428,11 +434,6 @@
      "text": "F 키로 손전등을 켜고 끈다.",
      "secs": 5,
      "tutorial": true
-    },
-    {
-     "t": 1.0,
-     "do": "heartbeat",
-     "level": 0.5
     }
    ],
    "end": "immediate",
@@ -460,25 +461,17 @@
      "at": "door_outside"
     },
     {
-     "t": 0.3,
-     "do": "heartbeat",
-     "level": 0.7
-    },
-    {
      "t": 2.8,
-     "do": "sound_at",
-     "id": "sfx_knock_3",
-     "at": "door_outside",
-     "db": -3.0,
-     "caption": "똑. 똑. 똑."
+     "do": "knock",
+     "style": "late"
     },
     {
-     "t": 5.0,
+     "t": 5.4,
      "do": "door_lock",
      "locked": false
     },
     {
-     "t": 5.0,
+     "t": 5.4,
      "do": "sound_at",
      "id": "sfx_door_unlock",
      "at": "door_inside",
@@ -486,13 +479,8 @@
      "caption": "철컥."
     },
     {
-     "t": 5.0,
+     "t": 5.4,
      "do": "place_soeun_corridor"
-    },
-    {
-     "t": 5.0,
-     "do": "corridor_lights",
-     "state": "unstable"
     }
    ],
    "end": "immediate",
@@ -505,9 +493,13 @@
    "trigger": {
     "type": "look_at",
     "target": "soeun_corridor",
-    "max_deg": 14,
+    "max_deg": 12,
     "los": true,
     "conditions": [
+     "soeun_lit"
+    ],
+    "fallback_after": 15.0,
+    "fallback_conditions": [
      "player_in_corridor"
     ]
    },
@@ -515,51 +507,37 @@
     "EV07_door_voice"
    ],
    "delay": 0.0,
-   "actions": [
-    {
-     "t": 1.4,
-     "do": "soeun_vanish_flicker",
-     "light": "CorLight5"
-    },
-    {
-     "t": 2.1,
-     "do": "sound_at",
-     "id": "sfx_child_laugh",
-     "at": "corridor_end",
-     "db": -12.0,
-     "caption": "멀리서 들리는 어린아이의 웃음소리"
-    },
-    {
-     "t": 2.1,
-     "do": "heartbeat",
-     "level": 0.7
-    },
-    {
-     "t": 2.3,
-     "do": "place_monster_corner"
-    }
-   ],
-   "end": "immediate",
-   "repeatable": false,
-   "checkpoint": "corridor",
    "characters": [
     {
      "id": "soeun",
      "presence": "observe_far",
      "can_attack": false
     }
-   ]
+   ],
+   "actions": [
+    {
+     "t": 1.1,
+     "do": "soeun_vanish_flashlight"
+    },
+    {
+     "t": 1.3,
+     "do": "silence",
+     "secs": 2.6
+    }
+   ],
+   "end": {
+    "after": 3.2
+   },
+   "repeatable": false,
+   "checkpoint": "corridor"
   },
   {
-   "id": "EV09_monster_corner",
+   "id": "EV08b_drop",
    "chapter_id": "prologue",
    "scene_id": "E09_monster",
    "trigger": {
-    "type": "look_at",
-    "target": "monster_corner",
-    "max_deg": 18,
-    "los": true,
-    "fallback_after": 35.0
+    "type": "time",
+    "secs": 0.2
    },
    "requires": [
     "EV08_soeun_corridor"
@@ -568,46 +546,80 @@
    "actions": [
     {
      "t": 0.0,
-     "do": "monster_peek_watch",
-     "hide_dist": 4.2
+     "do": "place_monster_corner"
     },
     {
-     "t": 0.0,
-     "do": "breathing",
-     "state": "fear"
+     "t": 0.05,
+     "do": "sound_at",
+     "id": "sfx_object_drop",
+     "at": "monster_drop",
+     "db": -2.0,
+     "caption": "뒤에서 무언가 떨어지는 소리"
     },
     {
-     "t": 0.0,
-     "do": "heartbeat",
-     "level": 0.8
+     "t": 0.4,
+     "do": "tension",
+     "unease": 0.5,
+     "danger": 0.0
     }
    ],
    "end": "immediate",
-   "repeatable": false,
+   "repeatable": false
+  },
+  {
+   "id": "EV09_monster_seen",
+   "chapter_id": "prologue",
+   "scene_id": "E09_monster",
+   "trigger": {
+    "type": "look_at",
+    "target": "monster_corner",
+    "max_deg": 20,
+    "los": true,
+    "fallback_after": 12.0
+   },
+   "requires": [
+    "EV08b_drop"
+   ],
+   "delay": 0.0,
    "characters": [
     {
      "id": "noise_silhouette",
      "presence": "observe_far",
      "can_attack": false
     }
-   ]
+   ],
+   "actions": [
+    {
+     "t": 0.0,
+     "do": "tension",
+     "unease": 0.6,
+     "danger": 0.32
+    },
+    {
+     "t": 0.6,
+     "do": "monster_emerge"
+    }
+   ],
+   "end": "immediate",
+   "repeatable": false
   },
   {
-   "id": "EV09b_follower",
+   "id": "EV09b_chase",
    "chapter_id": "prologue",
    "scene_id": "E09_monster",
    "trigger": {
     "type": "condition",
-    "cond": "monster_hidden"
+    "cond": "monster_chasing",
+    "fallback_after": 12.0
    },
    "requires": [
-    "EV09_monster_corner"
+    "EV09_monster_seen"
    ],
    "delay": 0.0,
    "actions": [
     {
-     "t": 1.2,
-     "do": "follower",
+     "t": 0.0,
+     "do": "chase_audio",
      "on": true
     }
    ],
@@ -615,124 +627,112 @@
    "repeatable": false
   },
   {
-   "id": "EV10_lights_chase",
+   "id": "EV10_transition",
    "chapter_id": "prologue",
    "scene_id": "E10_transition",
    "trigger": {
     "type": "condition",
-    "cond": "player_heading_east"
+    "cond": "chase_end",
+    "fallback_after": 50.0
    },
    "requires": [
-    "EV09b_follower"
+    "EV09b_chase"
    ],
    "delay": 0.0,
    "actions": [
     {
      "t": 0.0,
-     "do": "lights_chase"
-    }
-   ],
-   "end": "immediate",
-   "repeatable": false
-  },
-  {
-   "id": "EV10b_transition",
-   "chapter_id": "prologue",
-   "scene_id": "E10_transition",
-   "trigger": {
-    "type": "condition",
-    "cond": "reached_corridor_end"
-   },
-   "requires": [
-    "EV10_lights_chase"
-   ],
-   "delay": 0.0,
-   "actions": [
-    {
-     "t": 0.0,
-     "do": "set_lights_off",
-     "names": [
-      "CorLight5",
-      "StairUp",
-      "ExitSign"
-     ]
+     "do": "flashlight_flicker",
+     "secs": 1.6
     },
     {
      "t": 0.0,
-     "do": "sound_at",
-     "id": "sfx_power_down",
-     "at": "corridor_end",
-     "db": -6.0
+     "do": "monster_close_in"
     },
     {
-     "t": 0.15,
+     "t": 1.6,
      "do": "flashlight_cut"
     },
     {
-     "t": 0.15,
-     "do": "follower",
-     "on": false
+     "t": 1.65,
+     "do": "chase_stop"
     },
     {
-     "t": 0.15,
+     "t": 1.65,
+     "do": "breathing",
+     "state": "hold"
+    },
+    {
+     "t": 1.65,
+     "do": "heartbeat",
+     "level": 0.0
+    },
+    {
+     "t": 1.65,
      "do": "silence",
      "secs": 3.6
     },
     {
-     "t": 0.15,
-     "do": "breathing",
-     "state": "fear"
-    },
-    {
-     "t": 1.2,
+     "t": 2.7,
      "do": "voice",
      "line": "PRO_E10_001",
      "at": "ear"
     },
     {
-     "t": 2.3,
+     "t": 3.6,
      "do": "fade",
      "to": 1.0,
-     "secs": 0.25
+     "secs": 0.15
     },
     {
-     "t": 2.6,
+     "t": 3.8,
      "do": "enter_apartment"
     },
     {
-     "t": 4.4,
+     "t": 5.8,
      "do": "sound",
      "id": "sfx_fluorescent_start",
      "db": -4.0
     },
     {
-     "t": 4.5,
+     "t": 6.0,
      "do": "fade",
      "to": 0.0,
-     "secs": 1.6
+     "secs": 1.8
     },
     {
      "t": 6.2,
+     "do": "breathing",
+     "state": ""
+    },
+    {
+     "t": 6.2,
+     "do": "tension",
+     "unease": 0.15,
+     "danger": 0.0
+    },
+    {
+     "t": 7.9,
      "do": "voice",
      "line": "PRO_E10_002",
      "at": "player"
     },
     {
-     "t": 8.2,
+     "t": 9.8,
      "do": "title_card",
      "title": "TAPE 01",
      "subtitle": "평범했던 하루\n1998",
      "secs": 4.5
     },
     {
-     "t": 12.9,
+     "t": 14.5,
      "do": "return_control"
     }
    ],
    "end": "immediate",
    "repeatable": false,
    "checkpoint": "apt_entered",
-   "lock_interaction": 13.0
+   "lock_interaction": 14.5
   }
  ]
 }

@@ -12,7 +12,7 @@ var _waiting_btn: Button
 var _current := 0
 
 func _ready() -> void:
-	set_anchors_preset(Control.PRESET_FULL_RECT)
+	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)   # P0: set_anchors_preset만 쓰면 트리 안에서 크기 0으로 남는다
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	theme = UIKit.control_theme()
 	var bg := ColorRect.new()

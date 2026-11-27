@@ -19,6 +19,7 @@ var objective: Label
 var objective_text := ""
 static var _inspect_tutorial_done := false
 var _sub_timer := 0.0
+var _sub_bg: Panel             ## 자막 배경(설정에서 켤 때만): 글자 크기에 맞춘 작은 상자
 var _cap_timer := 0.0
 var _toast_timer := 0.0
 var _help_timer := 0.0
@@ -52,15 +53,30 @@ func _ready() -> void:
 	prompt.visible = false
 	add_child(prompt)
 
-	subtitle = _label(26, Color(0.94, 0.93, 0.90))        # 밝은 회색, 얇은 그림자 (_label)
-	subtitle.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
-	subtitle.position += Vector2(-560, -150)
-	subtitle.size = Vector2(1120, 96)
+	# 요구사항 17 §01: 영화 자막 — 1080p 기준 24px, 배경 없음, 부드러운 그림자, 하단 중앙(아래 여백 약 7%), 최대 2줄.
+	# 프로젝트가 1920×1080 기준 canvas_items 스케일이라 해상도가 바뀌면 비례해서 커지고 작아진다.
+	subtitle = _label(24, Color(0.95, 0.94, 0.91))
+	subtitle.anchor_left = 0.2
+	subtitle.anchor_right = 0.8
+	subtitle.anchor_top = 1.0
+	subtitle.anchor_bottom = 1.0
+	subtitle.offset_top = -78.0 - 70.0
+	subtitle.offset_bottom = -78.0
 	subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	subtitle.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	subtitle.max_lines_visible = 2
-	subtitle.add_theme_constant_override("outline_size", 4)
-	subtitle.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.55))
+	subtitle.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	subtitle.add_theme_constant_override("outline_size", 0)
+	subtitle.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.75))
+	subtitle.add_theme_constant_override("shadow_offset_x", 0)
+	subtitle.add_theme_constant_override("shadow_offset_y", 2)
+	subtitle.add_theme_constant_override("shadow_outline_size", 7)      # 번진 그림자 (글자 주변만, 띠 배경 없음)
+	subtitle.add_theme_constant_override("line_spacing", 2)
+	_sub_bg = Panel.new()
+	_sub_bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_sub_bg.visible = false
+	add_child(_sub_bg)
+	move_child(_sub_bg, subtitle.get_index())        # 글자 뒤에 그린다
 	subtitle.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
 	add_child(subtitle)
 
@@ -183,18 +199,30 @@ func _on_inspect_open(t: Interactable) -> void:
 	prompt.visible = false
 
 func _style_subtitle() -> void:
-	var sizes := [22, 26, 32, 38]
+	var sizes := [20, 24, 28, 34]          # 작게 / 보통(기본, 1080p 24px) / 크게 / 아주 크게
 	subtitle.add_theme_font_size_override("font_size", sizes[clampi(GameSettings.subtitle_size, 0, 3)])
-	if GameSettings.subtitle_bg:
-		var sb := StyleBoxFlat.new()
-		sb.bg_color = Color(0, 0, 0, 0.55)
-		sb.content_margin_left = 14
-		sb.content_margin_right = 14
-		sb.content_margin_top = 4
-		sb.content_margin_bottom = 6
-		subtitle.add_theme_stylebox_override("normal", sb)
-	else:
-		subtitle.remove_theme_stylebox_override("normal")
+	subtitle.remove_theme_stylebox_override("normal")
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(0, 0, 0, 0.5)
+	sb.set_corner_radius_all(4)
+	_sub_bg.add_theme_stylebox_override("panel", sb)
+
+## 배경 상자를 실제 글자 영역에만 맞춘다 (화면을 가로지르는 띠 금지 — 요구사항 17 §01)
+func _fit_sub_bg() -> void:
+	if not GameSettings.subtitle_bg or subtitle.text == "" or not subtitle.visible:
+		_sub_bg.visible = false
+		return
+	var font := subtitle.get_theme_font("font")
+	var fs := subtitle.get_theme_font_size("font_size")
+	var w := subtitle.size.x
+	var sz := font.get_multiline_string_size(subtitle.text, HORIZONTAL_ALIGNMENT_CENTER, w, fs, 2, TextServer.BREAK_MANDATORY | TextServer.BREAK_WORD_BOUND)
+	sz.x = minf(sz.x, w)
+	var lines := mini(subtitle.get_line_count(), 2)
+	var h := float(lines) * (font.get_height(fs) + 2.0)
+	var c := subtitle.global_position + Vector2(subtitle.size.x / 2.0, subtitle.size.y - h / 2.0)
+	_sub_bg.position = c - Vector2(sz.x / 2.0 + 12.0, h / 2.0 + 4.0)
+	_sub_bg.size = Vector2(sz.x + 24.0, h + 8.0)
+	_sub_bg.visible = true
 
 func _on_line(line: Dictionary) -> void:
 	if not GameSettings.subtitles:
@@ -224,8 +252,10 @@ func _process(delta: float) -> void:
 		var has := t != null and is_instance_valid(t)
 		crosshair.hand = has
 		crosshair.dot_visible = GameSettings.crosshair_mode == 0
-		crosshair.visible = GameSettings.crosshair_mode != 2 or has
-		prompt.visible = has and GameSettings.interaction_hints
+		# 팝업·일시정지·타이틀 중에는 상호작용 아이콘을 숨긴다 (P0 2026-11-27)
+		var playing := GameFlow.state == GameFlow.State.PLAYING and ConfirmDialogUI.open_count == 0
+		crosshair.visible = playing and (GameSettings.crosshair_mode != 2 or has)
+		prompt.visible = playing and has and GameSettings.interaction_hints
 		if prompt.visible:
 			prompt.text = tr(t.current_prompt())
 	if _sub_timer > 0.0:
@@ -233,6 +263,7 @@ func _process(delta: float) -> void:
 		if _sub_timer <= 0.0:
 			subtitle.text = ""
 	subtitle.visible = subtitle.text != ""
+	_fit_sub_bg()
 	if _cap_timer > 0.0:
 		_cap_timer -= delta
 		if _cap_timer <= 0.0:

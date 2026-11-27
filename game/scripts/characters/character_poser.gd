@@ -10,6 +10,9 @@ var t := 0.0
 var head_raise := 0.0          ## 0 = 고개 숙임, 1 = 정면 (괴물 EVENT 09)
 var hunch := 0.0               ## 괴물 굽은 자세 0~1
 var speed := 1.0
+var twitch := 0.0             ## 불규칙한 관절 경련 0~1 (요구사항 17 괴물) — 짧게 멈췄다 튀는 움직임
+var _tw_hold := 0.0
+var _tw_vals := {}
 var _ids := {}
 var _rest_local := {}
 var _rest_global := {}
@@ -75,6 +78,8 @@ func _process(delta: float) -> void:
 		rot("spine02", Vector3.RIGHT, 14.0 * hunch)
 		rot("spine04", Vector3.RIGHT, 18.0 * hunch)
 		rot("neck01", Vector3.RIGHT, 20.0 * hunch)
+	if twitch > 0.0:
+		_twitch(delta)
 	var down := 1.0 - head_raise
 	if hunch > 0.0 or mode == "idle":
 		rot("neck02", Vector3.RIGHT, 35.0 * down * hunch)
@@ -106,3 +111,19 @@ func _gait(freq: float, amp: float, lean: float) -> void:
 	rot("upperarm01.R", Vector3.RIGHT, sin(p) * amp * 0.7)
 	rot("spine01", Vector3.RIGHT, 8.0 * lean)
 	rot("spine03", Vector3.UP, sin(p) * 6.0)
+
+## 경련: 일정 시간 같은 각도를 유지했다가 갑자기 다른 각도로 튄다 (부드러운 사인 흔들림이 아님 → 비정상적인 관절)
+func _twitch(delta: float) -> void:
+	_tw_hold -= delta
+	if _tw_hold <= 0.0:
+		_tw_hold = randf_range(0.12, 0.7)
+		for b in ["neck02", "head", "clavicle.L", "clavicle.R", "lowerarm01.L", "lowerarm01.R", "spine05"]:
+			_tw_vals[b] = Vector3(randf_range(-1, 1), randf_range(-1, 1), randf_range(-1, 1))
+	var amp := {"neck02": 22.0, "head": 28.0, "clavicle.L": 14.0, "clavicle.R": 14.0, "lowerarm01.L": 26.0, "lowerarm01.R": 26.0, "spine05": 8.0}
+	for b in _tw_vals:
+		if not has(b):
+			continue
+		var v: Vector3 = _tw_vals[b]
+		rot(b, Vector3.RIGHT, v.x * amp[b] * twitch)
+		rot(b, Vector3.BACK, v.y * amp[b] * 0.6 * twitch)
+		rot(b, Vector3.UP, v.z * amp[b] * 0.5 * twitch)

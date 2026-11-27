@@ -153,7 +153,19 @@ def insert_atlas():
     atlas.save(OUT / "prop_cassette_spine_atlas.png")
 
 
+def key_labels():
+    """녹음기 피아노 키 표시 (요구사항 17 §05): REC · ▶ · ◀◀ · ▶▶ · ■ EJ · II — 은색 키 위의 검은 인쇄."""
+    f = ImageFont.truetype("/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc", 64, index=1)
+    for k, t in enumerate(["REC", "▶", "◀◀", "▶▶", "■ EJ", "II"]):
+        img = Image.new("RGB", (256, 96), (186, 186, 182))
+        d = ImageDraw.Draw(img)
+        w = d.textlength(t, font=f)
+        d.text(((256 - w) / 2, 4), t, font=f, fill=(170, 30, 24) if k == 0 else (28, 28, 30))
+        img.save(OUT / f"prop_key_label_{k}.png")
+
+
 if __name__ == "__main__":
+    key_labels()
     tape_labels()
     memo()
     waybill()

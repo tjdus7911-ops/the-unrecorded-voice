@@ -10,7 +10,7 @@ extends Node
 ##  - requires(선행 이벤트)가 모두 끝나야 평가
 ##  - 일시정지 중에는 타이머·평가 정지 (트리 일시정지를 따름)
 ##  - 저장/불러오기: done 목록을 저장하고, 불러올 때 지속 효과(조명·잠금·시계 등)만 즉시 재적용 (restore)
-##  - 핵심 이벤트는 시간만으로 실행되지 않음. look_at의 fallback_after는 필요한 행동을 이미 한 뒤의 안전장치
+##  - fallback_after(+fallback_conditions): 플레이어가 예상과 다르게 행동해도 영구히 멈추지 않게 하는 안전장치 (P0 2026-11-27)
 ## 실제 연출 동작은 story(액션 실행기: do_action / check / point / play_lights)가 담당한다.
 
 signal event_started(id: String)
@@ -30,6 +30,9 @@ var _tut := {"moved": 0.0, "look": 0.0, "interactions": 0}
 var _last_pos := Vector3.ZERO
 var _last_yaw := 0.0
 var active := false
+var _warned := {}
+var last_signal := ""
+var last_fired := ""
 var presences := {}                  ## 캐릭터 id → GhostPresence (연출용은 can_attack=false)
 
 func load_file(path: String) -> void:
@@ -68,6 +71,7 @@ func restore(done_ids: Array) -> void:
 func notify(sig: String, arg := "") -> void:
 	if not active:
 		return
+	last_signal = "%s %s" % [sig, arg]
 	_pending_signals.append([sig, arg])
 	if sig.begins_with("interact"):
 		_tut.interactions += 1
@@ -93,10 +97,22 @@ func _process(delta: float) -> void:
 			continue
 		if not _requires_met(e):
 			continue
+		# 필요 없어진 안전장치 이벤트는 건너뛴다 (예: 플레이어가 직접 녹음기를 멈췄으면 자동 정지는 필요 없음)
+		var skip := false
+		for sid in e.get("skip_if_started", []):
+			skip = skip or started.has(sid)
+		if skip:
+			started[id] = true
+			done[id] = true
+			_log("SKIP " + id)
+			continue
 		if not _armed_at.has(id):
 			_armed_at[id] = _clock
 		if _triggered(e):
 			_fire(e)
+		elif _clock - float(_armed_at[id]) > 90.0 and not _warned.has(id):
+			_warned[id] = true
+			_log("WARN 90초 넘게 대기: %s" % id)
 	_pending_signals.clear()
 
 func _requires_met(e: Dictionary) -> bool:
@@ -111,6 +127,49 @@ func _conds(e: Dictionary) -> bool:
 			return false
 	return true
 
+func _fallback_conds(tr: Dictionary) -> bool:
+	for c in tr.get("fallback_conditions", []):
+		if not story.check(c):
+			return false
+	return true
+
+## 디버그·진행 점검용: 선행 조건을 만족해 대기 중인 이벤트와, 아직 충족되지 않은 조건 목록
+func pending() -> Array:
+	var out: Array = []
+	for e in events:
+		var id: String = e["id"]
+		if started.has(id):
+			continue
+		var miss: Array = []
+		for r in e.get("requires", []):
+			if not done.has(r):
+				miss.append("선행:" + r)
+		if not miss.is_empty():
+			continue
+		var tr: Dictionary = e["trigger"]
+		var what := String(tr.get("type", ""))
+		match what:
+			"signal":
+				miss.append("신호 대기: %s%s" % [tr.get("name", ""), (" (" + str(tr["arg"]) + ")") if tr.has("arg") else ""])
+			"look_at":
+				miss.append("바라보기: " + String(tr.get("target", "")) + (" (가림 없이)" if tr.get("los", false) else ""))
+			"near":
+				miss.append("다가가기: %s %.1fm" % [tr.get("target", ""), float(tr.get("radius", 2.0))])
+			"condition":
+				if not story.check(String(tr.get("cond", ""))):
+					miss.append("조건: " + String(tr.get("cond", "")))
+			"time":
+				miss.append("시간: %.1f/%.1fs" % [_clock - float(_armed_at.get(id, _clock)), float(tr.get("secs", 0.0))])
+			"tutorial_complete":
+				miss.append("튜토리얼: 이동 %.1f/%sm 시선 %d/%s°" % [_tut.moved, tr.get("moved_m", 3.0), int(_tut.look), tr.get("looked_deg", 90)])
+		for c in tr.get("conditions", []):
+			if not story.check(c):
+				miss.append("조건: " + String(c))
+		if tr.has("fallback_after"):
+			miss.append("안전장치 %.0fs 뒤" % (float(tr["fallback_after"]) - (_clock - float(_armed_at.get(id, _clock)))))
+		out.append({"id": id, "waiting_s": _clock - float(_armed_at.get(id, _clock)), "missing": miss})
+	return out
+
 func _triggered(e: Dictionary) -> bool:
 	var tr: Dictionary = e["trigger"]
 	var since: float = _clock - float(_armed_at.get(e["id"], _clock))
@@ -118,13 +177,15 @@ func _triggered(e: Dictionary) -> bool:
 		"game_start":
 			return true
 		"tutorial_complete":
-			return _tut.moved >= float(tr.get("moved_m", 3.0)) and _tut.look >= float(tr.get("looked_deg", 90.0)) \
-					and _tut.interactions >= int(tr.get("interactions", 1)) and since >= float(tr.get("min_time", 0.0)) and _conds(e)
+			# fallback_after: 조작을 다 하지 않아도 이 시간이 지나면 진행 (튜토리얼 대기로 막히지 않게 — 요구사항 17 §11)
+			var tut_ok: bool = _tut.moved >= float(tr.get("moved_m", 3.0)) and _tut.look >= float(tr.get("looked_deg", 90.0)) \
+					and _tut.interactions >= int(tr.get("interactions", 1)) and since >= float(tr.get("min_time", 0.0))
+			return (tut_ok or (tr.has("fallback_after") and since >= float(tr["fallback_after"]))) and _conds(e)
 		"signal":
 			for s in _pending_signals:
 				if s[0] == tr.get("name", "") and (not tr.has("arg") or str(s[1]) == str(tr["arg"])):
 					return _conds(e)
-			return false
+			return tr.has("fallback_after") and since >= float(tr["fallback_after"]) and _fallback_conds(tr)
 		"look_at":
 			var tgt: Vector3 = story.point(tr.get("target", ""))
 			var cam := player.camera
@@ -135,19 +196,22 @@ func _triggered(e: Dictionary) -> bool:
 			if rad_to_deg(fwd.angle_to(dir)) <= float(tr.get("max_deg", 40.0)) and near_ok and _conds(e) \
 					and (not tr.get("los", false) or story.has_los(tgt)):
 				return true
-			return tr.has("fallback_after") and since >= float(tr["fallback_after"])
+			return tr.has("fallback_after") and since >= float(tr["fallback_after"]) and _fallback_conds(tr)
 		"near":
 			var tp: Vector3 = story.point(tr.get("target", ""))
 			return player.global_position.distance_to(tp) <= float(tr.get("radius", 2.0)) and _conds(e)
 		"time":
 			return since >= float(tr.get("secs", 0.0)) and _conds(e)
 		"condition":
-			return story.check(String(tr.get("cond", ""))) and _conds(e)
+			if story.check(String(tr.get("cond", ""))) and _conds(e):
+				return true
+			return tr.has("fallback_after") and since >= float(tr["fallback_after"]) and _fallback_conds(tr)
 	return false
 
 func _fire(e: Dictionary) -> void:
 	var id: String = e["id"]
 	started[id] = true
+	last_fired = id
 	_log("FIRE " + id)
 	event_started.emit(id)
 	var delay := float(e.get("delay", 0.0))

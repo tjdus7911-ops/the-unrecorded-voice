@@ -89,6 +89,12 @@ func check(cond: String) -> bool:
 			return not tried_door
 		"recorder_stopped_after_tape":
 			return lvl.recorder_state == "loaded" and lvl.director.is_done("EV04_first_recording")
+		"tried_locked_door":
+			return tried_door and lvl.door_locked
+		"door_locked":
+			return lvl.door_locked
+		"recorder_playing":
+			return lvl.recorder_state == "playing"
 		"photo_seen":
 			return lvl.photo != null and lvl.photo.visible
 	var r = st().check(cond)
@@ -277,43 +283,46 @@ func do_action(a: Dictionary, instant: bool) -> void:
 		# ---------------- 요구사항 16
 		"slam_after_line":
 			# 소은의 목소리가 끝나는 순간 등 뒤 문이 쾅 닫히고 잠긴다 (소리는 문 위치에서)
-			door_locked = true
-			lvl.door_locked = true
 			if instant:
+				door_locked = true
+				lvl.door_locked = true
 				lvl.slam_door(true)
 			else:
 				var wait := DialogueDB.duration_of(String(a.get("line", ""))) - 0.25
-				get_tree().create_timer(maxf(wait, 0.3), false).timeout.connect(func():
-					lvl.slam_door_story()
-					p.camera_kick(0.6)
-					p.breathing.play_oneshot(&"gasp")
-					p.danger = maxf(p.danger, 0.45))
+				get_tree().create_timer(maxf(wait, 0.3), false).timeout.connect(func(): _slam_when_inside())
 		"quiet":
 			if not instant:
 				lvl.set_world_quiet(float(a.get("db", -14.0)), float(a.get("fade", 2.0)))
 		"place_soeun_corridor":
 			st().place_soeun_corridor(instant)
-		"corridor_lights":
-			if String(a.get("state", "")) == "unstable":
-				lvl.set_light("CorLight2", "flicker", instant)
-				lvl.set_light("CorLight4", "flicker", instant)
-		"soeun_vanish_flicker":
-			st().soeun_vanish_flicker(String(a.get("light", "CorLight5")), instant)
-		"place_monster_corner":
-			st().place_monster_corner(instant)
-		"monster_peek_watch":
+		"knock":
+			if not instant:
+				lvl.knock(String(a.get("style", "normal")), int(a.get("count", 3)))
+		"tension":
+			# 요구사항 17 §07: unease = 호흡만(심장 없음), danger = 심장 박동·거친 호흡
+			p.unease = float(a.get("unease", p.unease))
+			p.danger = float(a.get("danger", p.danger))
+		"corridor_power":
+			pass                                 # 전체 정전은 set_lighting("blackout")이 복도까지 처리 (호환용)
+		"soeun_vanish_flashlight":
+			st().soeun_vanish_flashlight(instant)
+		"monster_emerge":
 			if instant:
 				st().monster_state = "gone"
 			else:
-				st().monster_peek_watch(float(a.get("hide_dist", 4.2)))
-		"follower":
-			st().set_follower(bool(a.get("on", true)) and not instant)
-		"lights_chase":
-			if instant:
-				for i in 5:
-					lvl.set_light("CorLight%d" % i, "story_off", true)
-			else:
-				st().start_lights_chase()
+				st().monster_emerge()
+		"chase_audio":
+			st().set_chase_audio(bool(a.get("on", true)) and not instant)
+		"flashlight_flicker":
+			if not instant:
+				p.flashlight.anomaly_flicker(float(a.get("secs", 1.5)))
+		"monster_close_in":
+			if not instant:
+				st().monster_close_in()
+		"chase_stop":
+			st().chase_stop()
+		"place_monster_corner":
+			st().place_monster_corner(instant)
 		"set_lights_off":
 			st().lights_off(a.get("names", []), instant)
 		"flashlight_cut":
@@ -361,6 +370,9 @@ func do_action(a: Dictionary, instant: bool) -> void:
 			if not instant:
 				Sounds.play("sfx_deck_button", &"SFX", -12.0)
 				get_tree().create_timer(0.15, false).timeout.connect(func(): Sounds.play("amb_tape_motor", &"SFX", -20.0))
+		"recorder_autostop":
+			if not instant:
+				lvl.recorder_autostop()
 		"phase_end_card":
 			if not instant:
 				_phase_end_card()
@@ -512,6 +524,22 @@ func _title_card(title: String, sub: String, secs: float) -> void:
 	tw.tween_interval(secs)
 	tw.tween_property(_card, "modulate:a", 0.0, 1.5)
 	tw.tween_callback(_card.queue_free)
+
+## EVENT 04 문 쾅: 플레이어가 작업실 안에 있을 때만 닫고 잠근다.
+## (P0 2026-11-27: 재생 중 복도로 나가 있으면 밖에 갇혀 손전등·녹음기에 닿을 수 없었다 → 돌아올 때까지 기다렸다가 등 뒤에서 닫는다)
+func _slam_when_inside() -> void:
+	var p: PlayerController = lvl.player
+	var waited := 0.0
+	while not lvl.in_studio(p.global_position) and waited < 600.0:
+		await get_tree().create_timer(0.25, false).timeout
+		waited += 0.25
+	if not lvl.in_studio(p.global_position):
+		return
+	door_locked = true
+	lvl.door_locked = true
+	lvl.slam_door_story()
+	p.camera_kick(0.6)
+	p.breathing.play_oneshot(&"gasp")          # 짧게 숨 들이킴 → 곧 평상시 호흡 (요구사항 17 §07)
 
 ## 개발 범위 안내 (대사 아님 · UI 알림): TAPE 02 본편은 다음 단계
 func _phase_end_card() -> void:

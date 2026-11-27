@@ -12,7 +12,7 @@
     "radius": 5.0
    },
    "requires": [
-    "EV10b_transition"
+    "EV10_transition"
    ],
    "delay": 0.0,
    "actions": [

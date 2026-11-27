@@ -18,6 +18,7 @@ python3 tools/blender/render_tape01_photo.py           # TAPE 01 이후 책상 �
 python3 tools/blender/draw_plan.py art/blender/environments/studio/stu_studio.blend art/renders/studio/stu_floorplan.png
 python3 tools/audio/make_placeholders.py
 python3 tools/audio/make_sfx.py
+python3 tools/audio/make_sfx_req17.py              # 요구사항 17: 노크·철문 쾅·래치·낙하음·카세트 잡음 (audio.json에 병합)
 [ -d "${TUV_SUPERTONIC:-/home/claude/ext_tts/sherpa-onnx-supertonic-3-tts-int8-2026-05-11}" ] && python3 tools/audio/make_voice_supertonic.py || echo "Supertonic 모델 없음 — 음성 생략 (tools/audio/make_voice_supertonic.py 주석 참고)"
 python3 tools/audio/export_voice_list.py
 python3 tools/audio/export_sfx_list.py

@@ -24,7 +24,8 @@ RENDERS = ROOT / "art" / "renders" / "corridor"
 R = T.RNG
 
 X0, X1 = -5.0, 13.0          # 복도 길이
-PILLAR_X, PILLAR_W, PILLAR_D = -1.35, 0.46, 0.64   # 기둥 (303호와 작업실 문 사이)
+PILLAR_X, PILLAR_W, PILLAR_D = -1.35, 0.46, 0.64
+WC_X0, WC_X1, WC_Y1 = -4.6, -3.6, -4.6   # 요구사항 17: 남쪽 공용 화장실 통로 (괴물이 나오는 '복도 모퉁이')   # 기둥 (303호와 작업실 문 사이)
 YN, YS = -0.2, -2.0          # 북쪽 벽면, 남쪽 벽면
 H = 2.5                      # 천장고
 WT = 0.2
@@ -71,6 +72,48 @@ def signs():
     d.text((90, 160), "소화전", font=ImageFont.truetype(f, 120, index=1), fill=(245, 240, 235))
     # 남쪽 벽(+y를 향한 면)에 붙으므로 박스 UV가 좌우 반전된다 → 미리 뒤집어 저장 (QA: 글자가 거울상으로 보이던 문제)
     img.transpose(Image.FLIP_LEFT_RIGHT).save(CTEX / "cor_hydrant.png")
+    # 화장실 표지·화살표·층 표시
+    for nm, txt, col_ in (("men", "남", (40, 80, 160)), ("women", "여", (190, 50, 60))):
+        img = Image.new("RGB", (256, 256), (240, 240, 236))
+        d = ImageDraw.Draw(img)
+        d.ellipse([88, 30, 168, 110], fill=col_)
+        d.rectangle([90, 118, 166, 230], fill=col_)
+        d.text((180, 150), txt, font=ImageFont.truetype(f, 56, index=1), fill=(40, 40, 40))
+        img.save(CTEX / f"cor_wc_{nm}.png")
+    img = Image.new("RGB", (512, 170), (30, 95, 60))
+    d = ImageDraw.Draw(img)
+    d.text((30, 40), "← 화장실", font=ImageFont.truetype(f, 80, index=1), fill=(245, 245, 240))
+    img.save(CTEX / "cor_wc_arrow.png")
+    img = Image.new("RGB", (384, 256), (235, 233, 226))
+    d = ImageDraw.Draw(img)
+    d.text((40, 40), "3F", font=ImageFont.truetype(f, 150, index=1), fill=(50, 50, 55))
+    img.save(CTEX / "cor_floor_sign.png")
+    # 요구사항 17 §12 데칼: 벽 얼룩(불규칙) · 덧칠 자국(색이 살짝 다른 사각) · 바닥 사용 흔적(통로 가운데 광택·때)
+    import numpy as _np
+    from PIL import ImageFilter as _F
+    rs = _np.random.default_rng(1712)
+    a = _np.zeros((512, 512))
+    for _ in range(26):
+        cx_, cy_, rr = rs.uniform(80, 432), rs.uniform(80, 432), rs.uniform(18, 70)
+        yy, xx = _np.mgrid[0:512, 0:512]
+        a += _np.exp(-(((xx - cx_) / rr) ** 2 + ((yy - cy_) / (rr * rs.uniform(0.6, 1.8))) ** 2)) * rs.uniform(0.05, 0.18)
+    a *= _np.clip(1 - ((_np.mgrid[0:512, 0:512][1] - 256) / 256) ** 4, 0, 1)
+    al = Image.fromarray((_np.clip(a, 0, 0.45) * 255).astype(_np.uint8)).filter(_F.GaussianBlur(6))
+    st_ = Image.new("RGBA", (512, 512), (92, 80, 62, 0))
+    st_.putalpha(al)
+    st_.save(CTEX / "cor_decal_wall_stain.png")
+    tu = Image.new("RGBA", (256, 256), (236, 232, 218, 0))
+    al = Image.new("L", (256, 256), 0)
+    ImageDraw.Draw(al).rectangle([18, 22, 238, 230], fill=120)
+    tu.putalpha(al.filter(_F.GaussianBlur(5)))
+    tu.save(CTEX / "cor_decal_touchup.png")
+    w_ = _np.zeros((256, 1024))
+    yy, xx = _np.mgrid[0:256, 0:1024]
+    w_ += _np.exp(-((yy - 128) / 60.0) ** 2) * (0.6 + 0.4 * rs.random((256, 1024)))
+    al = Image.fromarray((_np.clip(w_ * 0.35, 0, 1) * 255).astype(_np.uint8)).filter(_F.GaussianBlur(10))
+    wr = Image.new("RGBA", (1024, 256), (58, 48, 40, 0))
+    wr.putalpha(al)
+    wr.save(CTEX / "cor_decal_floor_wear.png")
     # 엘리베이터 층 표시
     img = Image.new("RGB", (256, 128), (8, 8, 8))
     d = ImageDraw.Draw(img)
@@ -107,6 +150,12 @@ def build_materials():
     M["hydrant"] = T.mat_image("cor_hydrant_door", str(CTEX / "cor_hydrant.png"), rough=0.35)
     M["elev_floor"] = T.mat_image("cor_elev_floor", str(CTEX / "cor_elev_floor.png"), emission=2.0, rough=0.2)
     M["led_red"] = T.mat_emission("cor_led_red", (1.0, 0.25, 0.08), 3.0)
+    M["wc_signs"] = [T.mat_image("cor_wc_men", str(CTEX / "cor_wc_men.png"), rough=0.3), T.mat_image("cor_wc_women", str(CTEX / "cor_wc_women.png"), rough=0.3)]
+    M["wc_arrow"] = T.mat_image("cor_wc_arrow", str(CTEX / "cor_wc_arrow.png"), rough=0.3)
+    M["floor_sign"] = T.mat_image("cor_floor_sign", str(CTEX / "cor_floor_sign.png"), rough=0.3)
+    M["d_stain_wall"] = T.mat_decal("cor_decal_wall_stain", CTEX / "cor_decal_wall_stain.png")
+    M["d_touchup"] = T.mat_decal("cor_decal_touchup", CTEX / "cor_decal_touchup.png", rough=0.6)
+    M["d_wear"] = T.mat_decal("cor_decal_floor_wear", CTEX / "cor_decal_floor_wear.png", rough=0.4)
     M["rooms"] = {n: T.mat_image(f"cor_room_{n}", str(CTEX / f"cor_room_{n}.png"), rough=0.25) for n in ("303", "304", "305", "306", "308")}
     M["d_dirt"] = T.mat_decal("cor_decal_dirt_wall", DECALS / "dirt_wall_bottom.png")
     M["d_smudge"] = T.mat_decal("cor_decal_smudge", DECALS / "smudge_hands.png")
@@ -173,15 +222,65 @@ def steel_door(M, col, name, x, y_face, facing, num, mat=None, wood=False):
     return r
 
 
+def build_wc_passage(M, col):
+    """공용 화장실로 가는 짧은 통로 (한국 상가 건물 층마다 있는 구조). 끝에 남·여 화장실 문, 조명은 꺼져 있다."""
+    cx, w, d0, d1 = (WC_X0 + WC_X1) / 2, WC_X1 - WC_X0, YS - 0.24, WC_Y1
+    ln = d0 - d1
+    T.box("cor_wc_floor", (w + 0.1, ln + 0.3, 0.05), (cx, (d0 + d1) / 2, -0.025), M["floor"], 0, col=col)
+    T.box("cor_wc_ceiling", (w + 0.1, ln + 0.3, 0.03), (cx, (d0 + d1) / 2, H + 0.015), M["ceiling"], 0, col=col)
+    for side, x in (("w", WC_X0), ("e", WC_X1)):
+        sg = 1 if side == "w" else -1
+        T.box(f"cor_wc_wall_{side}", (0.12, ln + 0.3, H), (x - sg * 0.06, (d0 + d1) / 2, H / 2), M["wall"], 0.002, col=col)
+        T.box(f"cor_wc_wall_low_{side}", (0.012, ln + 0.25, 1.0), (x + sg * 0.006, (d0 + d1) / 2, 0.5), M["wall_low"], 0.002, col=col)
+    T.box("cor_wc_end", (w + 0.2, 0.12, H), (cx, d1 - 0.06, H / 2), M["wall"], 0.002, col=col)
+    for k, (dx, lab) in enumerate(((-0.24, "men"), (0.24, "women"))):
+        T.box(f"cor_wc_door_{lab}", (0.42, 0.04, 1.95), (cx + dx, d1 + 0.02, 0.975), M["door"] if k else M["door_green"], 0.003, col=col)
+        T.box(f"cor_wc_sign_{lab}", (0.16, 0.006, 0.16), (cx + dx, d1 + 0.045, 1.55), M["wc_signs"][k], 0.001, col=col)
+        T.box(f"cor_wc_handle_{lab}", (0.02, 0.03, 0.12), (cx + dx + (0.15 if k == 0 else -0.15), d1 + 0.055, 1.0), M["chrome"], 0.003, col=col)
+    # 청소용 양동이·대걸레 (평소 쓰는 건물)
+    T.cyl("cor_wc_bucket", 0.15, 0.3, (WC_X0 + 0.22, d1 + 0.35, 0.15), M["plastic_white"], col=col, verts=24)
+    T.cyl("cor_wc_mop_stick", 0.012, 1.3, (WC_X0 + 0.25, d1 + 0.3, 0.75), M["alu"], rot=(0.12, 0, 0), col=col, verts=8)
+    T.box("cor_wc_sign_arrow", (0.36, 0.006, 0.12), (X0 + 0.9, YN - 0.042, 1.95), M["wc_arrow"], 0.001, col=col)
+    T.box("cor_wc_exhaust", (0.3, 0.3, 0.02), (cx, (d0 + d1) / 2, H - 0.01), M["plastic_white"], 0.004, col=col)
+
+
+def build_details(M, C):
+    """요구사항 17 §12: 정상적으로 쓰는 2026년 상가 건물 — 화재감지기·스프링클러·발신기함·도어클로저·디지털 도어락·스티커·문별 차이."""
+    col = C["props"]
+    for i, x in enumerate(range(-4, 13, 3)):
+        T.cyl(f"cor_smoke_det_{i}", 0.055, 0.035, (x + 0.6, -1.1, H - 0.018), M["plastic_white"], col=col, verts=24)
+        T.cyl(f"cor_sprinkler_{i}", 0.012, 0.03, (x + 1.8, -1.35, H - 0.015), M["chrome"], col=col, verts=10)
+    # 발신기함(비상벨·위치표시등) — 소화전 옆
+    T.box("cor_alarm_box", (0.36, 0.07, 0.5), (6.75, YS + 0.075, 1.4), M["red"], 0.008, col=col)
+    T.cyl("cor_alarm_bell", 0.07, 0.04, (6.75, YS + 0.12, 1.55), M["chrome"], rot=(math.pi / 2, 0, 0), col=col, verts=24)
+    T.cyl("cor_alarm_lamp", 0.025, 0.02, (6.75, YS + 0.12, 1.75), M["led_red"], rot=(math.pi / 2, 0, 0), col=col, verts=16)
+    # 도어클로저 (각 철문 위)
+    for nm, x, y, f in (("303", -2.6, YN, -1), ("305", 9.0, YN, -1), ("308", 2.0, YS, 1), ("306", 9.5, YS, 1), ("304", STU_DOOR_X, YN, -1)):
+        yy = y + f * 0.06
+        T.box(f"cor_closer_{nm}", (0.26, 0.06, 0.06), (x - 0.18, yy, 2.02), M["alu"], 0.008, col=col)
+        T.box(f"cor_closer_arm_{nm}", (0.28, 0.02, 0.015), (x + 0.02, yy + f * 0.05, 2.06), M["black"], 0.003, col=col, rot=(0, 0, f * 0.35))
+    # 디지털 도어락 (305·308 — 2026년 상가)
+    for nm, x, y, f in (("305", 9.0, YN, -1), ("308", 2.0, YS, 1)):
+        T.box(f"cor_doorlock_{nm}", (0.075, 0.035, 0.17), (x + 0.36 * (-f), y + f * 0.075, 1.05), M["black"], 0.008, col=col)
+    # 문별 차이: 303 문에 붙은 업체 스티커·308 우편 투입구·306 문 앞 우산꽂이
+    T.box("cor_303_sticker", (0.18, 0.003, 0.24), (-2.6, YN - 0.065, 1.45), M["notice"], 0.001, col=col)
+    T.box("cor_308_mailslot", (0.3, 0.02, 0.06), (2.0, YS + 0.07, 0.85), M["chrome"], 0.004, col=col)
+    T.cyl("cor_306_umbrella_stand", 0.12, 0.5, (10.15, YS + 0.2, 0.25), M["alu"], col=col, verts=24)
+    T.box("cor_3f_sign", (0.32, 0.008, 0.22), (12.2, YN - 0.045, 1.9), M["floor_sign"], 0.001, col=col)
+
+
 def build_corridor(M, C):
     col = C["arch"]
     L = X1 - X0
     T.box("cor_floor", (L + 0.4, YN - YS, 0.05), ((X0 + X1) / 2, (YN + YS) / 2, -0.025), M["floor"], 0, col=col)
     T.box("cor_ceiling", (L, YN - YS, 0.03), ((X0 + X1) / 2, (YN + YS) / 2, H + 0.015), M["ceiling"], 0, col=col)
     # 남벽 구조체 + 마감 (308호 문 x=2.0, 셔터 x 4.3~6.5, 306호 문 x=9.5)
-    T.box("cor_wall_south_struct", (L + 0.4, WT, H), ((X0 + X1) / 2, YS - WT / 2 - 0.04, H / 2), M["wall"], 0, col=col)
+    T.box("cor_wall_south_struct_w", (WC_X0 - X0 + 0.2, WT, H), ((X0 - 0.2 + WC_X0) / 2, YS - WT / 2 - 0.04, H / 2), M["wall"], 0, col=col)
+    T.box("cor_wall_south_struct_e", (X1 + 0.2 - WC_X1, WT, H), ((WC_X1 + X1 + 0.2) / 2, YS - WT / 2 - 0.04, H / 2), M["wall"], 0, col=col)
+    T.box("cor_wall_south_lintel_wc", (WC_X1 - WC_X0, WT, H - 2.2), ((WC_X0 + WC_X1) / 2, YS - WT / 2 - 0.04, 2.2 + (H - 2.2) / 2), M["wall"], 0, col=col)
     wall_with_openings(M, col, "cor_wall_s", "x", YS, X0, X1, -1,
-                       [(1.53, 2.47, 2.1), (4.3, 6.5, 2.35), (9.03, 9.97, 2.1)])
+                       [(WC_X0, WC_X1, 2.2), (1.53, 2.47, 2.1), (4.3, 6.5, 2.35), (9.03, 9.97, 2.1)])
+    build_wc_passage(M, col)
     # 북벽 마감: 303호(x -2.6), 304호=작업실 문(x 0.95), 305호(x 9.0)
     wall_with_openings(M, col, "cor_wall_n", "x", YN, X0, X1, 1,
                        [(-3.07, -2.13, 2.1), (STU_DOOR_X - 0.5, STU_DOOR_X + 0.5, 2.15), (8.53, 9.47, 2.1)])
@@ -325,7 +424,14 @@ def build_colliders(C):
     cc = C["col"]
     T.collider("cor_floor", (X1 - X0 + 0.4, YN - YS + 0.4, 0.2), ((X0 + X1) / 2, (YN + YS) / 2, -0.1), cc)
     T.collider("cor_ceiling", (X1 - X0 + 3, YN - YS + 0.4, 0.2), ((X0 + X1) / 2 + 1, (YN + YS) / 2, H + 0.1), cc)
-    T.collider("cor_wall_s", (X1 - X0 + 3, 0.2, H), ((X0 + X1) / 2 + 1, YS - 0.1, H / 2), cc)
+    T.collider("cor_wall_s_w", (WC_X0 - X0 + 0.4, 0.2, H), ((X0 - 0.4 + WC_X0) / 2, YS - 0.1, H / 2), cc)
+    T.collider("cor_wall_s_e", (X1 + 3 - WC_X1, 0.2, H), ((WC_X1 + X1 + 3) / 2, YS - 0.1, H / 2), cc)
+    cx, ln = (WC_X0 + WC_X1) / 2, YS - WC_Y1
+    T.collider("cor_wc_floor", (1.4, ln + 0.6, 0.2), (cx, (YS + WC_Y1) / 2, -0.1), cc)
+    T.collider("cor_wc_wall_w", (0.2, ln + 0.4, H), (WC_X0 - 0.1, (YS + WC_Y1) / 2, H / 2), cc)
+    T.collider("cor_wc_wall_e", (0.2, ln + 0.4, H), (WC_X1 + 0.1, (YS + WC_Y1) / 2, H / 2), cc)
+    T.collider("cor_wc_end", (1.4, 0.2, H), (cx, WC_Y1 - 0.1, H / 2), cc)
+    T.collider("cor_wc_ceiling", (1.4, ln + 0.6, 0.2), (cx, (YS + WC_Y1) / 2, H + 0.1), cc)
     T.collider("cor_wall_n_w", (X0 * -1 - 0.2, 0.2, H), ((X0 - 0.2) / 2, YN + 0.1, H / 2), cc)
     T.collider("cor_wall_n_e", (X1 - 6.2, 0.2, H), ((6.2 + X1) / 2, YN + 0.1, H / 2), cc)
     T.collider("cor_wall_w", (0.2, 2.2, H), (X0 - 0.1, (YN + YS) / 2, H / 2), cc)
@@ -360,6 +466,19 @@ def build_decals(M, C):
         T.decal_plane(f"cor_decal_scuff_{x}", 1.0, 1.0, (x, y, 0.0015), (0, 0, R.uniform(0, 3)), M["d_scuff"], col)
     T.decal_plane("cor_decal_smudge_304", 0.25, 0.45, (STU_DOOR_X + 0.62, YN - 0.0425, 1.05), (math.pi / 2, 0, math.pi), M["d_smudge"], col)
     T.decal_plane("cor_decal_ceiling_stain", 0.9, 0.9, (7.0, -1.2, H - 0.0018), (math.pi, 0, 0.7), M["d_stain"], col)
+    # 벽 중간 높이의 불규칙한 얼룩 · 덧칠 자국 (반복 타일 느낌을 깬다)
+    for i, (x, north) in enumerate(((-3.9, True), (-0.2, True), (3.1, False), (5.9, True), (7.9, False), (10.7, True), (11.6, False), (-2.0, False))):
+        y = YN - 0.043 if north else YS + 0.043
+        rot = (math.pi / 2, 0, math.pi) if north else (math.pi / 2, 0, 0)
+        T.decal_plane(f"cor_decal_wall_stain_{i}", R.uniform(0.9, 1.6), R.uniform(0.7, 1.1), (x, y, R.uniform(1.2, 1.7)), rot, M["d_stain_wall"], col)
+    for i, (x, north, z) in enumerate(((3.6, True, 1.2), (8.2, False, 1.9), (-3.3, False, 1.4))):
+        y = YN - 0.044 if north else YS + 0.044
+        rot = (math.pi / 2, 0, math.pi) if north else (math.pi / 2, 0, 0)
+        T.decal_plane(f"cor_decal_touchup_{i}", R.uniform(0.35, 0.6), R.uniform(0.3, 0.5), (x, y, z), rot, M["d_touchup"], col)
+    # 바닥 통로 가운데 사용 흔적 (걷는 선)
+    for i in range(6):
+        T.decal_plane(f"cor_decal_floor_wear_{i}", 3.2, 0.9, (X0 + 1.6 + i * 3.0, (YN + YS) / 2 + R.uniform(-0.1, 0.1), 0.0012),
+                      (0, 0, R.uniform(-0.03, 0.03)), M["d_wear"], col)
 
 
 C_ = {}
@@ -383,6 +502,7 @@ def main():
     fluorescent(M, C["arch"], "cor_fluorescent_stair_down", (13.73, 2.9, 0.3), lights, state="DEAD", length=0.65)
     fluorescent(M, C["arch"], "cor_fluorescent_stair_up", (14.95, 2.9, 3.45), lights, length=0.65)
     build_colliders(C)
+    build_details(M, C)
     build_decals(M, C)
     T.empty("cor_spawn_clue_dark_landing", (13.6, 2.85, -1.7), C["props"], rot=(0, 0, 0.7))
     w = bpy.data.worlds.new("cor_world")

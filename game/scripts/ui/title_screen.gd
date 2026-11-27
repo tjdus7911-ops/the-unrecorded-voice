@@ -104,9 +104,11 @@ func fade_out(then: Callable, t := 1.0) -> void:
 	tw.tween_callback(then)
 
 func _on_new() -> void:
+	if is_instance_valid(_sub):
+		return                                   # 중복 팝업 방지
 	if SaveGame.has_save():
 		_menu.get_parent().visible = false
-		_sub = ConfirmDialogUI.ask(_root, "새 게임을 시작할까요?", "첫 자동 저장 시 기존 저장 데이터를 덮어씁니다.", "새 게임", "취소")
+		_sub = ConfirmDialogUI.ask(_root, "새 게임을 시작하시겠습니까?", "기존 저장 데이터는 첫 자동 저장 때 덮어씁니다.", "예", "아니오", "새 게임")
 		_sub.answered.connect(func(yes):
 			_menu.get_parent().visible = true
 			if yes:

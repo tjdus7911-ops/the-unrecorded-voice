@@ -52,6 +52,8 @@ var hud: HUD
 var stu: Node3D
 var cor: Node3D
 var env: Environment
+var exit_glow: OmniLight3D       ## 비상구 유도등 번짐 (정전 때 독립 전원으로 아주 희미하게만)
+var _cor_emissive: Array = []   ## 복도 발광 재질 [mat, 기본값]
 var fx := {}                     ## 이름 → LightFixture
 var door_hinge: Node3D
 var door_body: AnimatableBody3D
@@ -132,8 +134,8 @@ func _ready() -> void:
 		t.wait_time = 0.5
 		t.autostart = true
 		t.process_mode = Node.PROCESS_MODE_ALWAYS
-		t.timeout.connect(func(): print("PROBE state=%d paused=%s mouse_mode=%d yaw=%.3f pitch=%.3f pos=%s focus=%s" % [
-			GameFlow.state, get_tree().paused, Input.mouse_mode, player.get("_yaw"), player.get("_pitch"), player.global_position, get_viewport().gui_get_focus_owner()]))
+		t.timeout.connect(func(): print("PROBE state=%d paused=%s mouse_mode=%d popups=%d yaw=%.3f pitch=%.3f pos=%s focus=%s" % [
+			GameFlow.state, get_tree().paused, Input.mouse_mode, ConfirmDialogUI.open_count, player.get("_yaw"), player.get("_pitch"), player.global_position, get_viewport().gui_get_focus_owner()]))
 		add_child(t)
 	if OS.get_cmdline_user_args().has("--benchmark"):
 		enable_thunder = false
@@ -574,6 +576,7 @@ func _lights() -> void:
 	up._apply()
 	# 비상구 유도등의 녹색 번짐
 	var ex := OmniLight3D.new()
+	exit_glow = ex
 	add_child(ex)
 	ex.global_position = b2g(Vector3(12.9, -1.1, 2.25))
 	ex.light_color = Color(0.3, 1.0, 0.5)
@@ -842,12 +845,12 @@ func slam_door(instant := false) -> void:
 		Sounds.play_at("sfx_door_close", door_hinge.global_position + Vector3(0.6, 1.0, 0.0), &"SFX", 4.0, null, 0.0, "문이 쾅 닫히는 소리")
 		door_busy = false)
 
-func knock() -> void:
-	Sounds.play_at("sfx_knock_3", b2g(Vector3(0.95, -0.4, 1.3)), &"SFX", 0.0, null, 0.0, "문 두드리는 소리")
+func knock_debug() -> void:
+	knock("normal")
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("debug_knock"):
-		knock()
+		knock_debug()
 
 func _switches_and_lamps() -> void:
 	var sw := find_child("stu_light_switch", true, false) as Node3D
@@ -1359,6 +1362,10 @@ func _setup_story(mode: String) -> void:
 	add_child(director)
 	director.load_file("res://data/events/prologue_events.json")
 	director.load_file("res://data/events/tape01_events.json")
+	if OS.is_debug_build():
+		var dbg := StoryDebugOverlay.new()
+		dbg.lvl = self
+		add_child(dbg)
 	if mode == "new":
 		ClueBook.reset()
 	Inventory.item_added.connect(func(id):
@@ -2037,6 +2044,20 @@ func set_lighting(st: String, instant := false) -> void:
 		"blackout", "emergency":
 			for n in studio_fixtures:
 				set_light(n, "story_off", instant)
+	# 요구사항 17 §08: 정전은 같은 층 전체 — 복도·계단 형광등도 함께 꺼지고 비상구 표지만 독립 전원으로 아주 희미하게
+	var cor_dark := st == "blackout" or st == "emergency"
+	for i in 6:
+		if cor_dark:
+			set_light("CorLight%d" % i, "story_off", instant)
+		elif st == "normal" and fx.has("CorLight%d" % i) and fx["CorLight%d" % i].state == LightFixture.State.STORY_OFF:
+			set_light("CorLight%d" % i, "normal", instant)
+	for n in ["StairUp"]:
+		if cor_dark:
+			set_light(n, "story_off", instant)
+	_corridor_emissive(0.12 if cor_dark else 1.0)
+	if exit_glow:
+		exit_glow.light_energy = 0.03 if cor_dark else 0.25
+		exit_glow.omni_range = 1.0 if cor_dark else 2.2
 	# 모니터·전자기기 발광 (정전이면 전부 꺼짐)
 	var devices_on := powered or st == "broken"
 	if monitor_light:
@@ -2060,7 +2081,8 @@ func set_lighting(st: String, instant := false) -> void:
 		env.ambient_light_color = Color(0.36, 0.40, 0.48)
 		env.sdfgi_energy = 0.55 if dark else 1.25
 		env.ssil_intensity = 0.25 if dark else 0.6
-		env.glow_intensity = 0.35
+		env.glow_intensity = 0.2 if dark else 0.35
+		env.glow_hdr_threshold = 2.2 if dark else 1.2      # 손전등이 비춘 벽에 블룸이 번지지 않게 (요구사항 17 §09)
 		env.tonemap_exposure = 1.15
 	for rp in probes:
 		rp.intensity = 0.03 if dark else 1.0
@@ -2075,8 +2097,8 @@ func set_lighting(st: String, instant := false) -> void:
 func point_lit(pt: Vector3) -> bool:
 	if lighting != "blackout" and lighting != "emergency":
 		return true
-	if not in_studio(pt):
-		return true                     # 복도·계단은 비상 전원 조명이 살아 있다
+	if in_apartment:
+		return true                     # 1998 아파트는 정전과 무관
 	var fl: Flashlight = player.flashlight
 	if fl and fl.is_on and fl.spot.visible:
 		var sp := fl.spot.global_position
@@ -2086,6 +2108,11 @@ func point_lit(pt: Vector3) -> bool:
 			return true
 	if lighting == "emergency" and emergency_light and emergency_light.global_position.distance_to(pt) < 3.2 and _clear(emergency_light.global_position, pt):
 		return true
+	# P0: 손전등을 얻기 전에는 서랍·손전등 자체를 어둠 때문에 조작 못 하는 일이 없게 (요구사항 13 '첫 손전등은 어둠에 막히지 않음')
+	if not Inventory.has_flashlight:
+		var dr := find_child("stu_desk_drawer_0", true, false) as Node3D
+		if dr and dr.global_position.distance_to(pt) < 0.9:
+			return true
 	# 손전등을 찾기 전 안내광 (서랍 주변만 희미하게 보인다)
 	if story_fx and story_fx._guide and story_fx._guide.light_energy > 0.05 and story_fx._guide.global_position.distance_to(pt) < 1.1:
 		return true
@@ -2232,27 +2259,58 @@ func _eject_tape() -> void:
 		_refresh_box_tapes()
 		_notify("tape_ejected", n))
 
-## 소은의 목소리가 끝나는 순간: 열려 있으면 쾅 닫히고, 닫혀 있으면 문짝이 크게 덜컹인다 (소리는 문 위치)
+## 소은의 목소리가 끝나는 순간 철제 출입문이 세게 닫힌다 (요구사항 17 §06)
+## 문짝이 0.22초에 닫히고, 쾅 소리의 충격 지점(파일 0.14초)이 정확히 그 프레임에 오도록 미리 재생 → 이어서 잠금 '철컥'
 func slam_door_story() -> void:
 	if door_hinge == null:
 		return
 	var at := door_inside_point() + Vector3(0, 0.9, 0)
+	const CLOSE_T := 0.22
+	var impact: float = float(Sounds.meta("sfx_door_slam").get("impact_at", 0.14))
 	if door_open:
 		door_open = false
 		door_busy = true
 		var tw := create_tween()
-		tw.tween_property(door_hinge, "rotation:y", 0.0, 0.2).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+		tw.tween_property(door_hinge, "rotation:y", 0.0, CLOSE_T).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
 		tw.tween_callback(func():
 			door_busy = false
-			Sounds.play_at("sfx_door_bang", at, &"SFX", 4.0, null, 0.0, "쾅!"))
+			player.camera_kick(0.35))
+		get_tree().create_timer(maxf(CLOSE_T - impact, 0.0), false).timeout.connect(func():
+			_door_sfx("sfx_door_slam", at, -2.5, "쾅!"))
 	else:
+		# 이미 닫혀 있었다면 문짝이 문틀에 한 번 세게 부딪힌다
 		var r0 := door_hinge.rotation.y
 		var tw := create_tween()
-		tw.tween_property(door_hinge, "rotation:y", r0 + deg_to_rad(1.6), 0.05)
-		tw.tween_property(door_hinge, "rotation:y", r0, 0.12).set_trans(Tween.TRANS_BOUNCE).set_ease(Tween.EASE_OUT)
-		Sounds.play_at("sfx_door_bang", at, &"SFX", 4.0, null, 0.0, "쾅!")
-	get_tree().create_timer(0.35, false).timeout.connect(func():
-		Sounds.play_at("sfx_door_lock", at, &"SFX", -4.0, null, 0.0, "철컥"))
+		tw.tween_property(door_hinge, "rotation:y", r0 + deg_to_rad(2.0), 0.06)
+		tw.tween_property(door_hinge, "rotation:y", r0, 0.08).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+		get_tree().create_timer(maxf(0.14 - impact, 0.0), false).timeout.connect(func():
+			_door_sfx("sfx_door_slam", at, -3.0, "쾅!"))
+	get_tree().create_timer(CLOSE_T + 0.16, false).timeout.connect(func():
+		_door_sfx("sfx_latch", at + Vector3(0.35, -0.2, 0), -4.0, "철컥"))
+
+## 문 효과음: 잔향 구역을 거치지 않고(과한 잔향 방지) 문 위치에서 3D 재생
+func _door_sfx(id: String, at: Vector3, db: float, cap := "") -> AudioStreamPlayer3D:
+	var p := Sounds.play_at(id, at, &"SFX", db, null, 0.02, cap, 3.0)
+	if p:
+		p.area_mask = 0
+	return p
+
+## 노크 3회 (요구사항 17 §02): 같은 음원을 기계적으로 반복하지 않게 매번 다른 타격·강도·간격.
+## normal = 초반 평범한 사람의 노크(짧고 묵직), late = 후반 초자연적인 노크(느리고 낮게 눌림).
+## 방 안에서 문이 닫혀 있으면 문 너머 소리처럼 고음이 깎이고, 복도에서는 또렷하다.
+func knock(style := "normal", count := 3) -> void:
+	var pos := b2g(Vector3(0.95, -0.12, 1.3))
+	var id := "sfx_knock_hit" if style == "normal" else "sfx_knock_late_hit"
+	var gaps := [0.0, randf_range(0.31, 0.37), randf_range(0.33, 0.41)] if style == "normal" else [0.0, randf_range(0.7, 0.85), randf_range(0.8, 1.0)]
+	var gains := [randf_range(-1.5, 0.0), randf_range(0.0, 1.0), randf_range(-2.5, -0.5)]
+	for i in count:
+		if i > 0:
+			await get_tree().create_timer(gaps[mini(i, 2)], false).timeout
+		var inside := in_studio(player.camera.global_position) and not door_open
+		var p := _door_sfx(id, pos, gains[mini(i, 2)] + (2.0 if style == "normal" else -2.0), ("똑. 똑. 똑." if style == "normal" else "...똑. ...똑. ...똑.") if i == 0 else "")
+		if p:
+			p.attenuation_filter_cutoff_hz = 2200.0 if inside else 9000.0
+			p.pitch_scale = randf_range(0.97, 1.03)
 
 ## 방 안의 생활 소음(시계·빗소리·환경음)을 줄인다 — '조용해짐' (요구사항 16 EVENT 05)
 func set_world_quiet(db: float, fade: float) -> void:
@@ -2324,3 +2382,33 @@ func show_photo(instant := false) -> void:
 		it.inspect_text = ""
 	photo.visible = true
 
+
+## 복도 발광 재질 (형광등 관·비상구 표지·엘리베이터 층 표시·버튼 LED): 정전 땐 비상구 표지만 아주 희미하게 남는다
+func _corridor_emissive(k: float) -> void:
+	if cor == null:
+		return
+	if _cor_emissive.is_empty():
+		var seen := {}
+		for n in cor.find_children("*", "MeshInstance3D", true, false):
+			var mi := n as MeshInstance3D
+			if mi.mesh == null:
+				continue
+			for i in mi.mesh.get_surface_count():
+				var m := mi.get_active_material(i)
+				if m is BaseMaterial3D and (m as BaseMaterial3D).emission_enabled and not seen.has(m) and not m.resource_name.contains("fluorescent"):
+					seen[m] = true
+					_cor_emissive.append([m, (m as BaseMaterial3D).emission_energy_multiplier])
+	for e in _cor_emissive:
+		var keep: float = k if String((e[0] as Material).resource_name).contains("exit") else (0.0 if k < 1.0 else 1.0)
+		(e[0] as BaseMaterial3D).emission_energy_multiplier = float(e[1]) * keep
+
+## 진행 안전장치 (P0 2026-11-27): 플레이어가 녹음기를 멈추지 않아도 테이프가 끝나 스스로 멈춘다 — 정지 버튼이 튀어 오르고 철컥
+func recorder_autostop() -> void:
+	if recorder == null or recorder_state != "playing":
+		return
+	recorder_state = "loaded"
+	_press("prop_recorder_btn_stop", recorder, Vector3(0, 0, -0.003))
+	Sounds.play_at("sfx_tape_stop", recorder.global_position, &"SFX", -2.0, null, 0.0, "철컥 — 테이프가 끝나 멈추는 소리")
+	motor.stop()
+	hiss.stop()
+	_notify("recorder_stop")

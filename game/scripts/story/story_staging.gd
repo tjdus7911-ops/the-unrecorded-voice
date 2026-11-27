@@ -1,33 +1,36 @@
 class_name StoryStaging
 extends Node
-## 요구사항 16 연출 담당: EVENT 07~10 (복도 · 소은 · 소음 실루엣 괴물 · 따라오는 발소리 · 순차 소등)과 TAPE 01 (1998 아파트).
-## PrologueStory.do_action 이 여기로 위임한다. 공격 없음 — 모든 존재는 연출용.
-## 원칙: 캐릭터는 플레이어가 보고 있는 동안 생기거나 사라지지 않는다 (조명이 꺼진 순간·시야 밖에서만 바뀐다).
+## 연출 담당: 요구사항 17 §10 소은 등장 → 실제 괴물 추격 (공격·사망 없음)과 요구사항 16 TAPE 01.
+## PrologueStory.do_action 이 여기로 위임한다.
+## 원칙: 캐릭터는 플레이어가 보고 있는 동안 생기거나 사라지지 않는다 (빛이 꺼진 순간·시야 밖에서만 바뀐다).
+## 괴물은 실제 공간을 따라 움직인다: 남쪽 화장실 통로(모퉁이) → 복도로 걸어 나와 → 몸을 돌리고 → 멈췄다가 → 플레이어를 향해 달린다.
 
 var lvl: Node3D
 var story: Node
 
-# --- 복도 (Blender 좌표 기준: 복도 x -5~13, y -2.0~-0.2, 작업실 문 x≈0.95, 기둥 x -1.35)
-const COR_LIGHT_X := [-3.5, -0.5, 2.5, 5.5, 8.5, 11.5]
-const SOEUN_COR := Vector3(12.15, -1.25, 0.0)
-const NOISE_PEEK := Vector3(-1.84, -0.42, 0.0)    ## 기둥(x -1.58~-1.12, y -0.2~-0.84) 서쪽 뒤
-const NOISE_HIDE := Vector3(-2.1, -0.38, 0.0)
-const NOISE_LEAN := 9.0
+# --- 복도 (Blender 좌표: 복도 x -5~13, y -2.0~-0.2 / 작업실 문 x 0.95 / 기둥 x -1.58~-1.12, y -0.84~-0.2 / 화장실 통로 x -4.6~-3.6, y -2.0~-4.6)
+const SOEUN_COR := Vector3(12.15, -1.25, 0.0)      ## 문에서 약 11 m, 복도 끝
+const NOISE_PEEK := Vector3(-3.87, -2.28, 0.0)     ## 화장실 통로 안, 모퉁이(동쪽 벽 끝) 바로 뒤
+const NOISE_OUT := Vector3(-4.05, -1.2, 0.0)       ## 복도로 걸어 나온 지점
+const NOISE_LEAN := 18.0
+const CHASE_END_X := 10.2                         ## '지정된 복도 구간' — 여기 닿으면 과거 전환
+const CAUGHT_DIST := 1.35
+const MAX_CHASE_SECS := 40.0                      ## 움직이지 않아도 영구히 막히지 않게
 var soeun_placed := false
 var soeun_gone := false
-var monster_state := ""          ## "" → placed → peeking → hiding → gone
+var monster_state := ""          ## "" → peeking → emerging → turning → paused → chasing → closing → gone
 var noise: Node3D
 var noise_poser: CharacterPoser
 var _noise_tape_mat: ShaderMaterial
-var _noise_upright := Basis()
-var follower_on := false
-var follow_dist := 7.5
-var _step_t := 0.0
-var _foll_pos := Vector3.ZERO
-var chase_on := false
-var _chase_next := 0
 var _glitch: ColorRect
 var fragments := 0               ## TAPE 01 녹음 조각 (0~3)
+var chase_audio_on := false
+var _chase_t := 0.0
+var _gap_want := 5.0
+var _speed := 0.0
+var _step_t := 0.0
+var _glitch_t := 2.0
+var caught := false
 
 func _ready() -> void:
 	set_process(true)
@@ -50,7 +53,9 @@ func point(name: String) -> Vector3:
 		"monster_corner":
 			if noise and noise.visible:
 				return _noise_head()
-			return b2g(Vector3(-1.2, -0.75, 1.75))
+			return b2g(Vector3(-3.7, -1.95, 1.75))
+		"monster_drop":
+			return b2g(Vector3(-4.1, -3.6, 0.2))       # 화장실 통로 안쪽 (양동이 옆)
 		"ear":
 			var cam: Camera3D = lvl.player.camera
 			return cam.global_position + cam.global_transform.basis.x * 0.22 + cam.global_transform.basis.z * 0.05
@@ -73,19 +78,32 @@ func check(cond: String) -> Variant:
 			return lvl.door_open
 		"player_in_corridor":
 			return in_corridor(p)
-		"monster_hidden":
-			return monster_state == "gone"
-		"player_heading_east":
-			return in_corridor(p) and g2b(p).x > 2.3
-		"reached_corridor_end":
-			return in_corridor(p) and g2b(p).x > 11.0
+		"soeun_lit":
+			return _lit_by_flashlight(b2g(SOEUN_COR) + Vector3(0, 0.75, 0))
+		"monster_chasing":
+			return monster_state == "chasing"
+		"chase_end":
+			return monster_state in ["chasing"] and (caught or (in_corridor(p) and g2b(p).x > CHASE_END_X) or _chase_t > MAX_CHASE_SECS)
 		"apt_soeun_visible":
 			return lvl.apt != null and lvl.apt.soeun != null and lvl.apt.soeun.visible
 		"in_apartment":
 			return lvl.apt != null and lvl.apt.bounds().has_point(p)
 	return null
 
-# =========================================================== EVENT 07~08 소은
+## 손전등 빛이 그 지점에 실제로 닿는가 (정전된 복도: 비춰야 보인다)
+func _lit_by_flashlight(pt: Vector3) -> bool:
+	var fl: Flashlight = lvl.player.flashlight
+	if fl == null or not fl.is_on or not fl.spot.visible:
+		return false
+	var sp := fl.spot.global_position
+	var to := pt - sp
+	if to.length() > fl.spot.spot_range * 0.95:
+		return false
+	if rad_to_deg((-fl.spot.global_transform.basis.z).angle_to(to.normalized())) > fl.spot.spot_angle * 0.8:
+		return false
+	return has_los(pt)
+
+# =========================================================== STEP 02 소은 (복도 끝, 등 돌림, 손전등으로 비춰야 보임)
 func place_soeun_corridor(instant: bool) -> void:
 	lvl._soeun()
 	var s: Node3D = lvl.soeun_node
@@ -93,47 +111,36 @@ func place_soeun_corridor(instant: bool) -> void:
 		return
 	var at := b2g(SOEUN_COR)
 	s.global_position = at
-	# 등을 돌리고 복도 끝(동쪽)을 바라본다
-	s.look_at(at + Vector3(1, 0, 0.15), Vector3.UP, true)
+	s.look_at(at + Vector3(1, 0, 0.15), Vector3.UP, true)     # 등을 돌리고 복도 끝(동쪽)을 바라본다
 	if lvl.soeun_poser:
 		lvl.soeun_poser.mode = "idle"
 		lvl.soeun_poser.head_raise = 0.0
 	s.visible = not instant
 	soeun_placed = true
 
-## 보는 순간 형광등이 깜빡이고, 다시 켜졌을 때 소은은 없다 (손전등도 같은 순간 꺼진다)
-func soeun_vanish_flicker(light: String, instant: bool) -> void:
+## 인지 후 손전등이 짧게 깜빡이고, 다시 빛이 들어오면 소은은 없다 (꺼진 프레임에서만 사라짐)
+func soeun_vanish_flashlight(instant: bool) -> void:
 	var s: Node3D = lvl.soeun_node
+	soeun_gone = true
 	if instant:
 		if s:
 			s.visible = false
-		soeun_gone = true
 		return
-	var f: LightFixture = lvl.fx.get(light)
 	var fl: Flashlight = lvl.player.flashlight
-	if f:
-		f._set_lit(false)
-	await get_tree().create_timer(0.09, false).timeout
-	if f:
-		f._set_lit(true, 0.55)
-	await get_tree().create_timer(0.07, false).timeout
-	if f:
-		f._set_lit(false)
-	var fl_was := fl != null and fl.is_on
-	if fl_was:
-		fl.spot.visible = false
-	Sounds.play_at("sfx_flicker_zap", b2g(Vector3(11.5, -1.1, 2.4)), &"SFX", -10.0)
-	await get_tree().create_timer(0.38, false).timeout
+	var seq := [[false, 0.07], [true, 0.05], [false, 0.09], [true, 0.04], [false, 0.42]]
+	Sounds.play("sfx_flashlight_off", &"SFX", -16.0)
+	for step in seq:
+		if fl.is_on:
+			fl.spot.visible = step[0]
+		if not step[0] and step[1] > 0.3 and s:
+			s.visible = false
+		await get_tree().create_timer(step[1], false).timeout
 	if s:
 		s.visible = false
-	soeun_gone = true
-	await get_tree().create_timer(0.12, false).timeout
-	if fl_was and fl.is_on:
+	if fl.is_on:
 		fl.spot.visible = true
-	if f:
-		f._apply()
 
-# =========================================================== EVENT 09 소음 실루엣
+# =========================================================== STEP 03~05 괴물
 func _ensure_noise() -> void:
 	if noise:
 		return
@@ -159,10 +166,11 @@ func _ensure_noise() -> void:
 				_noise_tape_mat.shader = sh
 				m.set_surface_override_material(i, _noise_tape_mat)
 			elif mat.resource_name.contains("noise_body"):
+				# 손전등을 비추면 실루엣과 일부 외형(거친 표면·테이프 광택)이 보이도록 완전한 검정은 피한다
 				var bm := StandardMaterial3D.new()
-				bm.albedo_color = Color(0.012, 0.012, 0.014)
-				bm.roughness = 0.95
-				bm.metallic_specular = 0.2
+				bm.albedo_color = Color(0.028, 0.026, 0.026)
+				bm.roughness = 0.72
+				bm.metallic_specular = 0.45
 				m.set_surface_override_material(i, bm)
 
 func _noise_head() -> Vector3:
@@ -174,6 +182,7 @@ func _noise_head() -> Vector3:
 			return s.global_transform * s.get_bone_global_pose(id).origin
 	return noise.global_position + Vector3(0, 1.8, 0)
 
+## 모퉁이 뒤에서 머리와 어깨만 내민다 (몸은 통로 안, 벽 뒤)
 func place_monster_corner(instant: bool) -> void:
 	if instant:
 		monster_state = "gone"
@@ -185,70 +194,156 @@ func place_monster_corner(instant: bool) -> void:
 	var at := b2g(NOISE_PEEK)
 	noise.global_position = at
 	noise.scale = Vector3.ONE
-	noise.look_at(at + Vector3(1, 0, 0), Vector3.UP, true)      # 기둥 동쪽(작업실 문 쪽)을 바라본다
+	noise.look_at(at + Vector3(1, 0, 0), Vector3.UP, true)
 	noise_poser.mode = "peek"
 	noise_poser.hunch = 0.5
 	noise_poser.head_raise = 0.6
+	noise_poser.twitch = 0.6
 	noise.visible = true
 	monster_state = "peeking"
-	# 기둥 뒤에서 몸을 옆으로 기울여 머리·어깨만 복도 쪽으로 내민다 (발은 기둥 뒤에 고정).
-	# 포즈의 기울기 방향을 모델마다 확신할 수 없으므로 양쪽을 재 보고 머리가 복도 쪽(남쪽)으로 더 나오는 쪽을 쓴다
 	await get_tree().process_frame
 	var base_t := noise.global_transform
 	var best := 0.0
-	var best_y := 99.0
+	var best_y := -99.0
 	for sgn in [1.0, -1.0]:
 		noise.global_transform = base_t
 		noise.rotate_object_local(Vector3(0, 0, 1), deg_to_rad(NOISE_LEAN) * sgn)
 		await get_tree().process_frame
-		var hy := g2b(_noise_head()).y
-		if hy < best_y:
+		var hy := g2b(_noise_head()).y          # 복도 쪽(북쪽, y가 큰 쪽)으로 더 나오는 방향을 고른다
+		if hy > best_y:
 			best_y = hy
 			best = sgn
 	noise.global_transform = base_t
-	_noise_upright = base_t.basis
 	noise.rotate_object_local(Vector3(0, 0, 1), deg_to_rad(NOISE_LEAN) * best)
-	await get_tree().process_frame
-	Sounds.play_at("sfx_tape_rip", _noise_head(), &"SFX", -22.0)
 
-## 다가가면 혹은 충분히 보였으면 기둥 뒤로 숨는다 → 시야에서 벗어난 뒤에만 사라진다
-func monster_peek_watch(_hide_dist: float) -> void:
+## STEP 04: 벽 뒤에서 천천히 걸어 나와(걷기) → 플레이어 쪽으로 몸을 돌리고(방향 전환) → 잠시 멈춘다 → STEP 05 추격
+func monster_emerge() -> void:
 	if noise == null or monster_state != "peeking":
-		monster_state = "gone"
 		return
-	# 다가오면 숨는다: 처음 본 거리보다 0.6 m 이상 가까워지거나, 1.6 m 안, 또는 3.5초 넘게 보이면
-	var seen := 0.0
-	var d0 := -1.0
-	while monster_state == "peeking":
-		await get_tree().process_frame
-		var dt := get_process_delta_time()
-		var head := _noise_head()
-		var d: float = lvl.player.camera.global_position.distance_to(head)
-		if _in_view(head, 30.0):
-			seen += dt
-			if d0 < 0.0:
-				d0 = d
-		if d0 > 0.0 and (d < d0 - 0.6 or d < 1.6 or seen > 3.5):
-			break
-		if d0 < 0.0 and d < 1.6:
-			break
-	monster_state = "hiding"
-	Sounds.play_at("step_concrete", noise.global_position, &"SFX", -14.0, null, 0.05)
-	noise_poser.mode = "idle"
-	noise_poser.head_raise = 0.0
+	monster_state = "emerging"
+	# 기울인 몸을 바로 세우며 복도 쪽(북)을 향한다
+	var from := noise.global_position
+	var out := b2g(NOISE_OUT)
+	var face_n := Transform3D(Basis(), from).looking_at(from + (out - from).normalized(), Vector3.UP, true).basis
 	var tw := create_tween()
-	tw.tween_property(noise, "global_transform", Transform3D(_noise_upright, b2g(NOISE_HIDE)), 0.45).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	tw.tween_property(noise, "global_transform", Transform3D(face_n, from), 0.5).set_trans(Tween.TRANS_SINE)
 	await tw.finished
-	# 시야 밖이 될 때까지 기다렸다가 제거 (보는 앞에서 사라지지 않음). 오래 지켜보면 손전등이 깜빡이는 순간에 사라진다
-	var waited := 0.0
-	while _in_view(noise.global_position + Vector3(0, 1.2, 0), 50.0) and waited < 6.0:
+	noise_poser.mode = "walk"
+	noise_poser.speed = 0.55
+	var dist := from.distance_to(out)
+	var t := 0.0
+	var dur := dist / 0.75                     # 느린 걸음
+	while t < dur:
 		await get_tree().process_frame
-		waited += get_process_delta_time()
-	if waited >= 6.0:
-		lvl.player.flashlight.anomaly_flicker(0.6)
-		await get_tree().create_timer(0.25, false).timeout
-	noise.visible = false
+		t += get_process_delta_time()
+		var k := clampf(t / dur, 0, 1)
+		noise.global_position = from.lerp(out, k)
+		_monster_step_sound(0.75)
+	monster_state = "turning"
+	noise_poser.mode = "idle"
+	var target: Vector3 = lvl.player.global_position
+	var face_p := Transform3D(Basis(), out).looking_at(Vector3(target.x, out.y, target.z), Vector3.UP, true).basis
+	var tw2 := create_tween()
+	tw2.tween_property(noise, "global_transform", Transform3D(face_p, out), 0.7).set_trans(Tween.TRANS_SINE)
+	Sounds.play_at("mon_step", out, &"SFX", -8.0, null, 0.05, "", 3.0)
+	await tw2.finished
+	monster_state = "paused"
+	noise_poser.twitch = 1.0
+	noise_poser.head_raise = 0.9
+	Sounds.play_at("mon_breath", _noise_head(), &"SFX", -6.0, null, 0.03, "", 3.0)
+	await get_tree().create_timer(1.3, false).timeout
+	# 추격 시작
+	noise_poser.twitch = 0.7
+	_chase_t = 0.0
+	_gap_want = maxf(noise.global_position.distance_to(lvl.player.global_position), 3.5)
+	_speed = 0.0
+	monster_state = "chasing"
+
+func _process(delta: float) -> void:
+	if _noise_tape_mat:
+		_noise_tape_mat.set_shader_parameter("t", Time.get_ticks_msec() / 1000.0)
+	if monster_state == "chasing" or monster_state == "closing":
+		_chase(delta)
+
+## STEP 05: 실제 추격 — 복도 바닥을 따라 플레이어에게 달려온다 (벽·기둥을 통과하지 않게 복도 안으로 제한).
+## 간격은 서서히 좁혀지고(5 m → 2.2 m) 플레이어가 멈추면 다가와 '잡힌' 것으로 보고 바로 전환한다 (사망 없음).
+func _chase(delta: float) -> void:
+	var p: PlayerController = lvl.player
+	_chase_t += delta
+	var m := noise.global_position
+	var goal := Vector3(p.global_position.x, m.y, p.global_position.z)
+	var dist := Vector2(goal.x - m.x, goal.z - m.z).length()
+	var want := 1.2 if monster_state == "closing" else lerpf(_gap_want, 2.2, clampf(_chase_t / 9.0, 0, 1))
+	var pv := Vector2(p.velocity.x, p.velocity.z).length()
+	var target_speed := clampf(pv + (dist - want) * 1.6, 0.0, 6.2)
+	if monster_state == "closing":
+		target_speed = maxf(target_speed, 3.0)
+	_speed = move_toward(_speed, target_speed, delta * 9.0)
+	var dir := (goal - m)
+	dir.y = 0
+	if dir.length() > 0.05:
+		dir = dir.normalized()
+		var nm := m + dir * _speed * delta
+		nm = _clamp_corridor(nm)
+		noise.global_position = nm
+		var want_b := Transform3D(Basis(), nm).looking_at(nm + dir, Vector3.UP, true).basis
+		noise.global_basis = noise.global_basis.slerp(want_b, clampf(delta * 6.0, 0, 1)).orthonormalized()
+	noise_poser.mode = "run" if _speed > 2.2 else ("walk" if _speed > 0.3 else "idle")
+	noise_poser.speed = clampf(_speed / 3.2, 0.5, 1.6)
+	_monster_step_sound(_speed)
+	caught = dist < CAUGHT_DIST
+	# 거리 → 심장·호흡 (가까울수록 빠르게)
+	if chase_audio_on:
+		p.danger = clampf(0.5 + 0.45 * (1.0 - clampf((dist - 1.5) / 8.0, 0, 1)), 0, 0.98)
+		_glitch_t -= delta
+		if _glitch_t <= 0.0:
+			_glitch_t = randf_range(1.2, 3.2)
+			Sounds.play_at("sfx_tape_glitch", _noise_head(), &"SFX", randf_range(-8.0, -3.0), null, 0.06, "", 3.0)
+
+func _monster_step_sound(speed: float) -> void:
+	if speed < 0.2:
+		return
+	_step_t -= get_process_delta_time()
+	if _step_t <= 0.0:
+		_step_t = clampf(0.95 / maxf(speed, 0.5), 0.22, 0.9)
+		Sounds.play_at("mon_step", noise.global_position + Vector3(0, 0.05, 0), &"SFX", -4.0 + minf(speed, 5.0), null, 0.06, "", 3.2)
+
+## 복도 바닥 안으로 제한 (벽·기둥 관통 방지). 화장실 통로에서 나오는 구간도 허용
+func _clamp_corridor(g: Vector3) -> Vector3:
+	var q := g2b(g)
+	if q.y < -1.75 and not (q.x > -4.45 and q.x < -3.85):
+		q.y = -1.75
+	q.y = clampf(q.y, -4.3, -0.48)
+	q.x = clampf(q.x, -4.6, 12.8)
+	if q.x > -1.85 and q.x < -0.85:
+		q.y = minf(q.y, -1.12)                       # 기둥 옆으로 지나간다
+	return b2g(Vector3(q.x, q.y, 0)) + Vector3(0, g.y, 0)
+
+func monster_close_in() -> void:
+	if monster_state == "chasing":
+		monster_state = "closing"
+
+func set_chase_audio(on: bool) -> void:
+	chase_audio_on = on
+
+## 손전등이 꺼진 순간: 괴물·발소리·잡음 모두 멈춘다 (어둠 속에서 치움 — 보는 앞에서 사라지지 않음)
+func chase_stop() -> void:
+	chase_audio_on = false
+	if noise:
+		noise.visible = false
 	monster_state = "gone"
+	lvl.player.danger = 0.0
+
+func flashlight_cut(instant: bool) -> void:
+	var fl: Flashlight = lvl.player.flashlight
+	if fl == null:
+		return
+	fl.blocked = true
+	if fl.is_on and not instant:
+		fl.set_on(false)
+	elif fl.is_on:
+		fl.is_on = false
+		fl.spot.visible = false
 
 ## 화면 안에 있고 가려지지 않았는가
 func _in_view(pt: Vector3, max_deg: float) -> bool:
@@ -265,92 +360,9 @@ func has_los(pt: Vector3) -> bool:
 	var hit := lvl.get_world_3d().direct_space_state.intersect_ray(q)
 	return hit.is_empty() or (hit["position"] as Vector3).distance_to(pt) < 0.35
 
-# =========================================================== EVENT 09b 따라오는 발소리
-func set_follower(on: bool) -> void:
-	follower_on = on
-	if on:
-		follow_dist = 7.5
-		_foll_pos = lvl.player.global_position + Vector3(-follow_dist, 0, 0)
-
-func _process(delta: float) -> void:
-	if follower_on:
-		_follow(delta)
-	if chase_on:
-		_chase()
-	if _noise_tape_mat:
-		_noise_tape_mat.set_shader_parameter("t", Time.get_ticks_msec() / 1000.0)
-
-func _follow(delta: float) -> void:
-	var p: PlayerController = lvl.player
-	var v := Vector2(p.velocity.x, p.velocity.z)
-	var spd := v.length()
-	# 플레이어 서쪽(지나온 쪽) 뒤편, 복도 안에서만 따라온다
-	var target := p.global_position + Vector3(-follow_dist, 0, 0)
-	target.x = maxf(target.x, b2g(Vector3(-4.6, 0, 0)).x)
-	target.z = clampf(target.z, b2g(Vector3(0, -0.4, 0)).z, b2g(Vector3(0, -1.8, 0)).z)
-	_foll_pos = _foll_pos.lerp(target, clampf(delta * 3.0, 0, 1))
-	# 돌아보면 멈춘다 (아무것도 없다)
-	var looking_back := _in_view(_foll_pos + Vector3(0, 1.0, 0), 35.0)
-	if spd < 0.4 or looking_back:
-		_step_t = 0.18          # 멈추면 거의 같이 멈춘다 (아주 짧게 늦게)
-		return
-	var running := spd > 3.6
-	var interval := 0.33 if running else 0.52
-	_step_t -= delta
-	if _step_t <= 0.0:
-		_step_t = interval * randf_range(0.97, 1.05)
-		var db := -8.0 + (7.5 - follow_dist) * 1.4
-		Sounds.play_at("step_concrete", _foll_pos + Vector3(0, 0.05, 0), &"SFX", db, null, 0.04, "", 3.0)
-		follow_dist = maxf(2.4, follow_dist - (0.22 if running else 0.14))
-		p.danger = clampf(0.55 + (7.5 - follow_dist) * 0.07, 0.0, 0.95)
-
-# =========================================================== EVENT 10 뒤에서부터 하나씩 꺼지는 형광등
-func start_lights_chase() -> void:
-	chase_on = true
-	_chase_next = 0
-
-func _chase() -> void:
-	var x := g2b(lvl.player.global_position).x
-	while _chase_next < 5 and x > float(COR_LIGHT_X[_chase_next]) + 1.6:
-		var n := "CorLight%d" % _chase_next
-		if lvl.fx.has(n) and lvl.fx[n].is_emitting():
-			lvl.set_light(n, "story_off")
-			Sounds.play_at("sfx_power_down", b2g(Vector3(COR_LIGHT_X[_chase_next], -1.1, 2.4)), &"SFX", -13.0, null, 0.06)
-		_chase_next += 1
-	if _chase_next >= 5:
-		chase_on = false
-
 func lights_off(names: Array, instant: bool) -> void:
 	for n in names:
-		if String(n) == "ExitSign":
-			_exit_sign_dim(0.04)
-			continue
 		lvl.set_light(String(n), "story_off", instant)
-
-## 비상구 표시등까지 꺼진다 (마지막 소등 — 초록빛이 벽을 물들이던 문제, 요구사항 16 영상 검수)
-func _exit_sign_dim(k: float) -> void:
-	for mi in lvl.cor.find_children("*", "MeshInstance3D", true, false):
-		var m := mi as MeshInstance3D
-		if m.mesh == null:
-			continue
-		for i in m.mesh.get_surface_count():
-			var mat := m.get_active_material(i)
-			if mat and mat.resource_name.contains("exit_sign") and mat is BaseMaterial3D:
-				var bm := mat as BaseMaterial3D
-				if not bm.has_meta("base_em"):
-					bm.set_meta("base_em", bm.emission_energy_multiplier)
-				bm.emission_energy_multiplier = float(bm.get_meta("base_em")) * k
-
-func flashlight_cut(instant: bool) -> void:
-	var fl: Flashlight = lvl.player.flashlight
-	if fl == null:
-		return
-	fl.blocked = true
-	if fl.is_on and not instant:
-		fl.set_on(false)
-	elif fl.is_on:
-		fl.is_on = false
-		fl.spot.visible = false
 
 # =========================================================== 테이프 잡음 (기억 속 공간이 흔들리는 순간)
 func tape_glitch(secs: float) -> void:

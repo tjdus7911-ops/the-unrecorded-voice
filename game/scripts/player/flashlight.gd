@@ -13,9 +13,9 @@ signal toggled(on: bool)
 @export var show_model := false
 @export var light_offset := Vector3(0.16, -0.30, -0.10)   ## 빛만 보일 때 광원 위치 (카메라 기준) — 손에 든 높이
 @export var model_offset := Vector3(0.21, -0.25, -0.36)   ## 모델을 보일 때 쥐는 위치
-@export var light_energy := 16.0      ## 요구사항 12·14: 3~5 m 앞 가구가 또렷이 보이되 1 m 벽이 하얗게 날아가지 않게
-@export var light_range := 16.0
-@export var spot_angle := 18.0       ## 반각 — 너무 넓으면 방 전체가 밝아진다 (요구사항 12)
+@export var light_energy := 6.5       ## 요구사항 17 §09: 가까운 벽이 하얗게 날아가거나 블룸이 생기지 않게 (쿠키가 중심을 밝게)
+@export var light_range := 15.0
+@export var spot_angle := 24.0       ## 반각 — 쿠키가 바깥 30%를 부드럽게 0으로 만들어 실제 밝은 원은 약 17°
 @export var click_on_sound: AudioStream       ## 비어 있으면 Sounds 라이브러리의 sfx_flashlight_on/off 사용
 @export var click_off_sound: AudioStream
 
@@ -69,13 +69,13 @@ func _ready() -> void:
 	spot.light_energy = light_energy
 	spot.spot_range = light_range
 	spot.spot_angle = spot_angle
-	spot.spot_angle_attenuation = 1.8      # 가장자리로 갈수록 자연스럽게 어두워짐
+	spot.spot_angle_attenuation = 1.0      # 가장자리 감쇠는 쿠키(가우시안+smoothstep)가 담당 — 겹친 원 없음
 	if ResourceLoader.exists("res://assets/textures/fx/flashlight_cookie.png"):
 		spot.light_projector = load("res://assets/textures/fx/flashlight_cookie.png")   # 중앙 핫스폿·반사판 링·부드러운 감쇠
-	spot.spot_attenuation = 1.05           # 거리 감쇠 (멀수록 어둡다, 물리 감쇠에 가깝게)
+	spot.spot_attenuation = 1.25           # 거리 감쇠: 가까운 곳은 밝고 먼 곳은 자연스럽게 어두워진다 (8~12 m의 소은이 보일 만큼)
 	spot.shadow_enabled = true                       # 벽·문을 통과하지 않는 빛
 	spot.shadow_bias = 0.03
-	spot.shadow_blur = 1.2
+	spot.shadow_blur = 1.6
 	spot.shadow_normal_bias = 1.0
 	spot.light_size = 0.03
 	spot.position = Vector3(0, 0, -0.14)

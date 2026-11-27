@@ -16,7 +16,8 @@
 - 사운드는 `game/data/config/audio.json` 의 ID로만 재생(`Sounds` autoload). 음성은 대사 JSON의 경로로만 참조
 - 그래픽 확인은 **실제 Godot 화면**으로: `scenes/tests/capture_phase01.tscn` (lavapipe Vulkan + xvfb). 자동 테스트 통과만으로 품질 판단 금지
 - 대사·음성·조명 상태는 `game/data/` JSON으로 관리. 코드에 음성 파일 경로 하드코딩 금지
-- 테스트: `tools/ci/run_tests.sh` 가 통과해야 커밋한다 (시스템 39 + 레벨 52 + 스토리 78 + 현지화 14). 입력 변경 시 `tools/ci/input_test_x11.sh`(실제 X11 입력)도 실행
+- 테스트: `tools/ci/run_tests.sh` 가 통과해야 커밋한다 (시스템 39 + 레벨 52 + 스토리 95 + 현지화 14). 입력·UI 변경 시 `tools/ci/input_test_x11.sh`·`tools/ci/popup_test_x11.sh`(실제 X11 입력)도 실행
+- **수정할 때마다 새 게임부터 현재 마지막 구간까지 전체 회귀 테스트** (요구사항 18): 스토리 테스트가 새 게임→TAPE 02 삽입→이어하기와 진행 불가 상황(녹음기 안 멈춤·재생 중 밖으로 나감·문 여러 번·ESC·Alt+Tab)을 한 번에 돈다
 
 ## 절대 규칙
 - 실행하지 못한 도구를 사용했다고 보고하지 않는다 (예: Blender MCP는 현재 미연결)
@@ -41,6 +42,11 @@
 - 조명 상태는 `lvl.set_lighting(normal|partial|broken|blackout|emergency)` — 정전은 화면 필터가 아니라 실제 조명·환경광·GI·반사·발광을 끈다
 - 녹음기는 책상 위에 둔 채 조작 (E/R), 테이프·덮개는 오브젝트 애니메이션
 - 저장: `SaveGame` autoload (user://save_01.json), 설정: `GameSettings` (user://settings.cfg)
+
+## 팝업·진행 안전장치 (요구사항 18 P0)
+- 코드로 만든 Control을 트리에 넣은 뒤에는 `set_anchors_preset` 대신 `set_anchors_and_offsets_preset` (앞의 것은 크기 0이 남아 팝업이 좌상단에 잘렸다)
+- 확인 팝업은 `ConfirmDialogUI.ask()` 하나로 (중앙 카드, 기본 '아니오', 중복 방지)
+- 이벤트가 플레이어 행동을 기다리면 `fallback_after`/`skip_if_started`로 영구 정지를 막는다. 개발 빌드 F9 = 이벤트 디버그 표시
 
 ## 요구사항 16 (공식 스토리) 구조
 - 이벤트: `data/events/prologue_events.json`(EV01~EV10b) + `tape01_events.json`(T01_*) — EventDirector가 여러 파일을 이어 읽는다. 이벤트 완료 = 마지막 액션 실행 뒤
