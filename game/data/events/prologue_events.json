@@ -166,28 +166,45 @@
    "delay": 0.0,
    "actions": [
     {
-     "t": 5.0,
-     "do": "tape_audio",
-     "id": "tape_playground",
-     "db": -6.0
-    },
-    {
-     "t": 9.0,
-     "do": "voice",
-     "line": "PRO_E04_T01",
-     "at": "recorder"
-    },
-    {
-     "t": 9.0,
-     "do": "slam_after_line",
-     "line": "PRO_E04_T01"
+     "t": 0.0,
+     "do": "tape_sequence",
+     "steps": [
+      {
+       "pause": 0.3,
+       "_note": "PLAY 버튼(효과음)과 릴 회전은 녹음기가 즉시 시작 — 테이프 헤드가 닿기까지 잠깐"
+      },
+      {
+       "sound": "sfx_tape_start_crackle",
+       "db": -9.0,
+       "bus": "SFX",
+       "wait": "end",
+       "gap": 0.12,
+       "_note": "짧은 지지직 0.65~0.85초, 끝 10 ms 무음"
+      },
+      {
+       "voice": "PRO_E04_T00",
+       "gap": 0.5
+      },
+      {
+       "tape_audio": "tape_playground",
+       "db": -6.0,
+       "wait": 4.0,
+       "_note": "기존 녹음 내용 (놀이터 공기·그네·아이 웃음)"
+      },
+      {
+       "voice": "PRO_E04_T01",
+       "slam_at_end": true,
+       "_note": "대사가 끝나는 순간 문이 쾅 (플레이어가 작업실 안에 있을 때)"
+      }
+     ]
     }
    ],
    "end": {
-    "after": 12.0
+    "after": 14.0
    },
    "repeatable": false,
-   "checkpoint": "tape1_played"
+   "checkpoint": "tape1_played",
+   "_note": "요구사항 20 (2026-11-27): PLAY → 릴 → 짧은 지지직 → 완전히 끝 → '정우야, 잘 들려?' → 놀이터 녹음 → '정우야, 녹음되고 있어?' → 끝나는 순간 문 쾅. 재생 중 반복 잡음 없음"
   },
   {
    "id": "EV05_locked_door",

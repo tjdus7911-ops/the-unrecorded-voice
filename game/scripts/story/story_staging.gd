@@ -228,6 +228,8 @@ func monster_emerge() -> void:
 	var tw := create_tween()
 	tw.tween_property(noise, "global_transform", Transform3D(face_n, from), 0.5).set_trans(Tween.TRANS_SINE)
 	await tw.finished
+	if _emerge_aborted():
+		return
 	noise_poser.mode = "walk"
 	noise_poser.speed = 0.55
 	var dist := from.distance_to(out)
@@ -235,6 +237,8 @@ func monster_emerge() -> void:
 	var dur := dist / 0.75                     # 느린 걸음
 	while t < dur:
 		await get_tree().process_frame
+		if _emerge_aborted():
+			return
 		t += get_process_delta_time()
 		var k := clampf(t / dur, 0, 1)
 		noise.global_position = from.lerp(out, k)
@@ -245,13 +249,17 @@ func monster_emerge() -> void:
 	var face_p := Transform3D(Basis(), out).looking_at(Vector3(target.x, out.y, target.z), Vector3.UP, true).basis
 	var tw2 := create_tween()
 	tw2.tween_property(noise, "global_transform", Transform3D(face_p, out), 0.7).set_trans(Tween.TRANS_SINE)
-	Sounds.play_at("mon_step", out, &"SFX", -8.0, null, 0.05, "", 3.0)
+	_mon_sfx.append(Sounds.play_at("mon_step", out, &"SFX", -8.0, null, 0.05, "", 3.0))
 	await tw2.finished
+	if _emerge_aborted():
+		return
 	monster_state = "paused"
 	noise_poser.twitch = 1.0
 	noise_poser.head_raise = 0.9
-	Sounds.play_at("mon_breath", _noise_head(), &"SFX", -6.0, null, 0.03, "", 3.0)
+	_mon_sfx.append(Sounds.play_at("mon_breath", _noise_head(), &"SFX", -6.0, null, 0.03, "", 3.0))
 	await get_tree().create_timer(1.3, false).timeout
+	if _emerge_aborted():
+		return
 	# 추격 시작
 	noise_poser.twitch = 0.7
 	_chase_t = 0.0
@@ -298,15 +306,21 @@ func _chase(delta: float) -> void:
 		_glitch_t -= delta
 		if _glitch_t <= 0.0:
 			_glitch_t = randf_range(1.2, 3.2)
-			Sounds.play_at("sfx_tape_glitch", _noise_head(), &"SFX", randf_range(-8.0, -3.0), null, 0.06, "", 3.0)
+			_mon_sfx.append(Sounds.play_at("sfx_tape_glitch", _noise_head(), &"SFX", randf_range(-8.0, -3.0), null, 0.06, "", 3.0))
+
+## 요구사항 20: 추격이 이미 끝났거나(공간 전환) 다른 공간에 있으면 남은 연출·소리를 멈춘다
+func _emerge_aborted() -> bool:
+	return monster_state == "gone" or lvl.in_apartment
 
 func _monster_step_sound(speed: float) -> void:
-	if speed < 0.2:
+	if _mon_sfx.size() > 24:
+		_mon_sfx = _mon_sfx.filter(func(x): return is_instance_valid(x))
+	if speed < 0.2 or lvl.in_apartment:
 		return
 	_step_t -= get_process_delta_time()
 	if _step_t <= 0.0:
 		_step_t = clampf(0.95 / maxf(speed, 0.5), 0.22, 0.9)
-		Sounds.play_at("mon_step", noise.global_position + Vector3(0, 0.05, 0), &"SFX", -4.0 + minf(speed, 5.0), null, 0.06, "", 3.2)
+		_mon_sfx.append(Sounds.play_at("mon_step", noise.global_position + Vector3(0, 0.05, 0), &"SFX", -4.0 + minf(speed, 5.0), null, 0.06, "", 3.2))
 
 ## 복도 바닥 안으로 제한 (벽·기둥 관통 방지). 화장실 통로에서 나오는 구간도 허용
 func _clamp_corridor(g: Vector3) -> Vector3:
@@ -327,7 +341,17 @@ func set_chase_audio(on: bool) -> void:
 	chase_audio_on = on
 
 ## 손전등이 꺼진 순간: 괴물·발소리·잡음 모두 멈춘다 (어둠 속에서 치움 — 보는 앞에서 사라지지 않음)
+## 요구사항 20: 괴물에게서 난 원샷 소리(발소리·7초짜리 숨소리·잡음)를 추적 → 추격이 끝나는 순간 함께 끊는다
+var _mon_sfx: Array = []
+func _stop_monster_sfx() -> void:
+	for pl in _mon_sfx:
+		if is_instance_valid(pl):
+			(pl as AudioStreamPlayer3D).stop()
+			pl.queue_free()
+	_mon_sfx.clear()
+
 func chase_stop() -> void:
+	_stop_monster_sfx()
 	chase_audio_on = false
 	if noise:
 		noise.visible = false
@@ -376,7 +400,7 @@ func tape_glitch(secs: float) -> void:
 		story._fade_layer.add_child(_glitch)
 		_glitch.move_to_front()
 	_glitch.visible = true
-	Sounds.play("amb_tape_hiss", &"SFX", -10.0)
+	Sounds.play("sfx_tape_glitch", &"SFX", -10.0, 0.05)   # 요구사항 20: 예전엔 반복 잡음(loop)을 원샷으로 틀어 끝나지 않았다
 	var t := 0.0
 	while t < secs:
 		(_glitch.material as ShaderMaterial).set_shader_parameter("amount", randf_range(0.5, 1.0))

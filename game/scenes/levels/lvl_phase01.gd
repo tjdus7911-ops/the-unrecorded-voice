@@ -691,14 +691,7 @@ func _process(delta: float) -> void:
 		for r in _reels:
 			if is_instance_valid(r):
 				r.rotate_object_local(Vector3.UP, delta * 14.0)
-	# 오래된 녹음 특유의 불규칙한 잡음 — 짧은 드롭아웃·잡음 튐 (대사를 가리지 않을 정도)
-	if recorder_state == "playing" and hiss:
-		_dropout_t -= delta
-		if _dropout_t <= 0.0:
-			_dropout_t = randf_range(2.5, 6.5)
-			var tw := create_tween()
-			tw.tween_property(hiss, "volume_db", hiss.base_volume_db + 6.0, 0.03)
-			tw.tween_property(hiss, "volume_db", hiss.base_volume_db, 0.12)
+	# (요구사항 20: 재생 중 무작위 잡음 튐 제거 — 대사 재생 중 반복 잡음 금지)
 	if recorder_state == "playing" or _self_play:
 		for r in _reels:
 			if is_instance_valid(r):
@@ -796,11 +789,17 @@ func _door() -> void:
 		it.reach_hold = 0.45
 		it.reach_follow = func(_k: float) -> Vector3: return lever.global_position
 
+var _locked_rattle_ms := 0
 func toggle_door() -> void:
 	if door_busy or door_hinge == null:
 		return
 	if door_locked and not door_open:
-		# 잠김: 손잡이만 덜컥거린다
+		# 잠김: 손잡이만 덜컥거린다 (요구사항 20: 연타해도 덜컥 소리·손잡이 동작이 겹치지 않게 0.35초 간격)
+		var now := Time.get_ticks_msec()
+		if now - _locked_rattle_ms < 350 and _locked_rattle_ms > 0:
+			_notify("door_locked_try")
+			return
+		_locked_rattle_ms = now
 		Sounds.play_at("sfx_door_locked", door_hinge.global_position + Vector3(0.6, 1.0, 0.0), &"SFX", -2.0, null, 0.03, "잠긴 문이 덜컥거리는 소리")
 		var lev := door_hinge.find_child("stu_door_lever_in", true, false) as Node3D
 		if lev:
@@ -915,8 +914,8 @@ func _furniture() -> void:
 			# 요구사항 14: 손 대신 서랍 자체의 물리적인 움직임 — 열 때 레일 끝에서 살짝 튕기고, 닫을 때 끝에서 '탁'
 			var tw := create_tween()
 			if open[0]:
-				tw.tween_property(dr, "position", base + Vector3(0, 0, 0.31), 0.42).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-				tw.tween_property(dr, "position", base + Vector3(0, 0, 0.3), 0.08)
+				tw.tween_property(dr, "position", base + Vector3(0, 0, 0.39), 0.42).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+				tw.tween_property(dr, "position", base + Vector3(0, 0, 0.38), 0.08)
 			else:
 				tw.tween_property(dr, "position", base, 0.32).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
 				tw.tween_property(dr, "position", base + Vector3(0, 0, 0.004), 0.05)
@@ -998,9 +997,19 @@ func _props() -> void:
 		fl = (load(PROPS + "prop_flashlight.gltf") as PackedScene).instantiate() as Node3D
 		dr0.add_child(fl)
 		_fix_materials(fl)
-		var box := Interactable.local_aabb(dr0)
-		fl.position = Vector3(box.get_center().x + 0.02, box.position.y + 0.03, box.get_center().z - 0.02)
-		fl.rotation = Vector3(0, deg_to_rad(80), deg_to_rad(90))
+		# 요구사항 20: 서랍 앞쪽 중앙, 바닥판 위에 옆으로 눕힘 (스위치가 위, 머리는 왼쪽).
+		# 서랍 원점 = 앞판 중앙. 서랍 안쪽은 Godot -Z. 앞판에서 10 cm 안쪽 = 열었을 때 책상 상판에 가리지 않는 구간
+		var floor_y := -0.05
+		var bottom := dr0.find_child("stu_desk_drawer_0_bottom", true, false) as MeshInstance3D
+		if bottom:
+			var bb := (dr0.global_transform.affine_inverse() * bottom.global_transform) * bottom.get_aabb()
+			floor_y = bb.end.y
+		fl.rotation = Vector3(0, deg_to_rad(90), 0)
+		fl.position = Vector3(0.115, floor_y + 0.03, -0.10)
+		# 실제 메시 경계로 바닥판 위에 정확히 올린다 (머리 베젤이 바닥에 닿음 — 파묻히지 않게)
+		var fb := (dr0.global_transform.affine_inverse() * fl.global_transform) * Interactable.local_aabb(fl)
+		fl.position.y += floor_y + 0.0015 - fb.position.y
+		fl.position.x -= fb.get_center().x
 		for c in fl.find_children("*", "CollisionObject3D", true, false):
 			c.queue_free()
 	else:
@@ -1010,11 +1019,16 @@ func _props() -> void:
 		var it := Interactable.attach_to(fl, "손전등", 0.02, 0.08)
 		it.name = "FlashlightInteract"
 		it.reach = "pick"
-		it.inspectable = true
-		it.inspect_visual = fl
-		it.inspect_title = "손전등"
-		it.inspect_text = "손잡이 도장이 벗겨진 검은 금속 손전등.\n위쪽 버튼으로 켜고 끈다."
-		it.pickup_item = &"flashlight"
+		# 요구사항 20: E 한 번에 바로 획득 (예전엔 조사 화면이 먼저 열려 E를 두 번 눌러야 했다)
+		it.action = func():
+			if Inventory.has_flashlight:
+				return
+			stats.interactions += 1
+			Inventory.add(&"flashlight")
+			Sounds.play("sfx_pickup", &"SFX", -2.0)
+			if is_instance_valid(fl):
+				fl.queue_free()
+			flashlight_prop = null
 	# 녹음기 (책상) — 테이프를 넣고 재생
 	recorder = _place("prop_recorder", "stu_spawn_prop_recorder")
 	if recorder:
@@ -1247,7 +1261,7 @@ func _insert_tape(n: String) -> void:
 	# 처음으로 되감기 (요구사항 15: 되감기 소리 + 릴이 거꾸로 빠르게 돈다)
 	tw.tween_callback(func():
 		_rewinding = true
-		Sounds.play_at("amb_tape_rewind", recorder.global_position, &"SFX", -8.0, null, 0.0, "테이프 되감는 소리"))
+		Sounds.play_at("amb_tape_rewind", recorder.global_position, &"SFX", -8.0, null, 0.0, "테이프 되감는 소리", 3.0, 1.05))   # 요구사항 20: 되감기 1.1초 뒤 반드시 끝남
 	tw.tween_interval(1.1)
 	tw.tween_callback(func():
 		_rewinding = false
@@ -1292,8 +1306,9 @@ func _play_tape() -> void:
 	Sounds.play_at("sfx_deck_button", recorder.global_position, &"SFX", -4.0, null, 0.0, "재생 버튼")
 	motor.stream = Sounds.pick("amb_tape_motor")
 	motor.play()
-	hiss.stream = Sounds.pick("amb_tape_hiss")
-	hiss.play()
+	# 요구사항 20: 재생 내내 깔리던 지지직(amb_tape_hiss) 반복을 없앤다 — 잡음은 PLAY 직후 짧게 한 번(tape_sequence)뿐, 릴 기계음(motor)만 남는다
+	hiss.stop()
+	_set_tape_audio_paused(false)
 	# 테이프 음성 (VoiceTape 버스: 대역 제한·미세 왜곡) — 임시 TTS 가이드 음성
 	if director == null:
 		get_tree().create_timer(1.6, false).timeout.connect(func():
@@ -1309,6 +1324,26 @@ func _stop_tape() -> void:
 	Sounds.play_at("sfx_tape_stop", recorder.global_position, &"SFX", -4.0, null, 0.0, "정지 버튼")
 	motor.stop()
 	hiss.stop()
+	_set_tape_audio_paused(true)          # 요구사항 20: 정지하면 테이프 속 소리(잡음·음성·놀이터 소리)도 함께 멈춘다 → 다시 재생하면 이어서
+
+## 녹음기에서 나는 '테이프 속' 소리 (도입 잡음·음성·놀이터 소리) — 정지/재생에 맞춰 함께 멈추고 이어진다
+func _tape_players() -> Array:
+	var out: Array = []
+	if recorder:
+		for c in recorder.find_children("*", "AudioStreamPlayer3D", true, false):
+			if c.has_meta(&"tuv_tape"):
+				out.append(c)
+	return out
+
+func _set_tape_audio_paused(on: bool) -> void:
+	for c in _tape_players():
+		(c as AudioStreamPlayer3D).stream_paused = on
+
+## 테이프 속 소리를 모두 끝낸다 (테이프를 꺼낼 때·공간 전환 때)
+func stop_tape_audio() -> void:
+	for c in _tape_players():
+		(c as AudioStreamPlayer3D).stop()
+		c.queue_free()
 
 func _play_line_at(line_id: String, at: Node3D) -> void:
 	var stream := DialogueDB.audio_of(line_id)
@@ -1320,6 +1355,8 @@ func _play_line_at(line_id: String, at: Node3D) -> void:
 	p.bus = &"VoiceTape"
 	p.unit_size = 1.5
 	p.volume_db = 2.0
+	if at == recorder:
+		p.set_meta(&"tuv_tape", true)
 	at.add_child(p)
 	p.play()
 	p.finished.connect(p.queue_free)
@@ -1450,18 +1487,20 @@ func play_line_world(line_id: String, pos: Vector3, at_player := false, bus := "
 	p.play()
 	p.finished.connect(p.queue_free)
 
-func play_tape_sound(id: String, db: float) -> void:
+func play_tape_sound(id: String, db: float, bus := &"VoiceTape") -> AudioStreamPlayer3D:
 	var s := Sounds.pick(id)
 	if s == null or recorder == null:
-		return
+		return null
 	var p := AudioStreamPlayer3D.new()
 	p.stream = s
-	p.bus = &"VoiceTape" if AudioServer.get_bus_index(&"VoiceTape") >= 0 else &"SFX"
+	p.bus = bus if AudioServer.get_bus_index(bus) >= 0 else &"SFX"
 	p.unit_size = 1.5
 	p.volume_db = db
+	p.set_meta(&"tuv_tape", true)
 	recorder.add_child(p)
 	p.play()
 	p.finished.connect(p.queue_free)
+	return p
 
 ## 조명 상태 문자열 → LightFixture
 func set_light(name: String, st: String, instant := false) -> void:
@@ -1498,9 +1537,10 @@ func set_rain(on: bool, fade: float) -> void:
 			em.playing = on
 			continue
 		if on and not em.playing:
+			em.gain_db = -60.0
 			em.play()
 		var tw := create_tween()
-		tw.tween_property(em, "volume_db", em.base_volume_db if on else -60.0, fade)
+		tw.tween_property(em, "gain_db", 0.0 if on else -60.0, fade)
 		if not on:
 			tw.tween_callback(em.stop)
 	var r := find_child("Rain", false, false) as GPUParticles3D
@@ -1690,7 +1730,49 @@ func enter_apartment() -> void:
 		player.footsteps.surface_zones.append(z)
 	set_rain(false, 0.0)
 	set_world_quiet(0.0, 0.1)
+	_space_mute(true)          # 요구사항 20: 작업실·상가 복도의 소리를 1998 공간으로 끌고 가지 않는다
 	# 작업실·복도 조명은 이 공간과 무관 — 멀리 있으므로 그대로 둔다
+
+## 공간 전환 때 이전 공간의 소리 정리: 반복음(환경음·형광등·녹음기 모터)은 멈춰 두었다가 돌아오면 다시, 원샷은 끊는다
+var _muted_space: Array = []
+func _space_mute(on: bool) -> void:
+	if on:
+		_muted_space.clear()
+		if motor:
+			motor.stop()
+		if hiss:
+			hiss.stop()
+		stop_tape_audio()
+		for c in find_children("*", "AudioStreamPlayer3D", true, false) + Sounds.find_children("*", "AudioStreamPlayer3D", true, false):
+			var a := c as AudioStreamPlayer3D
+			if apt and apt.is_ancestor_of(a):
+				continue
+			if not (a.playing or a.has_stream_playback()):
+				continue
+			if a.get_parent() is LightFixture:
+				(a.get_parent() as LightFixture).muted = true
+				_muted_space.append(a.get_parent())
+			elif a is AmbientEmitter:
+				a.stream_paused = true
+				_muted_space.append(a)
+			else:
+				a.stop()
+				if a.get_parent() == get_tree().current_scene or a.get_parent() == Sounds or a.get_parent() == self:
+					a.queue_free()
+		# 2D 원샷 (Sounds.play) 중 남은 것도 끊는다 — 호흡·심장·UI는 플레이어 몸/화면 소리라 유지
+		for c in Sounds.get_children():
+			if c is AudioStreamPlayer and (c as AudioStreamPlayer).playing and String((c as AudioStreamPlayer).bus) in ["SFX", "Ambience", "Ghost", "VoiceTape"]:
+				(c as AudioStreamPlayer).stop()
+				c.queue_free()
+	else:
+		for a in _muted_space:
+			if not is_instance_valid(a):
+				continue
+			if a is LightFixture:
+				(a as LightFixture).muted = false
+			else:
+				(a as AudioStreamPlayer3D).stream_paused = false
+		_muted_space.clear()
 
 
 # ======================================================================= 요구사항 11 프롤로그 연출
@@ -2328,6 +2410,7 @@ func return_to_studio(instant: bool) -> void:
 	if apt:
 		apt.leave(env)
 	in_apartment = false
+	_space_mute(false)
 	set_lighting("partial", true)          # 책상 스탠드만 켜져 있다 (Q-14 임시 결정)
 	set_world_quiet(-6.0, 0.1)
 	slam_door(true)
@@ -2336,6 +2419,7 @@ func return_to_studio(instant: bool) -> void:
 		recorder_state = "loaded"
 		motor.stop()
 		hiss.stop()
+	stop_tape_audio()
 	if recorder:
 		var to_desk := recorder.global_position
 		var front := b2g(Vector3(3.55, 3.45, 0.0))     # 책상 앞 (의자 옆), 녹음기를 내려다보는 자리
@@ -2402,6 +2486,12 @@ func _corridor_emissive(k: float) -> void:
 		var keep: float = k if String((e[0] as Material).resource_name).contains("exit") else (0.0 if k < 1.0 else 1.0)
 		(e[0] as BaseMaterial3D).emission_energy_multiplier = float(e[1]) * keep
 
+## 요구사항 20 진행 안전장치: 녹음 도중 멈춘 채 오래 두면 녹음기가 스스로 다시 돈다 (재생 버튼이 내려가는 소리)
+func recorder_resume_by_itself() -> void:
+	if recorder == null or recorder_state != "loaded":
+		return
+	_play_tape()
+
 ## 진행 안전장치 (P0 2026-11-27): 플레이어가 녹음기를 멈추지 않아도 테이프가 끝나 스스로 멈춘다 — 정지 버튼이 튀어 오르고 철컥
 func recorder_autostop() -> void:
 	if recorder == null or recorder_state != "playing":
@@ -2411,4 +2501,5 @@ func recorder_autostop() -> void:
 	Sounds.play_at("sfx_tape_stop", recorder.global_position, &"SFX", -2.0, null, 0.0, "철컥 — 테이프가 끝나 멈추는 소리")
 	motor.stop()
 	hiss.stop()
+	stop_tape_audio()
 	_notify("recorder_stop")

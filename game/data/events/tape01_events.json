@@ -158,7 +158,8 @@
      "do": "sound_at",
      "id": "amb_tape_hiss",
      "at": "apt_frag_3",
-     "db": -14.0
+     "db": -14.0,
+     "secs": 0.9
     },
     {
      "t": 1.2,

@@ -249,9 +249,8 @@ func _prologue() -> void:
 	await interact_at(dr.global_position + Vector3(0, 0.05, 0.1), 1.2)
 	await shot("ev06_drawer_open")
 	if lvl.flashlight_prop and is_instance_valid(lvl.flashlight_prop):
-		await interact_at(lvl.flashlight_prop.global_position, 1.0)
-		await press("interact")
-		await t(1.0)
+		await interact_at(lvl.flashlight_prop.global_position, 1.0)     # 요구사항 20: E 한 번에 획득
+		await t(0.6)
 	await press("flashlight")
 	await t(1.0)
 	await lookw(Bw(3.0, 2.5, 1.0), 0.8)

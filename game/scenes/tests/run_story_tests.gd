@@ -8,6 +8,46 @@ var p: PlayerController
 var passed := 0
 var failed := 0
 
+## 오디오가 실제로 믹싱되는지 (헤드리스 Dummy 드라이버는 믹싱하지 않아 원샷이 끝나지 않는다 → 소리 검수는 --write-movie 실행에서)
+var audio_mixing := false
+func _probe_audio() -> void:
+	var pl := Sounds.play("sfx_deck_button", &"SFX", -80.0)
+	var fin := [false]
+	if pl:
+		pl.finished.connect(func(): fin[0] = true)
+	var el := 0.0
+	while el < 2.0 and not fin[0]:
+		await get_tree().process_frame
+		el += get_process_delta_time()
+	audio_mixing = fin[0]
+	print("audio mixing: ", audio_mixing, " (probe finished after %.2fs, paused=%s)" % [el, get_tree().paused])
+
+func check_audio(c: bool, name: String, info := "") -> void:
+	if not audio_mixing:
+		print("  SKIP  %s (headless: no audio mix — run tools/ci/sound_audit.sh)" % name)
+		return
+	check(c, name, info)
+
+## 검수 로그: 지금 재생 중인 소리 목록 (tools/ci/sound_audit.sh 가 모아 docs/production/sound_audit_*.md 로 정리)
+func _snap(label: String) -> void:
+	var rows: Array = []
+	for e in Sounds.active_players():
+		var n := e[0] as Node
+		var where := ""
+		if n is Node3D and lvl and lvl.player:
+			where = "%.1fm" % (n as Node3D).global_position.distance_to(lvl.player.global_position)
+		rows.append("%s|%s|%s|%s|%s" % [e[1], e[2], "loop" if e[3] else "once", where, n.get_parent().name])
+	print("SOUND@%s %s" % [label, ";".join(rows)])
+
+func secs_real(t: float) -> void:
+	await get_tree().create_timer(t, true, false, true).timeout
+
+func _playing_file(part: String) -> bool:
+	for e in Sounds.active_players():
+		if String(e[1]).contains(part):
+			return true
+	return false
+
 func check(c: bool, name: String, info := "") -> void:
 	if c:
 		passed += 1
@@ -67,6 +107,7 @@ func _run() -> void:
 	add_child(lvl)
 	await frames(20)
 	p = lvl.player
+	await _probe_audio()
 	var d: EventDirector = lvl.director
 	check(d != null and d.by_id.has("EV10_transition") and d.by_id.has("T01_end"), "events: prologue + tape01 JSON loaded", "%d" % d.events.size())
 	# ---------------- EVENT 01
@@ -129,8 +170,42 @@ func _run() -> void:
 	var was_open: bool = lvl.door_open
 	# P0 회귀: 재생 중 복도로 나가 있으면 문은 닫히지 않고(밖에 갇히지 않음) 돌아오면 등 뒤에서 닫힌다
 	lvl.recorder_key()
+	# --- 요구사항 20: 재생 순서·잡음 (PLAY → 릴 → 짧은 지지직 → 완전히 끝 → '잘 들려?' → … → '녹음되고 있어?' → 쾅)
+	await secs(0.15)
+	var sf: PrologueStory = lvl.story_fx
+	check(lvl.motor.playing and not lvl.hiss.playing, "req20: PLAY → reel motor runs, no continuous hiss bed")
+	var el := 0.0
+	var crackle_on_at_voice := true
+	while el < 8.0 and not sf.tape_seq_log.any(func(e): return e[0] == "PRO_E04_T00"):
+		await frames(1)
+		el += get_process_delta_time()
+	crackle_on_at_voice = _playing_file("tape_start_crackle")
+	var log0: Array = sf.tape_seq_log.duplicate()
+	check(log0.size() >= 2 and log0[0][0] == "sfx_tape_start_crackle" and log0[1][0] == "PRO_E04_T00", "req20: crackle first, then '정우야, 잘 들려?'", str(log0))
+	check_audio(not crackle_on_at_voice and not lvl.hiss.playing, "req20: crackle has fully ended when '잘 들려?' starts")
+	check_audio(log0.size() >= 2 and float(log0[1][1]) - float(log0[0][1]) <= 1.15, "req20: start crackle ≤ ~1 s", str(log0))
+	# 정지 → 테이프 속 소리·모터도 멈춤 → 다시 재생하면 이어짐
+	await secs(0.3)
+	lvl.recorder_key()
+	await secs(0.3)
+	var tp_paused: bool = lvl._tape_players().all(func(c): return (c as AudioStreamPlayer3D).stream_paused)
+	check_audio(lvl.recorder_state == "loaded" and not lvl.motor.playing and tp_paused and Sounds.active_players(lvl.recorder).is_empty(), "req20: STOP silences everything on the recorder")
+	var log_n: int = sf.tape_seq_log.size()
+	await secs(1.5)
+	check(sf.tape_seq_log.size() == log_n, "req20: sequence holds while stopped")
+	lvl.recorder_key()
 	await stand(B(2.0, -1.1), B(5.0, -1.1, 1.5))
-	await secs(9.0 + DialogueDB.duration_of("PRO_E04_T01") + 0.8)
+	var hiss_during_voice := false
+	el = 0.0
+	while el < 30.0 and sf.tape_seq_running:
+		if _playing_file("tape_hiss") or _playing_file("tape_start_crackle") and sf.tape_seq_log.size() > 1:
+			hiss_during_voice = true
+		await frames(2)
+		el += get_process_delta_time() * 2.0
+	await secs(0.8)
+	var names: Array = sf.tape_seq_log.map(func(e): return e[0])
+	check(names == ["sfx_tape_start_crackle", "PRO_E04_T00", "tape_playground", "PRO_E04_T01", "slam"], "req20: order crackle → 잘 들려 → 놀이터 → 녹음되고 있어 → 쾅", str(names))
+	check_audio(not hiss_during_voice, "req20: no repeating noise while the recording plays")
 	check(was_open and lvl.door_open and not lvl.door_locked, "P0: player outside during the tape → door not slammed/locked behind them (no soft-lock)")
 	await stand(lvl.recorder.global_position + Vector3(0.1, -0.8, 0.6), lvl.door_inside_point())
 	await secs(1.0)
@@ -139,6 +214,7 @@ func _run() -> void:
 	lvl.toggle_door()
 	check(lvl.story_fx.tried_door, "P0: early door try is remembered")
 	check(await wait_done("EV04_first_recording", 12), "save: checkpoint 'tape1_played'")
+	_snap("EV04_done")
 	check(await wait_done("EV05_locked_door", 6), "EV05: '왜 안 열려...?' fires from the earlier try (no second try needed)")
 	lvl.toggle_door()
 	lvl.toggle_door()
@@ -151,12 +227,18 @@ func _run() -> void:
 	check(lvl.recorder_state == "playing", "P0: recorder still playing (player did not stop it)")
 	check(await wait_done("EV05a_tape_autostop", 14), "P0: tape runs out and stops by itself (철컥)")
 	check(lvl.recorder_state == "loaded", "P0: recorder state = stopped")
+	_snap("EV05a_autostop")
 	await stand(lvl.recorder.global_position + Vector3(0.3, -0.8, 0.6), lvl.recorder.global_position)
 	check(await wait_done("EV05b_voice_behind", 8), "EV05: clean '정우야...?' from behind")
 	# P0 회귀: 대사 중 ESC(일시정지) → 계속하기
 	GameFlow.pause()
 	await frames(10)
 	check(get_tree().paused, "P0: ESC pauses during the voice line")
+	# 요구사항 20: 일시정지 중에는 게임 소리(효과음·환경음·음성)가 모두 멈춘다 (UI 소리만 예외) → 재개하면 이어서
+	_snap("PAUSED")
+	var live_in_pause: Array = Sounds.active_players().filter(func(e): return e[2] != "UI")
+	var paused_n: int = GameFlow._paused_players.size()
+	check_audio(paused_n > 0 and live_in_pause.is_empty(), "req20: pause freezes all game sounds (%d paused)" % paused_n, str(live_in_pause.map(func(e): return e[1])))
 	GameFlow.resume()
 	var behind: Vector3 = lvl.story_fx._behind
 	check((behind - p.camera.global_position).dot(-p.camera.global_transform.basis.z) < 0.0 and lvl.in_studio(behind), "EV05: voice source behind the player, inside the room")
@@ -241,6 +323,17 @@ func _run() -> void:
 	check(st.monster_state == "gone" and not st.noise.visible, "EV10: monster and footsteps stopped (removed in the dark)")
 	check(SaveGame.read().checkpoint == "apt_entered", "save: checkpoint 'apt_entered'")
 	check(not p.flashlight.blocked and p.danger < 0.1, "EV10: control returned, heartbeat calmed")
+	_snap("EV10_in_1998")
+	# 요구사항 20: 공간 전환 — 작업실·상가 복도 소리(녹음기·형광등·환경음·추격음)가 1998 공간에서 들리지 않는다
+	await secs(1.0)
+	var leftover: Array = []
+	for e in Sounds.active_players():
+		var n := e[0] as Node
+		if n is AudioStreamPlayer3D and not lvl.apt.is_ancestor_of(n) and (n as Node3D).global_position.distance_to(p.global_position) > 25.0:
+			leftover.append(e[1])
+		elif n is AudioStreamPlayer and String(e[2]) in ["SFX", "VoiceTape", "Ghost"] and bool(e[3]):
+			leftover.append(e[1])
+	check_audio(leftover.is_empty(), "req20: no studio/corridor sound carried into 1998", str(leftover))
 	# ---------------- TAPE 01
 	var apt: AptCorridor = lvl.apt
 	check(apt.model != null, "T01: apartment model loaded (apt_1998.gltf)")
@@ -260,6 +353,7 @@ func _run() -> void:
 	check(not apt.soeun.visible, "T01: Soeun gone")
 	check(await wait_done("T01_end", 12), "T01: auto-stop → black → studio")
 	check(not lvl.in_apartment and lvl.in_studio(p.global_position), "T01: back in the studio")
+	_snap("T01_back_in_studio")
 	check(lvl.photo != null and lvl.photo.visible, "T01: childhood photo on the desk")
 	check(lvl.tapes_done.has("1") and lvl.next_tape() == 2, "tapes: TAPE 01 finished, next is 02")
 	check(SaveGame.read().checkpoint == "tape01_done", "save: checkpoint 'tape01_done'")
@@ -317,5 +411,7 @@ func _run() -> void:
 	check(lvl.photo != null and lvl.photo.visible, "continue: photo still on the desk")
 	GameFlow.start_mode = "title"
 	Engine.time_scale = 1.0
+	check(Sounds.loop_oneshot_warnings.is_empty(), "req20: no looping sound was fired as a one-shot", str(Sounds.loop_oneshot_warnings))
+	check(Sounds.duplicate_starts.is_empty(), "req20: no sound effect stacked twice at the same moment", str(Sounds.duplicate_starts))
 	print("== %d passed, %d failed ==" % [passed, failed])
 	get_tree().quit(1 if failed > 0 else 0)

@@ -121,7 +121,7 @@ func do_action(a: Dictionary, instant: bool) -> void:
 				lvl.show_parcel_at_door()
 		"sound_at":
 			if not instant:
-				Sounds.play_at(a["id"], point(a.get("at", "player")), &"SFX", float(a.get("db", 0.0)), null, 0.0, a.get("caption", ""))
+				Sounds.play_at(a["id"], point(a.get("at", "player")), &"SFX", float(a.get("db", 0.0)), null, 0.0, a.get("caption", ""), 3.0, float(a.get("secs", -1.0)))
 		"voice":
 			if not instant:
 				var at := String(a.get("at", "player"))
@@ -280,6 +280,16 @@ func do_action(a: Dictionary, instant: bool) -> void:
 		"title_card":
 			if not instant:
 				_title_card(a.get("title", ""), a.get("subtitle", ""), float(a.get("secs", 4.0)))
+		# ---------------- 요구사항 20: 녹음기 재생 순서 (PLAY → 릴 → 짧은 지지직 → 완전히 끝 → 대사 …)
+		"tape_sequence":
+			if instant:
+				for stp in a.get("steps", []):
+					if bool((stp as Dictionary).get("slam_at_end", false)):
+						door_locked = true
+						lvl.door_locked = true
+						lvl.slam_door(true)
+			else:
+				_tape_sequence(a.get("steps", []))
 		# ---------------- 요구사항 16
 		"slam_after_line":
 			# 소은의 목소리가 끝나는 순간 등 뒤 문이 쾅 닫히고 잠긴다 (소리는 문 위치에서)
@@ -369,7 +379,7 @@ func do_action(a: Dictionary, instant: bool) -> void:
 			st().fragments = maxi(st().fragments, int(a.get("n", 1)))
 			if not instant:
 				Sounds.play("sfx_deck_button", &"SFX", -12.0)
-				get_tree().create_timer(0.15, false).timeout.connect(func(): Sounds.play("amb_tape_motor", &"SFX", -20.0))
+				get_tree().create_timer(0.15, false).timeout.connect(func(): Sounds.play("amb_tape_motor", &"SFX", -20.0, 0.0, 0.7))
 		"recorder_autostop":
 			if not instant:
 				lvl.recorder_autostop()
@@ -524,6 +534,81 @@ func _title_card(title: String, sub: String, secs: float) -> void:
 	tw.tween_interval(secs)
 	tw.tween_property(_card, "modulate:a", 0.0, 1.5)
 	tw.tween_callback(_card.queue_free)
+
+## 요구사항 20: 테이프 속 소리를 순서대로 — 앞 소리가 '완전히' 끝난 뒤 다음 소리.
+## 녹음기를 멈추면 순서도 그 자리에서 멈췄다가 다시 재생하면 이어진다 (재생 중인 소리도 일시정지 → 이어서).
+## 진행 안전장치: 멈춘 채 TAPE_RESUME_SECS 동안 두면 녹음기가 스스로 다시 돈다 (P0 — 문이 영영 닫히지 않는 일 방지)
+const TAPE_RESUME_SECS := 20.0
+var tape_seq_running := false
+var tape_seq_log: Array = []        ## [단계, 시작 시각(재생 시간 기준)] — 테스트·검수용
+
+func _tape_wait(secs: float) -> void:
+	var el := 0.0
+	var idle := 0.0
+	while el < secs:
+		await get_tree().process_frame
+		var dt := get_process_delta_time()
+		if lvl.recorder_state == "playing":
+			el += dt
+			idle = 0.0
+		else:
+			idle += dt
+			if idle > TAPE_RESUME_SECS and lvl.recorder_state == "loaded" and not lvl.in_apartment:
+				idle = 0.0
+				lvl.recorder_resume_by_itself()
+
+func _tape_sequence(steps: Array) -> void:
+	tape_seq_running = true
+	tape_seq_log.clear()
+	var clock := 0.0
+	for raw in steps:
+		var stp := raw as Dictionary
+		if lvl.in_apartment:
+			break
+		if stp.has("pause"):
+			await _tape_wait(float(stp["pause"]))
+			clock += float(stp["pause"])
+			continue
+		var gap := float(stp.get("gap", 0.0))
+		if stp.has("sound"):
+			tape_seq_log.append([String(stp["sound"]), clock])
+			var pl: AudioStreamPlayer3D = lvl.play_tape_sound(String(stp["sound"]), float(stp.get("db", -8.0)), StringName(stp.get("bus", "SFX")))
+			var len: float = pl.stream.get_length() if pl and pl.stream else 0.5
+			var w = stp.get("wait", "end")
+			var secs := len if String(w) == "end" else float(w)
+			await _tape_wait(secs)
+			clock += secs
+			# 길이만큼 재생한 뒤 확실히 끊는다 (음원 끝 120 ms는 이미 0으로 줄어든 상태 — 다음 대사와 겹치지 않음)
+			if is_instance_valid(pl):
+				pl.stop()
+				pl.queue_free()
+			await _tape_wait(gap)
+			clock += gap
+		elif stp.has("tape_audio"):
+			tape_seq_log.append([String(stp["tape_audio"]), clock])
+			lvl.play_tape_sound(String(stp["tape_audio"]), float(stp.get("db", -6.0)))
+			var secs2 := float(stp.get("wait", 0.0))
+			await _tape_wait(secs2 + gap)
+			clock += secs2 + gap
+		elif stp.has("voice"):
+			var line := String(stp["voice"])
+			tape_seq_log.append([line, clock])
+			# 대사가 또렷하게: 함께 흐르는 녹음 속 배경음(놀이터 소리)은 대사 동안 6 dB 낮춘다
+			for c in lvl._tape_players():
+				var ap := c as AudioStreamPlayer3D
+				if ap.bus != &"SFX":
+					ap.create_tween().tween_property(ap, "volume_db", ap.volume_db - 6.0, 0.25)
+			lvl._play_line_at(line, lvl.recorder)
+			var dur := maxf(DialogueDB.duration_of(line) - 0.25, 0.3)
+			await _tape_wait(dur)
+			clock += dur
+			if bool(stp.get("slam_at_end", false)):
+				tape_seq_log.append(["slam", clock])
+				_slam_when_inside()
+			if gap > 0.0:
+				await _tape_wait(gap)
+				clock += gap
+	tape_seq_running = false
 
 ## EVENT 04 문 쾅: 플레이어가 작업실 안에 있을 때만 닫고 잠근다.
 ## (P0 2026-11-27: 재생 중 복도로 나가 있으면 밖에 갇혀 손전등·녹음기에 닿을 수 없었다 → 돌아올 때까지 기다렸다가 등 뒤에서 닫는다)

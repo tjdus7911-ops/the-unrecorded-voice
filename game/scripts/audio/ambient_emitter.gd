@@ -11,6 +11,8 @@ extends AudioStreamPlayer3D
 @export var check_interval := 0.12
 
 var occluded := false
+## 페이드용 추가 이득 (요구사항 20: 예전엔 volume_db 트윈이 매 프레임 덮어써져 페이드가 되지 않았다)
+var gain_db := 0.0
 var occlusion := 0.0           ## 0 = 트임, 1 = 완전히 막힘 (여러 경로 중 막힌 비율 — 문틈·모서리 회절 근사)
 var _occl := 0.0
 const PROBES := [Vector3.ZERO, Vector3(0.6, 0, 0), Vector3(-0.6, 0, 0), Vector3(0, -0.7, 0)]
@@ -42,4 +44,4 @@ func _physics_process(delta: float) -> void:
 			occluded = occlusion > 0.5
 	_occl = move_toward(_occl, occlusion, delta * 3.0)
 	attenuation_filter_cutoff_hz = lerpf(20500.0, occluded_cutoff_hz, _occl)
-	volume_db = base_volume_db + occluded_db * _occl
+	volume_db = base_volume_db + occluded_db * _occl + gain_db

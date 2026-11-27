@@ -123,6 +123,32 @@
       "voice": "subtitle"
     },
     {
+      "line_id": "PRO_E04_T00",
+      "character_id": "soeun",
+      "chapter_id": "prologue",
+      "scene_id": "E04_first_recording",
+      "text": {
+        "ko": "정우야, 잘 들려?",
+        "en": "Jungwoo, can you hear me?",
+        "ja": "ジョンウ、聞こえる？"
+      },
+      "subtitle": {
+        "ko": "정우야, 잘 들려?",
+        "en": "Jungwoo, can you hear me?",
+        "ja": "ジョンウ、聞こえる？"
+      },
+      "emotion": "playful",
+      "playback": {
+        "mode": "tape",
+        "position": "recorder",
+        "volume_db": 0.0,
+        "fx": []
+      },
+      "voice": "voiced",
+      "direction": "녹음 첫마디. 녹음기에 가까이 대고 밝게 (9살). 앞의 짧은 지지직이 끝난 직후 시작",
+      "_source": "요구사항 20 (2026-11-27 사용자 지정 순서 5번)"
+    },
+    {
       "line_id": "PRO_E04_T01",
       "character_id": "soeun",
       "chapter_id": "prologue",

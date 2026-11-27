@@ -201,10 +201,19 @@ func _run() -> void:
 	var fg := flp.global_position
 	await place(Vector3(fg.x, -fg.z - 0.75, 0), 0.0)
 	await look_b(Vector3(fg.x, -fg.z, fg.y))
-	check(p.try_interact() and p.inspect.is_open(), "flashlight: inspect view opens")
-	p.inspect.close(true)
+	# 요구사항 20: 서랍 바닥 위·앞쪽 중앙에 보이게 놓이고, 조준점이 손전등 자체를 가리키며, E 한 번에 획득
+	var dr0n := lvl.find_child("stu_desk_drawer_0", true, false) as Node3D
+	var flb := (dr0n.global_transform.affine_inverse() * flp.global_transform) * Interactable.local_aabb(flp)
+	var bot := dr0n.find_child("stu_desk_drawer_0_bottom", true, false) as MeshInstance3D
+	var bot_top := ((dr0n.global_transform.affine_inverse() * bot.global_transform) * bot.get_aabb()).end.y if bot else -1.0
+	check(bot != null and flb.position.y >= bot_top - 0.004 and flb.position.y < bot_top + 0.01, "flashlight: rests on the drawer bottom (not buried) %.3f/%.3f" % [flb.position.y, bot_top])
+	check(flb.end.z > -0.2 and flb.position.z < -0.03 and absf(flb.get_center().x) < 0.03, "flashlight: front-centre of the drawer")
+	p.interact_ray.force_raycast_update()
+	var hit_it: Node = p.interact_ray.get_collider()
+	check(hit_it == fit, "flashlight: crosshair hits the flashlight itself (collider matches model) → %s" % hit_it)
+	check(p.try_interact() and not p.inspect.is_open(), "flashlight: one E press (no inspect step)")
 	await frames(3)
-	check(Inventory.has_flashlight, "flashlight: acquired")
+	check(Inventory.has_flashlight and not is_instance_valid(flp), "flashlight: acquired with a single press")
 	check(p.flashlight.toggle() and p.flashlight.is_on, "flashlight: F on (after pickup)")
 	check(p.flashlight.spot.light_projector != null, "flashlight: projector pattern applied")
 	p.flashlight.toggle()

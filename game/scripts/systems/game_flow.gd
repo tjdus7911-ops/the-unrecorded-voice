@@ -33,9 +33,29 @@ func set_state(s: int) -> void:
 		return
 	var old := state
 	state = s
+	if s == State.PAUSED:
+		_pause_sounds(true)           # 트리를 멈추기 전에 (멈춘 뒤엔 재생 상태가 보이지 않는다)
 	get_tree().paused = (s == State.PAUSED)
+	if s != State.PAUSED and old == State.PAUSED:
+		_pause_sounds(false)
 	_apply_mouse()
 	state_changed.emit(s, old)
+
+## 요구사항 20: 일시정지 동안 게임 소리를 확실히 멈춘다 (UI 소리 제외) — 재개하면 멈췄던 것만 이어서 재생
+var _paused_players: Array = []
+func _pause_sounds(on: bool) -> void:
+	if on:
+		_paused_players.clear()
+		var root := get_tree().root
+		for c in root.find_children("*", "AudioStreamPlayer", true, false) + root.find_children("*", "AudioStreamPlayer3D", true, false):
+			if (c.playing or c.has_stream_playback()) and not c.stream_paused and c.bus != &"UI" and c.process_mode != Node.PROCESS_MODE_ALWAYS:
+				c.stream_paused = true
+				_paused_players.append(c)
+	else:
+		for c in _paused_players:
+			if is_instance_valid(c):
+				c.stream_paused = false
+		_paused_players.clear()
 
 func is_playing() -> bool:
 	return state == State.PLAYING

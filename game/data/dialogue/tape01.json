@@ -1,0 +1,281 @@
+{
+ "_doc": "요구사항 19 TAPE 01 개편 대본 (사용자 제공 그대로). voice: subtitle = 자막만(정우 현재 독백) / voiced = 최종 음성 파일이 있으면 재생, 없으면 임시 자막.",
+ "chapter_id": "tape01",
+ "lines": [
+  {
+   "line_id": "T01_S1_001",
+   "character_id": "jungwoo",
+   "chapter_id": "tape01",
+   "scene_id": "T01_S1_apartment",
+   "text": {
+    "ko": "사람이... 없는 건가?",
+    "en": "Is... nobody here?",
+    "ja": "誰も…いないのか？"
+   },
+   "subtitle": {
+    "ko": "사람이... 없는 건가?",
+    "en": "Is... nobody here?",
+    "ja": "誰も…いないのか？"
+   },
+   "emotion": "uneasy",
+   "playback": {
+    "mode": "live",
+    "position": "player",
+    "volume_db": 0.0,
+    "fx": []
+   },
+   "voice": "subtitle",
+   "direction": "현재 정우의 혼잣말 (자막)"
+  },
+  {
+   "line_id": "T01_PG_REC_001",
+   "character_id": "soeun",
+   "chapter_id": "tape01",
+   "scene_id": "T01_S2_playground",
+   "text": {
+    "ko": "정우야, 이것 봐! 아빠가 사줬어.",
+    "en": "Jungwoo, look! Dad bought it for me.",
+    "ja": "ジョンウ、見て！お父さんが買ってくれたの。"
+   },
+   "subtitle": {
+    "ko": "정우야, 이것 봐! 아빠가 사줬어.",
+    "en": "Jungwoo, look! Dad bought it for me.",
+    "ja": "ジョンウ、見て！お父さんが買ってくれたの。"
+   },
+   "emotion": "excited",
+   "playback": {
+    "mode": "tape",
+    "position": "world",
+    "volume_db": 0.0,
+    "fx": []
+   },
+   "voice": "voiced",
+   "direction": "어린 소은. 자랑하듯 들뜬 목소리 — 첫 번째 기억 단서(놀이터)"
+  },
+  {
+   "line_id": "T01_PG_REC_002",
+   "character_id": "jungwoo_child",
+   "chapter_id": "tape01",
+   "scene_id": "T01_S2_playground",
+   "text": {
+    "ko": "그게 뭔데?",
+    "en": "What is it?",
+    "ja": "それ、なに？"
+   },
+   "subtitle": {
+    "ko": "그게 뭔데?",
+    "en": "What is it?",
+    "ja": "それ、なに？"
+   },
+   "emotion": "curious",
+   "playback": {
+    "mode": "tape",
+    "position": "world",
+    "volume_db": 0.0,
+    "fx": []
+   },
+   "voice": "voiced",
+   "direction": "어린 정우. 궁금해서 다가오며"
+  },
+  {
+   "line_id": "T01_PG_REC_003",
+   "character_id": "soeun",
+   "chapter_id": "tape01",
+   "scene_id": "T01_S2_playground",
+   "text": {
+    "ko": "녹음기! 우리 목소리도 녹음할 수 있어.",
+    "en": "A recorder! It can record our voices.",
+    "ja": "録音機！わたしたちの声も録音できるんだよ。"
+   },
+   "subtitle": {
+    "ko": "녹음기! 우리 목소리도 녹음할 수 있어.",
+    "en": "A recorder! It can record our voices.",
+    "ja": "録音機！わたしたちの声も録音できるんだよ。"
+   },
+   "emotion": "excited",
+   "playback": {
+    "mode": "tape",
+    "position": "world",
+    "volume_db": 0.0,
+    "fx": []
+   },
+   "voice": "voiced",
+   "direction": "어린 소은. 신나서"
+  },
+  {
+   "line_id": "T01_PG_REC_004",
+   "character_id": "jungwoo_child",
+   "chapter_id": "tape01",
+   "scene_id": "T01_S2_playground",
+   "text": {
+    "ko": "나도 해볼래.",
+    "en": "Let me try too.",
+    "ja": "ぼくもやってみたい。"
+   },
+   "subtitle": {
+    "ko": "나도 해볼래.",
+    "en": "Let me try too.",
+    "ja": "ぼくもやってみたい。"
+   },
+   "emotion": "eager",
+   "playback": {
+    "mode": "tape",
+    "position": "world",
+    "volume_db": 0.0,
+    "fx": []
+   },
+   "voice": "voiced",
+   "direction": "어린 정우. 손을 내밀며"
+  },
+  {
+   "line_id": "T01_ST_001",
+   "character_id": "soeun",
+   "chapter_id": "tape01",
+   "scene_id": "T01_S3_stairs",
+   "text": {
+    "ko": "정우야! 빨리 와!",
+    "en": "Jungwoo! Hurry, come here!",
+    "ja": "ジョンウ！早く来て！"
+   },
+   "subtitle": {
+    "ko": "정우야! 빨리 와!",
+    "en": "Jungwoo! Hurry, come here!",
+    "ja": "ジョンウ！早く来て！"
+   },
+   "emotion": "urgent",
+   "playback": {
+    "mode": "live",
+    "position": "above_player",
+    "volume_db": 0.0,
+    "fx": []
+   },
+   "voice": "voiced",
+   "direction": "어린 소은. 위층에서 부르는 소리 — 다급하지만 위협이 아님. 괴물처럼 왜곡 금지"
+  },
+  {
+   "line_id": "T01_HOME_REC_001",
+   "character_id": "soeun",
+   "chapter_id": "tape01",
+   "scene_id": "T01_S5_home",
+   "text": {
+    "ko": "정우야, 내일도 놀 거지?",
+    "en": "Jungwoo, we'll play tomorrow too, right?",
+    "ja": "ジョンウ、明日も遊ぶよね？"
+   },
+   "subtitle": {
+    "ko": "정우야, 내일도 놀 거지?",
+    "en": "Jungwoo, we'll play tomorrow too, right?",
+    "ja": "ジョンウ、明日も遊ぶよね？"
+   },
+   "emotion": "warm",
+   "playback": {
+    "mode": "tape",
+    "position": "world",
+    "volume_db": 0.0,
+    "fx": []
+   },
+   "voice": "voiced",
+   "direction": "어린 소은. 헤어지기 아쉬운 목소리 — 마지막 기억 단서(소은의 집)"
+  },
+  {
+   "line_id": "T01_HOME_REC_002",
+   "character_id": "jungwoo_child",
+   "chapter_id": "tape01",
+   "scene_id": "T01_S5_home",
+   "text": {
+    "ko": "응. 당연하지.",
+    "en": "Yeah. Of course.",
+    "ja": "うん。もちろん。"
+   },
+   "subtitle": {
+    "ko": "응. 당연하지.",
+    "en": "Yeah. Of course.",
+    "ja": "うん。もちろん。"
+   },
+   "emotion": "warm",
+   "playback": {
+    "mode": "tape",
+    "position": "world",
+    "volume_db": 0.0,
+    "fx": []
+   },
+   "voice": "voiced",
+   "direction": "어린 정우. 당연하다는 듯"
+  },
+  {
+   "line_id": "T01_HOME_REC_003",
+   "character_id": "soeun",
+   "chapter_id": "tape01",
+   "scene_id": "T01_S5_home",
+   "text": {
+    "ko": "약속이다?",
+    "en": "Promise?",
+    "ja": "約束だよ？"
+   },
+   "subtitle": {
+    "ko": "약속이다?",
+    "en": "Promise?",
+    "ja": "約束だよ？"
+   },
+   "emotion": "playful",
+   "playback": {
+    "mode": "tape",
+    "position": "world",
+    "volume_db": 0.0,
+    "fx": []
+   },
+   "voice": "voiced",
+   "direction": "어린 소은. 새끼손가락을 내미는 느낌"
+  },
+  {
+   "line_id": "T01_HOME_REC_004",
+   "character_id": "jungwoo_child",
+   "chapter_id": "tape01",
+   "scene_id": "T01_S5_home",
+   "text": {
+    "ko": "알았어.",
+    "en": "Okay.",
+    "ja": "わかった。"
+   },
+   "subtitle": {
+    "ko": "알았어.",
+    "en": "Okay.",
+    "ja": "わかった。"
+   },
+   "emotion": "warm",
+   "playback": {
+    "mode": "tape",
+    "position": "world",
+    "volume_db": 0.0,
+    "fx": []
+   },
+   "voice": "voiced",
+   "direction": "어린 정우. 짧게"
+  },
+  {
+   "line_id": "T01_FINAL_001",
+   "character_id": "soeun",
+   "chapter_id": "tape01",
+   "scene_id": "T01_S6_final",
+   "text": {
+    "ko": "정우야, 기억나?",
+    "en": "Jungwoo, do you remember?",
+    "ja": "ジョンウ、覚えてる？"
+   },
+   "subtitle": {
+    "ko": "정우야, 기억나?",
+    "en": "Jungwoo, do you remember?",
+    "ja": "ジョンウ、覚えてる？"
+   },
+   "emotion": "whisper",
+   "playback": {
+    "mode": "live",
+    "position": "ear",
+    "volume_db": 0.0,
+    "fx": []
+   },
+   "voice": "voiced",
+   "direction": "어린 소은. 모든 소리가 멈춘 정적 속 귓가 — 위협이 아님, 서늘하고 슬프게"
+  }
+ ]
+}

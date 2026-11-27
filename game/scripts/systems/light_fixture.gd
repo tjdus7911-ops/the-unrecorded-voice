@@ -29,6 +29,12 @@ var _energy: Array[float] = []
 var _mats: Array[StandardMaterial3D] = []
 var _t := 0.0
 var _lit := true
+var _hum: AudioStreamPlayer3D
+## 요구사항 20: 다른 공간(1998)에 있는 동안 소리를 멈춘다
+var muted := false:
+	set(v):
+		muted = v
+		_apply_hum()
 
 func _ready() -> void:
 	child_entered_tree.connect(func(_n): _collect.call_deferred())
@@ -39,6 +45,7 @@ func _ready() -> void:
 		p.unit_size = 2.0
 		p.autoplay = true
 		add_child(p)
+		_hum = p
 	_collect()
 
 func _collect() -> void:
@@ -90,8 +97,14 @@ func _powered() -> bool:
 func _apply() -> void:
 	_set_lit(_powered())
 
+## 요구사항 20: 형광등 웅웅 소리는 불이 켜져 있을 때만 (예전엔 정전 중에도 계속 났다)
+func _apply_hum() -> void:
+	if _hum:
+		_hum.stream_paused = muted or not _lit
+
 func _set_lit(on: bool, k := 1.0) -> void:
 	_lit = on
+	_apply_hum()
 	for i in _lights.size():
 		_lights[i].visible = on
 		_lights[i].light_energy = _energy[i] * k

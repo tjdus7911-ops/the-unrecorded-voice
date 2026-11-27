@@ -54,6 +54,8 @@ func _run() -> void:
 		await _hands()
 	if only == "staging":
 		await _staging()
+	if only == "drawer":
+		await _drawer()
 	print("QA CAPTURE DONE")
 	get_tree().quit()
 
@@ -137,6 +139,47 @@ func _hands() -> void:
 
 
 ## 요구사항 16 연출 실제 화면: 복도 소은 · 기둥 괴물 · 뒤에서 꺼진 형광등 · 1998 아파트 · 복귀 후 책상 사진
+## 요구사항 20: 정전 상태에서 서랍을 열었을 때 손전등이 보이는지 (플레이어 눈높이, 책상 앞에 선 자리)
+func _drawer() -> void:
+	lvl.set_lighting("blackout", true)
+	var dr := lvl.find_child("stu_desk_drawer_0", true, false) as Node3D
+	# 이야기 진행 중과 같은 안내광 (prologue_story._set_guide 와 같은 값)
+	var g := OmniLight3D.new()
+	g.light_color = Color(0.75, 0.82, 1.0)
+	g.light_energy = 0.16
+	g.omni_range = 1.3
+	lvl.add_child(g)
+	g.global_position = dr.global_position + Vector3(0, 0.25, 0.45)
+	await t(2.5)
+	var front := dr.global_position
+	# 서랍이 나오는 방향(서랍 로컬 +Z)으로 0.75 m 물러선 자리
+	var out_dir := (dr.global_transform.basis.z).normalized()
+	out_dir.y = 0
+	p.global_position = Vector3(front.x, 0.05, front.z) + out_dir.normalized() * 0.78
+	await t(0.2)
+	p.look_at_point(front + Vector3(0, -0.05, 0))
+	await t(0.6)
+	await shot("drawer_closed_blackout")
+	var it := dr.find_child("Interact", true, false) as Interactable
+	it.interact(p)
+	await t(1.0)
+	p.look_at_point(lvl.flashlight_prop.global_position)
+	await t(0.6)
+	await shot("drawer_open_blackout")
+	p.interact_ray.force_raycast_update()
+	print("RAY ", p.interact_ray.get_collider())
+	await t(0.3)
+	await shot("drawer_open_blackout_aim")
+	# 가까이 (허리 굽혀 보는 느낌)
+	p.global_position = Vector3(front.x, 0.05, front.z) + out_dir.normalized() * 0.62
+	await t(0.2)
+	p.look_at_point(lvl.flashlight_prop.global_position)
+	await t(0.6)
+	await shot("drawer_open_blackout_close")
+	print("TRY ", p.call("try_interact"), " has=", Inventory.has_flashlight)
+	await t(0.8)
+	await shot("drawer_after_pickup")
+
 func _staging() -> void:
 	var st: StoryStaging = lvl.story_fx.st()
 	lvl.director.active = false
