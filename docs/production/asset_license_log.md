@@ -33,6 +33,11 @@ REF 01~21 시트 이미지는 웹 출처가 섞여 있어 `refs_local/`(git 제�
 | `game/assets/models/characters/chr_jungwoo_arms.gltf` | 서정우 1인칭 손·팔(좌우)·카디건 소매·리그·포즈 11종 | ORIGINAL (CC0 베이스 가공) | `tools/blender/build_arms.py` | 손톱·마디 주름·손금·핏줄·모공은 절차적 셰이더 → 2048 베이크 |
 | `game/assets/textures/chr/chr_skin_*`, `chr_knit_*`, `chr_rib_*` | 피부(베이크) · 니트 저지 · 2x2 고무단 | ORIGINAL | `build_arms.py` 베이크, `tools/textures/gen_knit_textures.py` | |
 | `game/assets/models/characters/PH_chr_soeun_silhouette.gltf` | 소은 역광 실루엣 (1998 복도 끝) | PLACEHOLDER | MakeHuman CC0 메시를 아이 비율로 변형 (`tools/blender/build_silhouette.py`) | 얼굴·디테일 없음. 정식 캐릭터 모델로 교체 |
-| `game/scripts/levels/apt_corridor.gd` (1998 아파트 복도) | EVENT 08 도착 공간 | PLACEHOLDER (블록아웃) | 기존 자체 PBR 텍스처로 코드 생성 | PHASE 02 승인 후 Blender로 정식 제작 |
+| ~~`game/scripts/levels/apt_corridor.gd` 블록아웃~~ | (요구사항 16에서 아래 정식 모델로 대체) | — | — | — |
 | `game/assets/audio/voice/<캐릭터>/<ko|en|ja>/TTS_*.wav` | 캐릭터 음성 (정우·어린 정우·소은·만수·영식) 한·영·일 | THIRD_PARTY 생성물 (상업 이용 가능) | **Supertonic 3** (Supertone Inc.) 모델 — **OpenRAIL-M** (상업 이용 허용, 사용 제한 조항 준수), 코드 MIT. sherpa-onnx(Apache-2.0)로 실행 (`tools/audio/make_voice_supertonic.py`). 이전 Mimic3(KSS, 비상업) 음성은 **모두 삭제** | 성우 녹음 예산이 생기면 교체 권장. OpenRAIL-M 사용 제한(타인 사칭·기만 등) 준수 |
 | `game/assets/audio/sfx/TTS_tape_playground.wav`, `TTS_child_laugh.wav` | 테이프 도입부·아이 웃음 | 위와 동일 + 자체 합성 | Supertonic 3 + DSP | |
+| `art/blender/environments/apartment_1998/apt_1998.blend` / `game/assets/models/environments/apt_1998.gltf` | 1998 복도식 아파트 (1층 외부 복도·계단실·현관·놀이터·그네·벤치·조경·맞은편 동) | ORIGINAL | 자체 제작 (`tools/blender/build_apartment.py`) — 기존 자체 PBR 텍스처 재사용 | 요구사항 16 TAPE 01. 외부 모델 없음 |
+| `game/assets/textures/apt/*.png` | 호수판(101~105)·우유 투입구·소화전·단지 표지·맞은편 동 외벽 | ORIGINAL | 자체 생성 (`build_apartment.py`, Noto Sans CJK OFL 폰트) | 가상의 단지명 |
+| `game/assets/textures/apt/apt_tape01_photo.jpg` | TAPE 01 이후 책상 위 어린 시절 사진 | ORIGINAL | 자체 렌더 (`tools/blender/render_tape01_photo.py`: apt_1998 + chr_soeun 렌더 → 필름 후처리, DejaVu 폰트 날짜 각인) | |
+| `game/assets/models/characters/gst_noise_silhouette.gltf` | 소음 실루엣 괴물 (검은 인간형 + 테이프 리본 260가닥) | ORIGINAL (CC0 베이스 가공) | MakeHuman CC0 메시 변형 (`tools/blender/build_characters.py noise`) | 요구사항 16 EVENT 09 |
+| `game/shaders/noise_tape.gdshader`, `tape_glitch.gdshader` | 테이프 리본 흔들림 · 테이프 잡음 화면 | ORIGINAL | 자체 작성 | |

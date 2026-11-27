@@ -1,17 +1,32 @@
-[gd_resource type="AudioBusLayout" load_steps=4 format=3]
+[gd_resource type="AudioBusLayout" load_steps=6 format=3]
 
 [sub_resource type="AudioEffectLimiter" id="lim_master"]
 ceiling_db = -1.0
 threshold_db = -3.0
 
-[sub_resource type="AudioEffectBandPassFilter" id="tape_band"]
-cutoff_hz = 1400.0
-resonance = 0.35
+[sub_resource type="AudioEffectHighPassFilter" id="tape_band"]
+cutoff_hz = 260.0
+resonance = 0.6
+
+[sub_resource type="AudioEffectLowPassFilter" id="tape_lp"]
+cutoff_hz = 4600.0
+resonance = 0.6
+
+[sub_resource type="AudioEffectChorus" id="tape_wow"]
+voice_count = 1
+dry = 0.0
+wet = 1.0
+voice/1/delay_ms = 6.0
+voice/1/rate_hz = 0.7
+voice/1/depth_ms = 0.9
+voice/1/level_db = 0.0
+voice/1/cutoff_hz = 16000.0
+voice/1/pan = 0.0
 
 [sub_resource type="AudioEffectDistortion" id="tape_dist"]
 mode = 0
-drive = 0.08
-post_gain = -1.0
+drive = 0.06
+post_gain = -0.5
 
 [resource]
 bus/0/name = &"Master"
@@ -36,8 +51,12 @@ bus/2/volume_db = 0.0
 bus/2/send = &"Voice"
 bus/2/effect/0/effect = SubResource("tape_band")
 bus/2/effect/0/enabled = true
-bus/2/effect/1/effect = SubResource("tape_dist")
+bus/2/effect/1/effect = SubResource("tape_lp")
 bus/2/effect/1/enabled = true
+bus/2/effect/2/effect = SubResource("tape_dist")
+bus/2/effect/2/enabled = true
+bus/2/effect/3/effect = SubResource("tape_wow")
+bus/2/effect/3/enabled = true
 bus/3/name = &"Breathing"
 bus/3/solo = false
 bus/3/mute = false

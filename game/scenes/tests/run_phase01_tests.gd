@@ -103,7 +103,9 @@ func _run() -> void:
 	check(Sounds.has("step_wood") and Sounds.has("step_tile") and Sounds.has("sfx_door_open") and Sounds.has("amb_rain_window"),
 			"sound: library loaded from audio.json")
 	check(AudioServer.get_bus_index(&"RoomCorridor") >= 0, "sound: per-room reverb buses")
-	check(DialogueDB.audio_of("PRO_E03_TAPE_1") != null, "voice: sample attached to PRO_E03_TAPE_1 via data")
+	# 요구사항 15: 최종 음성 파일이 없으면 음성 없이 자막만 (무료 TTS는 최종 음성이 아님 — 디버그 미리듣기 전용)
+	check(DialogueDB.audio_of("PRO_E04_T01") == null and DialogueDB.voice_policy("PRO_E04_T01") == "voiced" and DialogueDB.text_of("PRO_E04_T01") != "",
+			"voice: voiced tape line is subtitle-only until the final file exists")
 
 	# --- 작업실 이동·발소리(나무) ---
 	await place(Vector3(2.4, 2.0, 0), 0.0)

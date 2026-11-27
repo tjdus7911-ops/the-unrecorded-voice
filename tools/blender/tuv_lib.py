@@ -862,7 +862,22 @@ def _kept_root(o):
     return None
 
 
-def export_optimized(path, collections, collider_col, prefix, exclude=()):
+def flatten_basic_colors():
+    """mat_basic(절차적 색 얼룩)은 glTF로 색이 내보내지지 않아 Godot에서 흰색이 된다 →
+    내보내기 직전 Base Color 링크를 끊고 diffuse_color(설계 색)를 기본값으로 넣는다. (요구사항 16 아파트 QA에서 발견)"""
+    for m in bpy.data.materials:
+        if not m.use_nodes:
+            continue
+        bsdf = next((n for n in m.node_tree.nodes if n.type == "BSDF_PRINCIPLED"), None)
+        if bsdf is None or not bsdf.inputs["Base Color"].is_linked:
+            continue
+        src = bsdf.inputs["Base Color"].links[0].from_node
+        if src.type == "VALTORGB":
+            m.node_tree.links.remove(bsdf.inputs["Base Color"].links[0])
+            bsdf.inputs["Base Color"].default_value = tuple(m.diffuse_color)
+
+
+def export_optimized(path, collections, collider_col, prefix, exclude=(), flatten_basic=False):
     """정적 메시를 재질별로 병합(드로우콜 감소)하고, 상호작용 오브젝트(tuv_keep)는 계층·피벗을 유지해 따로 내보낸다.
     반환: (병합 메시 수, 유지 오브젝트 수, 원본 메시 수)"""
     dg = bpy.context.evaluated_depsgraph_get()
@@ -927,6 +942,8 @@ def export_optimized(path, collections, collider_col, prefix, exclude=()):
     for o in collider_col.all_objects:
         o.select_set(True)
     strip_aux_uv()
+    if flatten_basic:
+        flatten_basic_colors()
     gltf_export(path)
     return len(merged), len([o for o in kept if o.type == "MESH"]), n_src
 

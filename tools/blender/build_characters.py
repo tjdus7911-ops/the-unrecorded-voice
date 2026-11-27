@@ -527,9 +527,103 @@ def build_monster():
     finish("gst_prologue_monster", [body, shirt, pants, scalp, hair], rig, OUT / "gst_prologue_monster.gltf")
 
 
+# ---------------------------------------------------------------- 잡음의 실루엣 (요구사항 16 EVENT 09)
+def build_noise():
+    """사람보다 약간 큰(1.98 m) 검은 인간형. 얼굴은 어둠에 묻혀 식별되지 않고, 몸 곳곳에서 카세트 자기테이프 리본이
+    늘어져 불규칙하게 흔들린다(흔들림은 Godot 셰이더 — UV.v = 리본 뿌리 0 → 끝 1)."""
+    T.reset_scene()
+    V, F, groups, sk, wt = load_mh()
+    bones, order = skeleton(V, sk)
+    names = order
+    W = weight_matrix(len(V), wt, names, groups)
+    spec = {
+        "neck": (1.35, 0.8), "head": (1.0, 0.92), "spine": (1.05, 0.82), "breast": (0.3, 0.3), "pelvis": (0.95, 0.85),
+        "clavicle": (1.08, 0.85), "shoulder": (1.05, 0.82), "upperarm": (1.12, 0.74), "lowerarm": (1.18, 0.7), "wrist": (1.1, 0.85),
+        "metacarpal": (1.15, 0.8), "finger": (1.3, 0.75), "upperleg": (1.06, 0.78), "lowerleg": (1.08, 0.74), "foot": (1.05, 0.85), "toe": (1.1, 0.85),
+    }
+    V2, nb = morph(V, bones, order, W, names, spec)
+    V2 = scale_all(V2, nb, 1.98)
+    body = mesh_from("gst_noise_body", V2, F, W, names)
+    subdivide(body, 1)
+    rng = np.random.default_rng(16)
+    me = body.data
+    co = np.array([v.co for v in me.vertices])
+    nrm = np.array([v.normal for v in me.vertices])
+    # 표면을 감은 테이프처럼 결이 있는 울퉁불퉁함 (세로 결 + 잔물결)
+    disp = 0.005 * np.sin(co[:, 2] * 95 + co[:, 0] * 30) * np.sin(co[:, 1] * 60 + 1.0) + 0.003 * np.sin(co[:, 0] * 210 + co[:, 2] * 160)
+    for v, d, n in zip(me.vertices, disp, nrm):
+        v.co = Vector(np.array(v.co) + n * d)
+    skin = mat("gst_noise_body", (0.018, 0.014, 0.012), 0.42)
+    me.materials.append(skin)
+    tape_m = mat("gst_noise_tape", (0.06, 0.035, 0.02), 0.22)
+    # 자기테이프 리본: 몸 위 무작위 지점(머리·어깨·팔·몸통에 집중)에서 아래로 늘어짐, 폭 6.3 mm 실제 테이프 비율보다 약간 넓게
+    P = np.array([v.co for v in body.data.vertices])
+    N = np.array([v.normal for v in body.data.vertices])
+    gids = {g.index: g.name for g in body.vertex_groups}
+    def main_bone(i):
+        best, bw = "spine03", 0.0
+        for ge in body.data.vertices[i].groups:
+            if ge.weight > bw:
+                bw, best = ge.weight, gids[ge.group]
+        return best
+    ztop = P[:, 2].max()
+    cand = np.where(P[:, 2] > ztop * 0.45)[0]
+    bm = bmesh.new()
+    vg_of = []   # (vert index range, bone)
+    count = 0
+    for k in range(260):
+        i = int(rng.choice(cand))
+        root = P[i] + N[i] * 0.004
+        bone = main_bone(i)
+        length = rng.uniform(0.12, 0.55) * (1.3 if P[i][2] > ztop * 0.85 else 1.0)
+        width = rng.uniform(0.006, 0.012)
+        seg = 7
+        side = np.cross(N[i], [0, 0, 1.0])
+        if np.linalg.norm(side) < 1e-3:
+            side = np.array([1.0, 0, 0])
+        side = side / np.linalg.norm(side) * width
+        prev = None
+        start = count
+        for j in range(seg + 1):
+            tt = j / seg
+            pnt = root + N[i] * (0.015 * tt) + np.array([rng.normal(0, 0.006), rng.normal(0, 0.006), -length * tt])
+            a1 = bm.verts.new(pnt - side)
+            a2 = bm.verts.new(pnt + side)
+            count += 2
+            if prev:
+                bm.faces.new([prev[0], prev[1], a2, a1])
+            prev = (a1, a2)
+        vg_of.append((start, count, bone))
+    me2 = bpy.data.meshes.new("gst_noise_tape")
+    bm.to_mesh(me2)
+    bm.free()
+    tape = bpy.data.objects.new("gst_noise_tape", me2)
+    bpy.context.scene.collection.objects.link(tape)
+    me2.materials.append(tape_m)
+    uv = me2.uv_layers.new(name="UVMap")
+    # 리본별 UV: u = 좌우(0/1), v = 뿌리 0 → 끝 1
+    for poly in me2.polygons:
+        for li in poly.loop_indices:
+            vi = me2.loops[li].vertex_index
+            for (a, b, _bn) in vg_of:
+                if a <= vi < b:
+                    local = vi - a
+                    uv.data[li].uv = (local % 2, (local // 2) / 7.0)
+                    break
+    groups_made = {}
+    for (a, b, bn) in vg_of:
+        g = groups_made.get(bn) or tape.vertex_groups.new(name=bn)
+        groups_made[bn] = g
+        g.add(list(range(a, b)), 1.0, "REPLACE")
+    rig = armature("gst_noise_rig", nb, order)
+    finish("gst_noise_silhouette", [body, tape], rig, OUT / "gst_noise_silhouette.gltf")
+
+
 if __name__ == "__main__":
     what = ARGS[0] if ARGS else "all"
     if what in ("soeun", "all"):
         build_soeun()
     if what in ("monster", "all"):
         build_monster()
+    if what in ("noise", "all"):
+        build_noise()

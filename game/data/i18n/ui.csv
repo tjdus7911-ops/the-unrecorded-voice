@@ -253,3 +253,52 @@ Why is it under the desk...","箱から消えたテープだ。
 "작은 아이 웃음소리","작은 아이 웃음소리","A small child's laughter","小さな子どもの笑い声"
 "문손잡이가 덜컥거리는 소리","문손잡이가 덜컥거리는 소리","The door handle rattles","ドアノブがガチャガチャ鳴る音"
 "철문을 세게 치는 소리","철문을 세게 치는 소리","Something pounds on the steel door","鉄の扉を激しく叩く音"
+"현재 목표","현재 목표","Objective","現在の目標"
+"문을 열어 누가 왔는지 확인하세요.","문을 열어 누가 왔는지 확인하세요.","Open the door and see who's there.","ドアを開けて誰が来たか確かめる。"
+"택배 상자를 책상 위에 내려놓으세요.","택배 상자를 책상 위에 내려놓으세요.","Put the parcel down on the desk.","小包を机の上に置く。"
+"상자를 열어 보세요.","상자를 열어 보세요.","Open the box.","箱を開けてみる。"
+"첫 번째 테이프를 녹음기에 넣으세요.","첫 번째 테이프를 녹음기에 넣으세요.","Put the first tape into the recorder.","一本目のテープをレコーダーに入れる。"
+"녹음기를 재생하세요. (R)","녹음기를 재생하세요. (R)","Play the recorder. (R)","レコーダーを再生する。(R)"
+"책상 서랍에서 손전등을 찾으세요.","책상 서랍에서 손전등을 찾으세요.","Find the flashlight in the desk drawer.","机の引き出しで懐中電灯を探す。"
+"라벨에 매직으로 크게 'TAPE 0%d'.
+투명 창 너머로 감긴 테이프가 보인다.","라벨에 매직으로 크게 'TAPE 0%d'.
+투명 창 너머로 감긴 테이프가 보인다.","'TAPE 0%d' written large in marker.
+You can see the wound tape through the window.","ラベルにマジックで大きく『TAPE 0%d』。
+透明な窓から巻かれたテープが見える。"
+"라벨에 'TAPE 0%d'.
+1번부터 들어 보자.","라벨에 'TAPE 0%d'.
+1번부터 들어 보자.","'TAPE 0%d' on the label.
+Better start with number 1.","ラベルに『TAPE 0%d』。
+1番から聴いてみよう。"
+"조준점","조준점","Crosshair","照準"
+"항상 표시","항상 표시","Always","常に表示"
+"상호작용 때만","상호작용 때만","Only when interactable","操作できる時だけ"
+"상호작용 힌트","상호작용 힌트","Interaction hints","操作ヒント"
+"현재 목표 표시","현재 목표 표시","Show objective","現在の目標を表示"
+"첫 번째 테이프 획득","첫 번째 테이프 획득","Take the first tape","一本目のテープを取る"
+"E 내려놓기","E 내려놓기","E  Put down","E  置く"
+"R 녹음기 (테이프 넣기 · 재생 · 정지)","R 녹음기 (테이프 넣기 · 재생 · 정지)","R  Recorder (insert · play · stop)","R  レコーダー(挿入・再生・停止)"
+"E 조사·조작 · Shift 달리기 · Ctrl 앉기","E 조사·조작 · Shift 달리기 · Ctrl 앉기","E Examine/Use · Shift Run · Ctrl Crouch","E 調べる・操作 · Shift 走る · Ctrl しゃがむ"
+"손으로 쓴 편지","손으로 쓴 편지","Handwritten letter","手書きの手紙"
+"사진","사진","Photograph","写真"
+"TAPE 02 준비됨 — 본편은 다음 단계(PHASE 02)에서 제작됩니다.","TAPE 02 준비됨 — 본편은 다음 단계(PHASE 02)에서 제작됩니다.","TAPE 02 ready — the chapter itself comes in the next phase (PHASE 02).","TAPE 02 準備完了 — 本編は次の段階(PHASE 02)で制作されます。"
+"테이프를 상자에 넣는 소리","테이프를 상자에 넣는 소리","A tape set back in the box","テープを箱に戻す音"
+"녹음기 덮개 여는 소리","녹음기 덮개 여는 소리","The recorder lid opens","レコーダーの蓋が開く音"
+"쾅!","쾅!","BANG!","バン！"
+"철컥","철컥","Clack","ガチャ"
+"끼익... 끼익...","끼익... 끼익...","Creak... creak...","ギィ…ギィ…"
+"아이들의 웃음소리","아이들의 웃음소리","Children laughing","子供たちの笑い声"
+"위층에서 들리는 작은 발소리","위층에서 들리는 작은 발소리","Small footsteps upstairs","上の階から小さな足音"
+"철컥 — 테이프가 끝나 멈추는 소리","철컥 — 테이프가 끝나 멈추는 소리","Clack — the tape runs out and stops","ガチャ — テープが終わって止まる音"
+"멀리서 들리는 어린아이의 웃음소리","멀리서 들리는 어린아이의 웃음소리","A child's laugh, far away","遠くで子供の笑い声"
+"지직... 지지직...","지직... 지지직...","Bzzt... bzzzt...","ジジッ…ジジジッ…"
+"퍽! 전기가 나가는 소리","퍽! 전기가 나가는 소리","Pop! The power cuts out","バチッ！電気が落ちる音"
+"철컥.","철컥.","Clack.","ガチャ。"
+"복도","복도","Corridor","廊下"
+"TAPE 01 종료","TAPE 01 종료","TAPE 01 finished","TAPE 01 終了"
+"TAPE 02 삽입","TAPE 02 삽입","TAPE 02 inserted","TAPE 02 挿入"
+"평범했던 하루
+1998","평범했던 하루
+1998","An Ordinary Day
+1998","ありふれた一日
+1998"

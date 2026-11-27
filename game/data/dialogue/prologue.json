@@ -1,43 +1,36 @@
 {
-  "_doc": "PROLOGUE 대사 (요구사항 11 최종안). audio는 tools/audio/make_voice_supertonic.py가 언어별로 채운다. 스키마: docs/design/sound_bible.md §3",
+  "_doc": "프롤로그·TAPE 01 대사 (요구사항 16 공식 대본). voice: subtitle=자막만 / voiced=실제 음성(최종 음성 파일이 있을 때만 재생, 없으면 임시 자막) / document=오브젝트 글. 최종 음성: res://assets/audio/voice/final/<lang>/<line_id>.ogg",
   "chapter_id": "prologue",
   "lines": [
     {
       "line_id": "PRO_E01_001",
       "character_id": "jungwoo_adult",
-      "voice_id": "vo_jungwoo_adult",
       "chapter_id": "prologue",
       "scene_id": "E01_studio",
       "text": {
-        "ko": "하... 이것만 끝내고 집에 가야겠다.",
-        "en": "Hah... Just finish this, then go home.",
-        "ja": "はぁ…これだけ終わらせて帰ろう。"
+        "ko": "오늘은 여기까지만 해야겠다.",
+        "en": "I should call it a night.",
+        "ja": "今日はここまでにしよう。"
       },
       "subtitle": {
-        "ko": "하... 이것만 끝내고 집에 가야겠다.",
-        "en": "Hah... Just finish this, then go home.",
-        "ja": "はぁ…これだけ終わらせて帰ろう。"
+        "ko": "오늘은 여기까지만 해야겠다.",
+        "en": "I should call it a night.",
+        "ja": "今日はここまでにしよう。"
       },
       "emotion": "tired",
-      "audio": {
-        "ko": "res://assets/audio/voice/jungwoo_adult/ko/TTS_PRO_E01_001.wav",
-        "en": "res://assets/audio/voice/jungwoo_adult/en/TTS_PRO_E01_001.wav",
-        "ja": "res://assets/audio/voice/jungwoo_adult/ja/TTS_PRO_E01_001.wav"
-      },
       "playback": {
         "mode": "live",
         "position": "player",
         "volume_db": 0.0,
         "fx": []
       },
-      "voice_source": "Supertonic 3 TTS (OpenRAIL-M, commercial use allowed) — replace with voice actors if budget allows"
+      "voice": "subtitle"
     },
     {
       "line_id": "PRO_E02_001",
       "character_id": "jungwoo_adult",
-      "voice_id": "vo_jungwoo_adult",
       "chapter_id": "prologue",
-      "scene_id": "E02_parcel",
+      "scene_id": "E02_knock",
       "text": {
         "ko": "누구세요?",
         "en": "Who is it?",
@@ -48,376 +41,239 @@
         "en": "Who is it?",
         "ja": "どちら様ですか？"
       },
-      "emotion": "uneasy",
-      "audio": {
-        "ko": "res://assets/audio/voice/jungwoo_adult/ko/TTS_PRO_E02_001.wav",
-        "en": "res://assets/audio/voice/jungwoo_adult/en/TTS_PRO_E02_001.wav",
-        "ja": "res://assets/audio/voice/jungwoo_adult/ja/TTS_PRO_E02_001.wav"
-      },
+      "emotion": "neutral",
       "playback": {
         "mode": "live",
         "position": "player",
         "volume_db": 0.0,
         "fx": []
       },
-      "voice_source": "Supertonic 3 TTS (OpenRAIL-M, commercial use allowed) — replace with voice actors if budget allows"
+      "voice": "subtitle"
     },
     {
       "line_id": "PRO_E02_002",
       "character_id": "jungwoo_adult",
-      "voice_id": "vo_jungwoo_adult",
       "chapter_id": "prologue",
-      "scene_id": "E02_parcel",
+      "scene_id": "E02_knock",
       "text": {
-        "ko": "...뭐야?",
-        "en": "...What?",
-        "ja": "…なんだ？"
+        "ko": "이 시간에 택배가...?",
+        "en": "A delivery, at this hour...?",
+        "ja": "こんな時間に宅配…？"
       },
       "subtitle": {
-        "ko": "...뭐야?",
-        "en": "...What?",
-        "ja": "…なんだ？"
+        "ko": "이 시간에 택배가...?",
+        "en": "A delivery, at this hour...?",
+        "ja": "こんな時間に宅配…？"
       },
-      "emotion": "uneasy",
-      "audio": {
-        "ko": "res://assets/audio/voice/jungwoo_adult/ko/TTS_PRO_E02_002.wav",
-        "en": "res://assets/audio/voice/jungwoo_adult/en/TTS_PRO_E02_002.wav",
-        "ja": "res://assets/audio/voice/jungwoo_adult/ja/TTS_PRO_E02_002.wav"
-      },
+      "emotion": "neutral",
       "playback": {
         "mode": "live",
         "position": "player",
         "volume_db": 0.0,
         "fx": []
       },
-      "voice_source": "Supertonic 3 TTS (OpenRAIL-M, commercial use allowed) — replace with voice actors if budget allows"
+      "voice": "subtitle"
     },
     {
-      "line_id": "PRO_E03_NOTE_1",
+      "line_id": "PRO_E03_NOTE",
       "character_id": "",
-      "voice_id": "",
       "chapter_id": "prologue",
-      "scene_id": "E03_tapes",
+      "scene_id": "E03_parcel",
       "text": {
-        "ko": "잡음을 제거하지 말아 주세요.",
-        "en": "Please don't remove the noise.",
-        "ja": "ノイズを消さないでください。"
+        "ko": "\"잡음을 제거하지 말아 주세요.\n그 안에 목소리가 있습니다.\"",
+        "en": "\"Please do not remove the noise.\nThere is a voice inside it.\"",
+        "ja": "「ノイズを消さないでください。\nその中に声があります。」"
       },
       "subtitle": {
-        "ko": "잡음을 제거하지 말아 주세요.",
-        "en": "Please don't remove the noise.",
-        "ja": "ノイズを消さないでください。"
+        "ko": "\"잡음을 제거하지 말아 주세요.\n그 안에 목소리가 있습니다.\"",
+        "en": "\"Please do not remove the noise.\nThere is a voice inside it.\"",
+        "ja": "「ノイズを消さないでください。\nその中に声があります。」"
       },
       "emotion": "neutral",
-      "audio": {},
       "playback": {
         "mode": "document",
-        "position": "",
+        "position": "player",
         "volume_db": 0.0,
         "fx": []
-      }
-    },
-    {
-      "line_id": "PRO_E03_NOTE_2",
-      "character_id": "",
-      "voice_id": "",
-      "chapter_id": "prologue",
-      "scene_id": "E03_tapes",
-      "text": {
-        "ko": "그 안에 목소리가 있습니다.",
-        "en": "There is a voice inside it.",
-        "ja": "その中に声があります。"
       },
-      "subtitle": {
-        "ko": "그 안에 목소리가 있습니다.",
-        "en": "There is a voice inside it.",
-        "ja": "その中に声があります。"
-      },
-      "emotion": "neutral",
-      "audio": {},
-      "playback": {
-        "mode": "document",
-        "position": "",
-        "volume_db": 0.0,
-        "fx": []
-      }
+      "voice": "document"
     },
     {
       "line_id": "PRO_E03_001",
       "character_id": "jungwoo_adult",
-      "voice_id": "vo_jungwoo_adult",
       "chapter_id": "prologue",
-      "scene_id": "E03_tapes",
+      "scene_id": "E03_parcel",
       "text": {
-        "ko": "보낸 사람도 없네...",
-        "en": "No sender, either...",
-        "ja": "差出人もない…"
+        "ko": "잡음을 제거하지 말라고...?",
+        "en": "Don't remove the noise...?",
+        "ja": "ノイズを消すな、って…？"
       },
       "subtitle": {
-        "ko": "보낸 사람도 없네...",
-        "en": "No sender, either...",
-        "ja": "差出人もない…"
+        "ko": "잡음을 제거하지 말라고...?",
+        "en": "Don't remove the noise...?",
+        "ja": "ノイズを消すな、って…？"
       },
-      "emotion": "uneasy",
-      "audio": {
-        "ko": "res://assets/audio/voice/jungwoo_adult/ko/TTS_PRO_E03_001.wav",
-        "en": "res://assets/audio/voice/jungwoo_adult/en/TTS_PRO_E03_001.wav",
-        "ja": "res://assets/audio/voice/jungwoo_adult/ja/TTS_PRO_E03_001.wav"
-      },
+      "emotion": "neutral",
       "playback": {
         "mode": "live",
         "position": "player",
         "volume_db": 0.0,
         "fx": []
       },
-      "voice_source": "Supertonic 3 TTS (OpenRAIL-M, commercial use allowed) — replace with voice actors if budget allows"
+      "voice": "subtitle"
     },
     {
-      "line_id": "PRO_E03_TAPE_1",
+      "line_id": "PRO_E04_T01",
       "character_id": "soeun",
-      "voice_id": "vo_soeun",
       "chapter_id": "prologue",
-      "scene_id": "E03_tape01",
+      "scene_id": "E04_first_recording",
       "text": {
         "ko": "정우야, 녹음되고 있어?",
-        "en": "Jeong-woo, is it recording?",
+        "en": "Jungwoo, is it recording?",
         "ja": "ジョンウ、録音されてる？"
       },
       "subtitle": {
         "ko": "정우야, 녹음되고 있어?",
-        "en": "Jeong-woo, is it recording?",
+        "en": "Jungwoo, is it recording?",
         "ja": "ジョンウ、録音されてる？"
       },
       "emotion": "playful",
-      "audio": {
-        "ko": "res://assets/audio/voice/soeun/ko/TTS_PRO_E03_TAPE_1.wav",
-        "en": "res://assets/audio/voice/soeun/en/TTS_PRO_E03_TAPE_1.wav",
-        "ja": "res://assets/audio/voice/soeun/ja/TTS_PRO_E03_TAPE_1.wav"
-      },
       "playback": {
         "mode": "tape",
         "position": "recorder",
         "volume_db": 0.0,
         "fx": []
       },
-      "voice_source": "Supertonic 3 TTS (OpenRAIL-M, commercial use allowed) — replace with voice actors if budget allows"
-    },
-    {
-      "line_id": "PRO_E03_TAPE_2",
-      "character_id": "jungwoo_child",
-      "voice_id": "vo_jungwoo_child",
-      "chapter_id": "prologue",
-      "scene_id": "E03_tape01",
-      "text": {
-        "ko": "응. 되는 것 같은데?",
-        "en": "Yeah. I think it's working?",
-        "ja": "うん。できてるみたい。"
-      },
-      "subtitle": {
-        "ko": "응. 되는 것 같은데?",
-        "en": "Yeah. I think it's working?",
-        "ja": "うん。できてるみたい。"
-      },
-      "emotion": "playful",
-      "audio": {
-        "ko": "res://assets/audio/voice/jungwoo_child/ko/TTS_PRO_E03_TAPE_2.wav",
-        "en": "res://assets/audio/voice/jungwoo_child/en/TTS_PRO_E03_TAPE_2.wav",
-        "ja": "res://assets/audio/voice/jungwoo_child/ja/TTS_PRO_E03_TAPE_2.wav"
-      },
-      "playback": {
-        "mode": "tape",
-        "position": "recorder",
-        "volume_db": 0.0,
-        "fx": []
-      },
-      "voice_source": "Supertonic 3 TTS (OpenRAIL-M, commercial use allowed) — replace with voice actors if budget allows"
-    },
-    {
-      "line_id": "PRO_E03_TAPE_3",
-      "character_id": "soeun",
-      "voice_id": "vo_soeun",
-      "chapter_id": "prologue",
-      "scene_id": "E03_tape01",
-      "text": {
-        "ko": "그럼 내가 먼저 말할래!",
-        "en": "Then I'll go first!",
-        "ja": "じゃあ、わたしが先に話す！"
-      },
-      "subtitle": {
-        "ko": "그럼 내가 먼저 말할래!",
-        "en": "Then I'll go first!",
-        "ja": "じゃあ、わたしが先に話す！"
-      },
-      "emotion": "joy",
-      "audio": {
-        "ko": "res://assets/audio/voice/soeun/ko/TTS_PRO_E03_TAPE_3.wav",
-        "en": "res://assets/audio/voice/soeun/en/TTS_PRO_E03_TAPE_3.wav",
-        "ja": "res://assets/audio/voice/soeun/ja/TTS_PRO_E03_TAPE_3.wav"
-      },
-      "playback": {
-        "mode": "tape",
-        "position": "recorder",
-        "volume_db": 0.0,
-        "fx": []
-      },
-      "voice_source": "Supertonic 3 TTS (OpenRAIL-M, commercial use allowed) — replace with voice actors if budget allows"
-    },
-    {
-      "line_id": "PRO_E03_002",
-      "character_id": "jungwoo_adult",
-      "voice_id": "vo_jungwoo_adult",
-      "chapter_id": "prologue",
-      "scene_id": "E03_tape01",
-      "text": {
-        "ko": "...뭐지?",
-        "en": "...What was that?",
-        "ja": "…なんだ？"
-      },
-      "subtitle": {
-        "ko": "...뭐지?",
-        "en": "...What was that?",
-        "ja": "…なんだ？"
-      },
-      "emotion": "uneasy",
-      "audio": {
-        "ko": "res://assets/audio/voice/jungwoo_adult/ko/TTS_PRO_E03_002.wav",
-        "en": "res://assets/audio/voice/jungwoo_adult/en/TTS_PRO_E03_002.wav",
-        "ja": "res://assets/audio/voice/jungwoo_adult/ja/TTS_PRO_E03_002.wav"
-      },
-      "playback": {
-        "mode": "live",
-        "position": "player",
-        "volume_db": 0.0,
-        "fx": []
-      },
-      "voice_source": "Supertonic 3 TTS (OpenRAIL-M, commercial use allowed) — replace with voice actors if budget allows"
-    },
-    {
-      "line_id": "PRO_E04_001",
-      "character_id": "jungwoo_adult",
-      "voice_id": "vo_jungwoo_adult",
-      "chapter_id": "prologue",
-      "scene_id": "E04_doorgap",
-      "text": {
-        "ko": "누구야!",
-        "en": "Who's there!",
-        "ja": "誰だ！"
-      },
-      "subtitle": {
-        "ko": "누구야!",
-        "en": "Who's there!",
-        "ja": "誰だ！"
-      },
-      "emotion": "fear",
-      "audio": {
-        "ko": "res://assets/audio/voice/jungwoo_adult/ko/TTS_PRO_E04_001.wav",
-        "en": "res://assets/audio/voice/jungwoo_adult/en/TTS_PRO_E04_001.wav",
-        "ja": "res://assets/audio/voice/jungwoo_adult/ja/TTS_PRO_E04_001.wav"
-      },
-      "playback": {
-        "mode": "live",
-        "position": "player",
-        "volume_db": 0.0,
-        "fx": []
-      },
-      "voice_source": "Supertonic 3 TTS (OpenRAIL-M, commercial use allowed) — replace with voice actors if budget allows"
+      "voice": "voiced",
+      "direction": "밝고 장난스럽게 (9살). 카세트 잡음은 게임이 입힌다"
     },
     {
       "line_id": "PRO_E05_001",
-      "character_id": "soeun",
-      "voice_id": "vo_soeun",
+      "character_id": "jungwoo_adult",
       "chapter_id": "prologue",
-      "scene_id": "E05_behind",
+      "scene_id": "E05_locked",
       "text": {
-        "ko": "정우야?",
-        "en": "Jeong-woo?",
-        "ja": "ジョンウ？"
+        "ko": "왜 안 열려...?",
+        "en": "Why won't it open...?",
+        "ja": "なんで開かない…？"
       },
       "subtitle": {
-        "ko": "정우야?",
-        "en": "Jeong-woo?",
-        "ja": "ジョンウ？"
+        "ko": "왜 안 열려...?",
+        "en": "Why won't it open...?",
+        "ja": "なんで開かない…？"
+      },
+      "emotion": "neutral",
+      "playback": {
+        "mode": "live",
+        "position": "player",
+        "volume_db": 0.0,
+        "fx": []
+      },
+      "voice": "subtitle"
+    },
+    {
+      "line_id": "PRO_E05_002",
+      "character_id": "soeun",
+      "chapter_id": "prologue",
+      "scene_id": "E05_locked",
+      "text": {
+        "ko": "정우야...?",
+        "en": "Jungwoo...?",
+        "ja": "ジョンウ…？"
+      },
+      "subtitle": {
+        "ko": "정우야...?",
+        "en": "Jungwoo...?",
+        "ja": "ジョンウ…？"
       },
       "emotion": "whisper",
-      "audio": {
-        "ko": "res://assets/audio/voice/soeun/ko/TTS_PRO_E05_001.wav",
-        "en": "res://assets/audio/voice/soeun/en/TTS_PRO_E05_001.wav",
-        "ja": "res://assets/audio/voice/soeun/ja/TTS_PRO_E05_001.wav"
-      },
       "playback": {
         "mode": "live",
         "position": "behind_player",
         "volume_db": 0.0,
         "fx": []
       },
-      "voice_source": "Supertonic 3 TTS (OpenRAIL-M, commercial use allowed) — replace with voice actors if budget allows"
+      "voice": "voiced",
+      "direction": "작고 선명한 목소리. 테이프와 같은 음색, 카세트 잡음 없음 — 실제 공간(등 뒤)"
+    },
+    {
+      "line_id": "PRO_E05_003",
+      "character_id": "jungwoo_adult",
+      "chapter_id": "prologue",
+      "scene_id": "E05_locked",
+      "text": {
+        "ko": "누구야?",
+        "en": "Who's there?",
+        "ja": "誰だ？"
+      },
+      "subtitle": {
+        "ko": "누구야?",
+        "en": "Who's there?",
+        "ja": "誰だ？"
+      },
+      "emotion": "neutral",
+      "playback": {
+        "mode": "live",
+        "position": "player",
+        "volume_db": 0.0,
+        "fx": []
+      },
+      "voice": "subtitle"
     },
     {
       "line_id": "PRO_E06_001",
       "character_id": "jungwoo_adult",
-      "voice_id": "vo_jungwoo_adult",
       "chapter_id": "prologue",
       "scene_id": "E06_blackout",
       "text": {
-        "ko": "아, 씨... 뭐야.",
-        "en": "Ah, damn... What now.",
-        "ja": "あ、くそ…なんだよ。"
+        "ko": "손전등... 서랍에 있었는데.",
+        "en": "The flashlight... it was in the drawer.",
+        "ja": "懐中電灯…引き出しにあったはず。"
       },
       "subtitle": {
-        "ko": "아, 씨... 뭐야.",
-        "en": "Ah, damn... What now.",
-        "ja": "あ、くそ…なんだよ。"
+        "ko": "손전등... 서랍에 있었는데.",
+        "en": "The flashlight... it was in the drawer.",
+        "ja": "懐中電灯…引き出しにあったはず。"
       },
-      "emotion": "fear",
-      "audio": {
-        "ko": "res://assets/audio/voice/jungwoo_adult/ko/TTS_PRO_E06_001.wav",
-        "en": "res://assets/audio/voice/jungwoo_adult/en/TTS_PRO_E06_001.wav",
-        "ja": "res://assets/audio/voice/jungwoo_adult/ja/TTS_PRO_E06_001.wav"
-      },
+      "emotion": "neutral",
       "playback": {
         "mode": "live",
         "position": "player",
         "volume_db": 0.0,
         "fx": []
       },
-      "voice_source": "Supertonic 3 TTS (OpenRAIL-M, commercial use allowed) — replace with voice actors if budget allows"
-    },
-    {
-      "line_id": "PRO_E06_002",
-      "character_id": "jungwoo_adult",
-      "voice_id": "vo_jungwoo_adult",
-      "chapter_id": "prologue",
-      "scene_id": "E06_blackout",
-      "text": {
-        "ko": "거기 누구 있어?",
-        "en": "Is someone there?",
-        "ja": "誰かいるのか？"
-      },
-      "subtitle": {
-        "ko": "거기 누구 있어?",
-        "en": "Is someone there?",
-        "ja": "誰かいるのか？"
-      },
-      "emotion": "fear",
-      "audio": {
-        "ko": "res://assets/audio/voice/jungwoo_adult/ko/TTS_PRO_E06_002.wav",
-        "en": "res://assets/audio/voice/jungwoo_adult/en/TTS_PRO_E06_002.wav",
-        "ja": "res://assets/audio/voice/jungwoo_adult/ja/TTS_PRO_E06_002.wav"
-      },
-      "playback": {
-        "mode": "live",
-        "position": "player",
-        "volume_db": 0.0,
-        "fx": []
-      },
-      "voice_source": "Supertonic 3 TTS (OpenRAIL-M, commercial use allowed) — replace with voice actors if budget allows"
+      "voice": "subtitle"
     },
     {
       "line_id": "PRO_E07_001",
       "character_id": "soeun",
-      "voice_id": "vo_soeun",
       "chapter_id": "prologue",
-      "scene_id": "E07_found",
+      "scene_id": "E07_door",
+      "text": {
+        "ko": "정우야... 여기야.",
+        "en": "Jungwoo... over here.",
+        "ja": "ジョンウ…ここだよ。"
+      },
+      "subtitle": {
+        "ko": "정우야... 여기야.",
+        "en": "Jungwoo... over here.",
+        "ja": "ジョンウ…ここだよ。"
+      },
+      "emotion": "whisper",
+      "playback": {
+        "mode": "live",
+        "position": "door_outside",
+        "volume_db": 0.0,
+        "fx": []
+      },
+      "voice": "voiced",
+      "direction": "낮은 속삭임, 출입문 바깥쪽에서"
+    },
+    {
+      "line_id": "PRO_E10_001",
+      "character_id": "soeun",
+      "chapter_id": "prologue",
+      "scene_id": "E10_transition",
       "text": {
         "ko": "찾았다.",
         "en": "Found you.",
@@ -429,168 +285,161 @@
         "ja": "みつけた。"
       },
       "emotion": "whisper",
-      "audio": {
-        "ko": "res://assets/audio/voice/soeun/ko/TTS_PRO_E07_001.wav",
-        "en": "res://assets/audio/voice/soeun/en/TTS_PRO_E07_001.wav",
-        "ja": "res://assets/audio/voice/soeun/ja/TTS_PRO_E07_001.wav"
-      },
       "playback": {
         "mode": "live",
+        "position": "ear",
+        "volume_db": 0.0,
+        "fx": []
+      },
+      "voice": "voiced",
+      "direction": "귓가에서 속삭이듯 — 위협 아님, 숨바꼭질처럼"
+    },
+    {
+      "line_id": "PRO_E10_002",
+      "character_id": "jungwoo_adult",
+      "chapter_id": "prologue",
+      "scene_id": "E10_transition",
+      "text": {
+        "ko": "여기가... 어디야?",
+        "en": "Where... is this?",
+        "ja": "ここは…どこだ？"
+      },
+      "subtitle": {
+        "ko": "여기가... 어디야?",
+        "en": "Where... is this?",
+        "ja": "ここは…どこだ？"
+      },
+      "emotion": "neutral",
+      "playback": {
+        "mode": "live",
+        "position": "player",
+        "volume_db": 0.0,
+        "fx": []
+      },
+      "voice": "subtitle"
+    },
+    {
+      "line_id": "T01_REC_001",
+      "character_id": "soeun",
+      "chapter_id": "tape01",
+      "scene_id": "T01_rec3",
+      "text": {
+        "ko": "정우야, 우리 나중에 어른 되면 이거 같이 듣자.",
+        "en": "Jungwoo, when we grow up, let's listen to this together.",
+        "ja": "ジョンウ、大人になったらこれ一緒に聴こうね。"
+      },
+      "subtitle": {
+        "ko": "정우야, 우리 나중에 어른 되면 이거 같이 듣자.",
+        "en": "Jungwoo, when we grow up, let's listen to this together.",
+        "ja": "ジョンウ、大人になったらこれ一緒に聴こうね。"
+      },
+      "emotion": "happy",
+      "playback": {
+        "mode": "tape",
         "position": "world",
         "volume_db": 0.0,
         "fx": []
       },
-      "voice_source": "Supertonic 3 TTS (OpenRAIL-M, commercial use allowed) — replace with voice actors if budget allows"
+      "voice": "voiced",
+      "direction": "놀이터 오후, 들뜬 목소리"
     },
     {
-      "line_id": "PRO_E07_002",
-      "character_id": "jungwoo_adult",
-      "voice_id": "vo_jungwoo_adult",
-      "chapter_id": "prologue",
-      "scene_id": "E07_found",
+      "line_id": "T01_REC_002",
+      "character_id": "jungwoo_child",
+      "chapter_id": "tape01",
+      "scene_id": "T01_rec3",
       "text": {
-        "ko": "으악!",
-        "en": "Aagh!",
-        "ja": "うわっ！"
+        "ko": "이런 걸 왜 녹음해?",
+        "en": "Why are you even recording this?",
+        "ja": "なんでこんなの録音するの？"
       },
       "subtitle": {
-        "ko": "으악!",
-        "en": "Aagh!",
-        "ja": "うわっ！"
+        "ko": "이런 걸 왜 녹음해?",
+        "en": "Why are you even recording this?",
+        "ja": "なんでこんなの録音するの？"
       },
-      "emotion": "scream",
-      "audio": {
-        "ko": "res://assets/audio/voice/jungwoo_adult/ko/TTS_PRO_E07_002.wav",
-        "en": "res://assets/audio/voice/jungwoo_adult/en/TTS_PRO_E07_002.wav",
-        "ja": "res://assets/audio/voice/jungwoo_adult/ja/TTS_PRO_E07_002.wav"
+      "emotion": "neutral",
+      "playback": {
+        "mode": "tape",
+        "position": "world",
+        "volume_db": 0.0,
+        "fx": []
       },
+      "voice": "voiced",
+      "direction": "시큰둥하지만 싫지 않은 투"
+    },
+    {
+      "line_id": "T01_REC_003",
+      "character_id": "soeun",
+      "chapter_id": "tape01",
+      "scene_id": "T01_rec3",
+      "text": {
+        "ko": "나중에 까먹을 수도 있잖아.",
+        "en": "We might forget someday.",
+        "ja": "いつか忘れちゃうかもしれないじゃん。"
+      },
+      "subtitle": {
+        "ko": "나중에 까먹을 수도 있잖아.",
+        "en": "We might forget someday.",
+        "ja": "いつか忘れちゃうかもしれないじゃん。"
+      },
+      "emotion": "happy",
+      "playback": {
+        "mode": "tape",
+        "position": "world",
+        "volume_db": 0.0,
+        "fx": []
+      },
+      "voice": "voiced",
+      "direction": "웃음기 섞인 설명"
+    },
+    {
+      "line_id": "T01_END_001",
+      "character_id": "jungwoo_adult",
+      "chapter_id": "tape01",
+      "scene_id": "T01_return",
+      "text": {
+        "ko": "이 사진이 왜 여기 있지?",
+        "en": "Why is this photo here?",
+        "ja": "なんでこの写真がここに？"
+      },
+      "subtitle": {
+        "ko": "이 사진이 왜 여기 있지?",
+        "en": "Why is this photo here?",
+        "ja": "なんでこの写真がここに？"
+      },
+      "emotion": "neutral",
       "playback": {
         "mode": "live",
         "position": "player",
         "volume_db": 0.0,
         "fx": []
       },
-      "voice_source": "Supertonic 3 TTS (OpenRAIL-M, commercial use allowed) — replace with voice actors if budget allows"
+      "voice": "subtitle"
     },
     {
-      "line_id": "PRO_E08_001",
+      "line_id": "T01_END_002",
       "character_id": "jungwoo_adult",
-      "voice_id": "vo_jungwoo_adult",
-      "chapter_id": "prologue",
-      "scene_id": "E08_monster_door",
+      "chapter_id": "tape01",
+      "scene_id": "T01_return",
       "text": {
-        "ko": "누구야... 대체...",
-        "en": "Who... who the hell...",
-        "ja": "誰なんだ…いったい…"
+        "ko": "한소은...",
+        "en": "Han So-eun...",
+        "ja": "ハン・ソウン…"
       },
       "subtitle": {
-        "ko": "누구야... 대체...",
-        "en": "Who... who the hell...",
-        "ja": "誰なんだ…いったい…"
+        "ko": "한소은...",
+        "en": "Han So-eun...",
+        "ja": "ハン・ソウン…"
       },
-      "emotion": "fear",
-      "audio": {
-        "ko": "res://assets/audio/voice/jungwoo_adult/ko/TTS_PRO_E08_001.wav",
-        "en": "res://assets/audio/voice/jungwoo_adult/en/TTS_PRO_E08_001.wav",
-        "ja": "res://assets/audio/voice/jungwoo_adult/ja/TTS_PRO_E08_001.wav"
-      },
+      "emotion": "neutral",
       "playback": {
         "mode": "live",
         "position": "player",
         "volume_db": 0.0,
         "fx": []
       },
-      "voice_source": "Supertonic 3 TTS (OpenRAIL-M, commercial use allowed) — replace with voice actors if budget allows"
-    },
-    {
-      "line_id": "PRO_E09_001",
-      "character_id": "jungwoo_adult",
-      "voice_id": "vo_jungwoo_adult",
-      "chapter_id": "prologue",
-      "scene_id": "E09_encounter",
-      "text": {
-        "ko": "...뭐야, 저게.",
-        "en": "...What the hell is that.",
-        "ja": "…なんだ、あれ。"
-      },
-      "subtitle": {
-        "ko": "...뭐야, 저게.",
-        "en": "...What the hell is that.",
-        "ja": "…なんだ、あれ。"
-      },
-      "emotion": "fear",
-      "audio": {
-        "ko": "res://assets/audio/voice/jungwoo_adult/ko/TTS_PRO_E09_001.wav",
-        "en": "res://assets/audio/voice/jungwoo_adult/en/TTS_PRO_E09_001.wav",
-        "ja": "res://assets/audio/voice/jungwoo_adult/ja/TTS_PRO_E09_001.wav"
-      },
-      "playback": {
-        "mode": "live",
-        "position": "player",
-        "volume_db": 0.0,
-        "fx": []
-      },
-      "voice_source": "Supertonic 3 TTS (OpenRAIL-M, commercial use allowed) — replace with voice actors if budget allows"
-    },
-    {
-      "line_id": "PRO_E12_001",
-      "character_id": "jungwoo_adult",
-      "voice_id": "vo_jungwoo_adult",
-      "chapter_id": "prologue",
-      "scene_id": "E12_tape01",
-      "text": {
-        "ko": "여긴... 어디야?",
-        "en": "Where... am I?",
-        "ja": "ここは…どこだ？"
-      },
-      "subtitle": {
-        "ko": "여긴... 어디야?",
-        "en": "Where... am I?",
-        "ja": "ここは…どこだ？"
-      },
-      "emotion": "dazed",
-      "audio": {
-        "ko": "res://assets/audio/voice/jungwoo_adult/ko/TTS_PRO_E12_001.wav",
-        "en": "res://assets/audio/voice/jungwoo_adult/en/TTS_PRO_E12_001.wav",
-        "ja": "res://assets/audio/voice/jungwoo_adult/ja/TTS_PRO_E12_001.wav"
-      },
-      "playback": {
-        "mode": "live",
-        "position": "player",
-        "volume_db": 0.0,
-        "fx": []
-      },
-      "voice_source": "Supertonic 3 TTS (OpenRAIL-M, commercial use allowed) — replace with voice actors if budget allows"
-    },
-    {
-      "line_id": "PRO_E12_002",
-      "character_id": "jungwoo_adult",
-      "voice_id": "vo_jungwoo_adult",
-      "chapter_id": "prologue",
-      "scene_id": "E12_tape01",
-      "text": {
-        "ko": "잠깐... 우리 옛날 집인데?",
-        "en": "Wait... this is our old home?",
-        "ja": "待てよ…昔の家じゃないか？"
-      },
-      "subtitle": {
-        "ko": "잠깐... 우리 옛날 집인데?",
-        "en": "Wait... this is our old home?",
-        "ja": "待てよ…昔の家じゃないか？"
-      },
-      "emotion": "dazed",
-      "audio": {
-        "ko": "res://assets/audio/voice/jungwoo_adult/ko/TTS_PRO_E12_002.wav",
-        "en": "res://assets/audio/voice/jungwoo_adult/en/TTS_PRO_E12_002.wav",
-        "ja": "res://assets/audio/voice/jungwoo_adult/ja/TTS_PRO_E12_002.wav"
-      },
-      "playback": {
-        "mode": "live",
-        "position": "player",
-        "volume_db": 0.0,
-        "fx": []
-      },
-      "voice_source": "Supertonic 3 TTS (OpenRAIL-M, commercial use allowed) — replace with voice actors if budget allows"
+      "voice": "subtitle"
     }
   ]
 }

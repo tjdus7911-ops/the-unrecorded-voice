@@ -12,11 +12,11 @@
 - 엔진: **Godot 4.7.2-stable**, Forward+, GDScript. 프로젝트 루트는 `game/`
 - 3D: **Blender 5.3**, `tools/blender/*.py` 스크립트로 재현 가능하게 제작 → **.gltf(+.bin)** 로 `game/assets/models/`에 익스포트.
   텍스처는 임베드하지 않고 `game/assets/textures/`의 공유 파일을 참조(중복 VRAM 방지). 정적 메시는 재질별 병합, 상호작용 부품(`tuv_keep`)은 피벗 유지
-- 플레이 레벨: `game/scenes/levels/lvl_phase01.tscn` (작업실 + 복도 + 계단실, 로딩 없음). 좌표 변환 Blender (x,y,z) → Godot (x,z,-y)
+- 플레이 레벨: `game/scenes/levels/lvl_phase01.tscn` (작업실 + 복도 + 계단실 + 1998 아파트(z+60 떨어진 곳, `AptCorridor`), 로딩 없음). 좌표 변환 Blender (x,y,z) → Godot (x,z,-y)
 - 사운드는 `game/data/config/audio.json` 의 ID로만 재생(`Sounds` autoload). 음성은 대사 JSON의 경로로만 참조
 - 그래픽 확인은 **실제 Godot 화면**으로: `scenes/tests/capture_phase01.tscn` (lavapipe Vulkan + xvfb). 자동 테스트 통과만으로 품질 판단 금지
 - 대사·음성·조명 상태는 `game/data/` JSON으로 관리. 코드에 음성 파일 경로 하드코딩 금지
-- 테스트: `tools/ci/run_tests.sh` 가 통과해야 커밋한다 (시스템 39 + 레벨 52 + 스토리 51 + 현지화 14). 입력 변경 시 `tools/ci/input_test_x11.sh`(실제 X11 입력)도 실행
+- 테스트: `tools/ci/run_tests.sh` 가 통과해야 커밋한다 (시스템 39 + 레벨 52 + 스토리 78 + 현지화 14). 입력 변경 시 `tools/ci/input_test_x11.sh`(실제 X11 입력)도 실행
 
 ## 절대 규칙
 - 실행하지 못한 도구를 사용했다고 보고하지 않는다 (예: Blender MCP는 현재 미연결)
@@ -36,8 +36,17 @@
 ## 구조 메모 (2차 피드백 이후)
 - 마우스 캡처·일시정지 상태는 `GameFlow` autoload만 바꾼다. HUD Control은 항상 `MOUSE_FILTER_IGNORE` (조준점이 마우스 입력을 먹던 버그)
 - 스토리 이벤트는 `game/data/events/*.json` + `EventDirector` — 코드에 이벤트 하드코딩 금지
-- 1인칭 손: `ViewmodelArms` (Blender `tools/blender/build_arms.py`), 손 포즈는 `game/data/characters/hand_poses.json`
+- 1인칭 손·팔은 **표시하지 않는다** (요구사항 14). `ViewmodelArms`·`build_arms.py`·`hand_poses.json`은 보관만 (`PlayerController.use_hands=false`)
+- 상호작용 UI는 미니멀 (요구사항 13): 평소 작은 점, 가까이에서 정확히 볼 때만 손 아이콘. 이름·E키·강조는 설정 '상호작용 힌트'에서만
+- 조명 상태는 `lvl.set_lighting(normal|partial|broken|blackout|emergency)` — 정전은 화면 필터가 아니라 실제 조명·환경광·GI·반사·발광을 끈다
+- 녹음기는 책상 위에 둔 채 조작 (E/R), 테이프·덮개는 오브젝트 애니메이션
 - 저장: `SaveGame` autoload (user://save_01.json), 설정: `GameSettings` (user://settings.cfg)
+
+## 요구사항 16 (공식 스토리) 구조
+- 이벤트: `data/events/prologue_events.json`(EV01~EV10b) + `tape01_events.json`(T01_*) — EventDirector가 여러 파일을 이어 읽는다. 이벤트 완료 = 마지막 액션 실행 뒤
+- 연출 실행: `PrologueStory`(액션 분기) → `StoryStaging`(복도 소은·소음 실루엣·따라오는 발소리·순차 소등·TAPE 01) — 캐릭터는 시야 밖/조명이 꺼진 순간에만 나타나고 사라진다
+- 테이프 순서: `lvl.tapes_done` / `next_tape()` — 다음 차례 테이프만 상자에서 가져갈 수 있고, 다 들은 테이프는 녹음기에서 꺼내 상자 제자리로
+- 대본에 없는 대사 추가 금지. 임시 결정은 `docs/design/open_questions.md` Q-14~17
 
 ## 명명 규칙
 `snake_case`. 접두사: `stu_` 작업실 · `cor_` 상가 복도 · `apt_` 1998 아파트 · `prop_` 소품 · `chr_` 캐릭터 · `gst_` 귀신 · `PH_` 임시 리소스

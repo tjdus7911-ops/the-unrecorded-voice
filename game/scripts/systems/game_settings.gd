@@ -32,7 +32,7 @@ var window_mode := 0              ## 0 전체 화면 / 1 창 모드 / 2 테두�
 var resolution := 2               ## RESOLUTIONS 인덱스 (창 모드에서 적용)
 var vsync := true
 var fps_limit := 0                ## FPS_LIMITS 인덱스
-var fov := 70.0
+var fov := 68.0                   ## 수직 FOV (요구사항 12: 65~75 화면 비교 후 68)
 var brightness := 1.0
 var graphics_quality := 2         ## 0 낮음 / 1 보통 / 2 높음 (높음 = SDFGI·SSIL·SSR)
 ## ---- 조작
@@ -42,16 +42,20 @@ var keybinds := {}                ## action → physical keycode (변경한 것�
 ## ---- 접근성
 var subtitles := true
 var subtitle_size := 1            ## 0 작게 / 1 보통 / 2 크게 / 3 아주 크게
-var subtitle_bg := true           ## 자막 뒤 반투명 배경
+var subtitle_bg := false          ## 자막 뒤 반투명 배경 (요구사항 15: 기본은 영화 자막처럼 그림자만)
 var sound_captions := false       ## 주요 효과음 자막
 var camera_shake := 1.0           ## 카메라 흔들림 강도 0~1
 var reduce_flashes := false       ## 조명 깜빡임·섬광 완화
 var inspect_text_size := 1        ## 조사 설명 글자 크기 0~3
+var crosshair_mode := 0           ## 조준점: 0 항상 작은 점 · 1 상호작용 때만(손 아이콘) · 2 끔 (요구사항 13)
+var interaction_hints := false    ## 상호작용 힌트: 켜면 손 아이콘 옆에 물건 이름 + 바라보는 물건 은은한 강조
+var objective_hints := true       ## 현재 목표 표시 (요구사항 12 §4)
 var dynamic_range_compression := false
 
+const SETTINGS_VERSION := 2
 const GAME_KEYS := ["text_language", "voice_language", "window_mode", "resolution", "vsync", "fps_limit", "fov", "brightness", "graphics_quality",
 	"mouse_sensitivity", "invert_y", "subtitles", "subtitle_size", "subtitle_bg", "sound_captions",
-	"camera_shake", "reduce_flashes", "inspect_text_size", "breathing_intensity", "dynamic_range_compression"]
+	"camera_shake", "reduce_flashes", "inspect_text_size", "crosshair_mode", "interaction_hints", "objective_hints", "breathing_intensity", "dynamic_range_compression"]
 
 var _headless := false
 
@@ -182,6 +186,7 @@ func save_settings() -> void:
 		cfg.set_value("game", k, get(k))
 	for a in keybinds:
 		cfg.set_value("keys", a, keybinds[a])
+	cfg.set_value("meta", "version", SETTINGS_VERSION)
 	cfg.save(SAVE_PATH)
 
 func load_settings() -> void:
@@ -192,6 +197,9 @@ func load_settings() -> void:
 		volumes[k] = cfg.get_value("audio", String(k), volumes[k])
 	for k in GAME_KEYS:
 		set(k, cfg.get_value("game", k, get(k)))
+	# 설정 버전 2 (요구사항 12·13): 이전 기본값 그대로였던 FOV 70은 새 기본값 68로
+	if int(cfg.get_value("meta", "version", 1)) < 2 and is_equal_approx(fov, 70.0):
+		fov = 68.0
 	if cfg.has_section("keys"):
 		for a in cfg.get_section_keys("keys"):
 			if InputMap.has_action(a):

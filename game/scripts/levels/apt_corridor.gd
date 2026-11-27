@@ -1,171 +1,194 @@
 class_name AptCorridor
 extends Node3D
-## [PH_ 블록아웃] 1998년 아파트 복도 — EVENT 08 공간 전환 도착 지점 (PHASE 02 본 제작 전 임시 공간)
-## 기존 PBR 텍스처만 사용한 단순 구조: 연녹색 하단 벽 + 미색 상단 벽, 인조석(테라조) 바닥, 형광등, 철문.
-## 시대 착오 물건 없음 (디지털 도어락·CCTV·평면 TV 없음). 정식 모델링은 승인 후 Blender로 제작.
+## 1998년 복도식 아파트 (TAPE 01 「평범했던 하루」) — 요구사항 16 §6·REF 05
+## 모델: tools/blender/build_apartment.py → assets/models/environments/apt_1998.gltf (Blender 좌표 → Godot (x, z, -y))
+## 1층 외부 복도(남쪽 난간이 트임) · 동쪽 계단실(2층 참) · 현관 계단 · 놀이터(그네 2개). 시대 착오 물건 없음.
+## 늦은 오후: 낮은 해 + 하늘빛, 복도등은 막 켜진 상태. 모델이 없으면(빌드 전) 단순 바닥만 만들어 진행이 막히지 않게 한다.
 
 const ORIGIN := Vector3(0.0, 0.0, 60.0)    ## 작업실·복도와 겹치지 않는 위치
-const LEN := 22.0
-const W := 2.1
-const H := 2.45
-var spawn_yaw := PI                          ## 복도 끝(-Z 방향)을 바라봄
+const MODEL := "res://assets/models/environments/apt_1998.gltf"
+const SOEUN := "res://assets/models/characters/chr_soeun.gltf"
+var spawn_yaw := -PI / 2                    ## 동쪽(+X)을 바라봄
+var model: Node3D
+var sun: DirectionalLight3D
+var lamps: Array[OmniLight3D] = []
+var lamp_mats: Array = []
+var swings: Array[Node3D] = []
 var soeun: Node3D
-var _tubes: Array = []
+var soeun_poser: CharacterPoser
+var _hum: AudioStreamPlayer3D
+var _amb: AudioStreamPlayer
+var _env_backup := {}
+
+static func b(v: Vector3) -> Vector3:
+	return Vector3(v.x, v.z, -v.y)
 
 func _ready() -> void:
 	position = ORIGIN
-	var floor_m := _pbr("stair_terrazzo", 1.2)
-	var low_m := _pbr("steel_door_paint_green", 1.5, Color(0.62, 0.82, 0.66))
-	var up_m := _pbr("wall_paint_ivory", 2.0)
-	var ceil_m := _pbr("concrete_paint", 2.0)
-	var door_m := _pbr("steel_door_paint", 1.0, Color(0.55, 0.5, 0.42))
-	_box(Vector3(W, 0.1, LEN), Vector3(0, -0.05, -LEN / 2), floor_m, true)
-	_box(Vector3(W, 0.1, LEN), Vector3(0, H + 0.05, -LEN / 2), ceil_m, true)
-	for sx in [-1.0, 1.0]:
-		_box(Vector3(0.1, 1.1, LEN), Vector3(sx * (W / 2 + 0.05), 0.55, -LEN / 2), low_m, true)
-		_box(Vector3(0.1, H - 1.1, LEN), Vector3(sx * (W / 2 + 0.05), 1.1 + (H - 1.1) / 2, -LEN / 2), up_m, true)
-		# 하단 벽 경계 몰딩
-		_box(Vector3(0.02, 0.04, LEN), Vector3(sx * (W / 2 - 0.01), 1.1, -LEN / 2), _flat(Color(0.2, 0.28, 0.22), 0.5), false)
-	_box(Vector3(W + 0.2, H, 0.1), Vector3(0, H / 2, 0.05), up_m, true)
-	_box(Vector3(W + 0.2, H, 0.1), Vector3(0, H / 2, -LEN - 0.05), up_m, true)
-	# 철문 (호수 표지)
-	for i in 5:
-		var z := -2.5 - i * 4.2
-		for sx in [-1.0, 1.0]:
-			_box(Vector3(0.06, 2.0, 0.9), Vector3(sx * (W / 2 - 0.01), 1.0, z), door_m, false)
-			var lbl := Label3D.new()
-			lbl.text = "%d0%d" % [12, i * 2 + (1 if sx < 0 else 2)]
-			lbl.font_size = 64
-			lbl.pixel_size = 0.0012
-			lbl.modulate = Color(0.12, 0.12, 0.12)
-			lbl.outline_size = 0
-			add_child(lbl)
-			lbl.position = Vector3(sx * (W / 2 - 0.045), 1.82, z)
-			lbl.rotation.y = PI / 2 * (-sx)
-	# 형광등 (막대 + 실제 빛) — 끝 쪽 하나는 꺼져 있다
-	for i in 5:
-		var z := -2.0 - i * 4.6
-		var tube := MeshInstance3D.new()
-		var tm := BoxMesh.new()
-		tm.size = Vector3(0.05, 0.03, 1.2)
-		tube.mesh = tm
-		var em := StandardMaterial3D.new()
-		em.albedo_color = Color(0.9, 0.95, 0.92)
-		em.emission_enabled = i != 4
-		em.emission = Color(0.85, 0.95, 0.9)
-		em.emission_energy_multiplier = 3.0
-		tube.material_override = em
-		add_child(tube)
-		tube.position = Vector3(0, H - 0.04, z)
-		if i != 4:
-			var l := OmniLight3D.new()
-			l.light_color = Color(0.86, 0.96, 0.9)
-			l.light_energy = 0.9 if i < 3 else 0.45
-			l.omni_range = 4.2
-			l.shadow_enabled = i < 2
-			add_child(l)
-			l.position = Vector3(0, H - 0.15, z)
-			_tubes.append(l)
-	# 복도 끝 창 너머 약한 빛 (소은 실루엣 역광)
-	var back := OmniLight3D.new()
-	back.light_color = Color(0.7, 0.78, 0.95)
-	back.light_energy = 1.2
-	back.omni_range = 3.0
-	add_child(back)
-	back.position = Vector3(0, 1.4, -LEN + 0.4)
-	var hum := AudioStreamPlayer3D.new()
-	hum.stream = Sounds.pick("amb_fluorescent_hum")
-	hum.bus = &"Ambience"
-	hum.volume_db = -14.0
-	hum.autoplay = true
-	add_child(hum)
-	hum.position = Vector3(0, H - 0.2, -4.0)
-	_soeun()
-
-func _soeun() -> void:
-	var path := "res://assets/models/characters/PH_chr_soeun_silhouette.gltf"
-	if ResourceLoader.exists(path):
-		soeun = (load(path) as PackedScene).instantiate()
+	if ResourceLoader.exists(MODEL):
+		model = (load(MODEL) as PackedScene).instantiate()
+		add_child(model)
+		_colliders(model)
 	else:
-		soeun = MeshInstance3D.new()
-		var cm := CapsuleMesh.new()
-		cm.radius = 0.16
-		cm.height = 1.25
-		(soeun as MeshInstance3D).mesh = cm
-		soeun.position.y = 0.62
-	var holder := Node3D.new()
-	holder.name = "SoeunSilhouette"
-	add_child(holder)
-	holder.add_child(soeun)
-	holder.position = Vector3(0.15, 0, -LEN + 1.3)
-	holder.rotation.y = 0.0
-	var dark := StandardMaterial3D.new()
-	dark.albedo_color = Color(0.02, 0.02, 0.025)
-	dark.roughness = 1.0
-	for mi in holder.find_children("*", "MeshInstance3D", true, false) + ([soeun] if soeun is MeshInstance3D else []):
-		(mi as MeshInstance3D).material_override = dark
-	holder.visible = false
-	soeun = holder
-
-## 복도 끝에 소은이가 잠시 나타났다 사라진다 (연출용 — 공격 없음)
-func show_soeun(secs: float) -> void:
-	soeun.visible = true
-	await get_tree().create_timer(secs, false).timeout
-	# 사라질 때 가장 가까운 형광등이 한 번 깜빡
-	if _tubes.size() > 3:
-		_tubes[3].visible = false
-	soeun.visible = false
-	await get_tree().create_timer(0.12, false).timeout
-	if _tubes.size() > 3:
-		_tubes[3].visible = true
-
-func point(name: String) -> Vector3:
-	match name:
-		"apt_spawn":
-			return to_global(Vector3(0, 0.05, -0.8))
-		"apt_light":
-			return to_global(Vector3(0, H - 0.1, -2.0))
-	return global_position
-
-func bounds() -> AABB:
-	return AABB(ORIGIN + Vector3(-W / 2, -0.3, -LEN), Vector3(W, 0.6, LEN))
-
-func _box(size: Vector3, pos: Vector3, mat: Material, collide: bool) -> void:
-	var mi := MeshInstance3D.new()
-	var bm := BoxMesh.new()
-	bm.size = size
-	mi.mesh = bm
-	mi.material_override = mat
-	add_child(mi)
-	mi.position = pos
-	if collide:
+		push_warning("AptCorridor: %s 없음 — tools/blender/build_apartment.py 실행 필요" % MODEL)
 		var sb := StaticBody3D.new()
 		var cs := CollisionShape3D.new()
 		var bs := BoxShape3D.new()
-		bs.size = size
+		bs.size = Vector3(40, 0.2, 40)
 		cs.shape = bs
 		sb.add_child(cs)
 		add_child(sb)
-		sb.position = pos
+		sb.position = Vector3(12, -0.1, 0)
+	for k in 2:
+		var s := find_child("apt_swing_%d" % k, true, false) as Node3D
+		if s:
+			swings.append(s)
+	_lights()
+	_sounds()
+	_soeun()
+	visible = false
 
-func _flat(c: Color, r: float) -> StandardMaterial3D:
-	var m := StandardMaterial3D.new()
-	m.albedo_color = c
-	m.roughness = r
-	return m
+## glTF 임포트 힌트(-colonly)가 적용되지 않은 경우를 위한 보정: *_col-colonly 메시를 충돌체로
+func _colliders(root: Node) -> void:
+	for n in root.find_children("*col-colonly*", "MeshInstance3D", true, false):
+		var mi := n as MeshInstance3D
+		var sb := StaticBody3D.new()
+		var cs := CollisionShape3D.new()
+		cs.shape = mi.mesh.create_convex_shape()
+		sb.add_child(cs)
+		mi.get_parent().add_child(sb)
+		sb.transform = mi.transform
+		mi.visible = false
 
-func _pbr(name: String, tile: float, tint := Color(1, 1, 1)) -> BaseMaterial3D:
-	var base := "res://assets/textures/pbr/%s_" % name
-	var m := ORMMaterial3D.new()
-	m.albedo_color = tint
-	if ResourceLoader.exists(base + "albedo.jpg"):
-		m.albedo_texture = load(base + "albedo.jpg")
-	if ResourceLoader.exists(base + "orm.jpg"):
-		m.orm_texture = load(base + "orm.jpg")
-	if ResourceLoader.exists(base + "normal.jpg"):
-		m.normal_enabled = true
-		m.normal_texture = load(base + "normal.jpg")
-	m.uv1_triplanar = true
-	m.uv1_world_triplanar = true
-	m.uv1_scale = Vector3.ONE / tile
-	return m
+func _lights() -> void:
+	sun = DirectionalLight3D.new()
+	sun.name = "AptSun"
+	sun.light_color = Color(1.0, 0.82, 0.62)            # 늦은 오후의 낮은 해
+	sun.light_energy = 1.7
+	sun.shadow_enabled = true
+	sun.directional_shadow_max_distance = 60.0
+	sun.rotation_degrees = Vector3(-27, 38, 0)        # 남서쪽 낮은 해 → 건물 정면·복도 난간·놀이터에 빛
+	sun.visible = false
+	add_child(sun)
+	# 복도등 (원형 유리 갓, 백열등 색) — 101~105호 앞 + 계단 참
+	var xs := [2.1, 6.3, 10.5, 14.7, 18.9]
+	for i in xs.size():
+		_lamp(b(Vector3(xs[i], 0.85, 2.38)), 0.55, 4.0, i < 2)
+	_lamp(b(Vector3(26.15, 5.05, 2.45)), 0.5, 4.5, false)
+	for mi in find_children("*", "MeshInstance3D", true, false):
+		var m := mi as MeshInstance3D
+		if m.mesh == null:
+			continue
+		for i in m.mesh.get_surface_count():
+			var mat := m.get_active_material(i)
+			if mat and mat.resource_name.contains("apt_lamp_shade") and mat is BaseMaterial3D:
+				lamp_mats.append(mat)
+
+func _lamp(pos: Vector3, energy: float, rng: float, shadow: bool) -> void:
+	var l := OmniLight3D.new()
+	l.light_color = Color(1.0, 0.86, 0.66)
+	l.light_energy = energy
+	l.omni_range = rng
+	l.shadow_enabled = shadow
+	add_child(l)
+	l.position = pos
+	l.set_meta("base", energy)
+	lamps.append(l)
+
+func _sounds() -> void:
+	_hum = AudioStreamPlayer3D.new()
+	_hum.stream = Sounds.pick("amb_fluorescent_hum")
+	_hum.bus = &"Ambience"
+	_hum.volume_db = -22.0
+	add_child(_hum)
+	_hum.position = b(Vector3(10.5, 0.85, 2.3))
+
+func _soeun() -> void:
+	if not ResourceLoader.exists(SOEUN):
+		return
+	soeun = (load(SOEUN) as PackedScene).instantiate() as Node3D
+	add_child(soeun)
+	soeun.visible = false
+	var sk := soeun.find_children("*", "Skeleton3D", true, false)
+	soeun_poser = CharacterPoser.new()
+	soeun.add_child(soeun_poser)
+	if not sk.is_empty():
+		soeun_poser.setup(sk[0])
+	for mi in soeun.find_children("*", "MeshInstance3D", true, false):
+		(mi as MeshInstance3D).extra_cull_margin = 2.0
+
+## 들어올 때 / 나갈 때: 해·하늘·환경광을 이 공간에 맞게 바꾸고, 나갈 때 원래대로 되돌린다
+func enter(env: Environment) -> void:
+	visible = true
+	sun.visible = true
+	if env:
+		for k in ["background_mode", "background_color", "ambient_light_source", "ambient_light_energy", "ambient_light_color",
+				"sky", "tonemap_exposure", "sdfgi_energy", "fog_enabled"]:
+			_env_backup[k] = env.get(k)
+		var sky := Sky.new()
+		var sm := ProceduralSkyMaterial.new()
+		sm.sky_top_color = Color(0.46, 0.56, 0.68)
+		sm.sky_horizon_color = Color(0.86, 0.78, 0.66)
+		sm.ground_horizon_color = Color(0.6, 0.55, 0.48)
+		sm.ground_bottom_color = Color(0.25, 0.23, 0.2)
+		sm.sun_angle_max = 20.0
+		sky.sky_material = sm
+		env.sky = sky
+		env.background_mode = Environment.BG_SKY
+		env.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
+		env.ambient_light_energy = 0.42
+		env.tonemap_exposure = 1.0
+		env.sdfgi_energy = 1.0
+	_hum.play()
+
+func leave(env: Environment) -> void:
+	visible = false
+	sun.visible = false
+	_hum.stop()
+	if env:
+		for k in _env_backup:
+			env.set(k, _env_backup[k])
+
+## 마커 (Blender empty) → 월드 좌표. 없으면 빌드 스크립트와 같은 값으로 계산
+const MARKERS := {
+	"apt_spawn": Vector3(3.0, 0.85, 0.0), "apt_frag_1": Vector3(12.6, -9.2, -0.4), "apt_frag_2": Vector3(26.15, 5.0, 1.42),
+	"apt_frag_3": Vector3(14.0, 0.25, 1.12), "apt_soeun_end": Vector3(23.4, 0.95, 0.0), "apt_steps_up": Vector3(26.75, 2.2, 2.9),
+	"apt_swing": Vector3(9.5, -9.5, 1.2), "apt_stair_base": Vector3(25.5, 1.4, 0.0), "apt_entrance": Vector3(25.1, -0.6, -0.3),
+	"apt_corridor_mid": Vector3(12.0, 0.85, 1.2),
+}
+func point(name: String) -> Vector3:
+	if name == "apt_light":
+		return lamps[0].global_position if not lamps.is_empty() else global_position
+	var n := find_child(name, true, false) as Node3D if model else null
+	if n:
+		return n.global_position
+	if MARKERS.has(name):
+		return to_global(b(MARKERS[name]))
+	return global_position
+
+## 아파트 전체(복도·계단·놀이터) 영역
+func bounds() -> AABB:
+	return AABB(ORIGIN + Vector3(-3, -1.0, -6), Vector3(34, 8, 26))
+
+func corridor_bounds() -> AABB:
+	return AABB(ORIGIN + Vector3(0, -0.2, -1.75), Vector3(24.2, 3.0, 1.75))
+
+## 그네가 혼자 흔들린다 (TAPE 01 조각 1) — 진폭이 줄며 멈춘다
+func swing_move(idx: int, secs: float, amp_deg := 24.0) -> void:
+	if idx >= swings.size():
+		return
+	var s := swings[idx]
+	var t := 0.0
+	var base := s.rotation.x
+	while t < secs:
+		var k := 1.0 - t / secs
+		s.rotation.x = base + deg_to_rad(amp_deg * k * sin(t * TAU / 2.1))
+		await get_tree().process_frame
+		t += get_process_delta_time()
+	s.rotation.x = base
+
+func lamps_power(k: float) -> void:
+	for l in lamps:
+		l.light_energy = float(l.get_meta("base")) * k
+	for m in lamp_mats:
+		(m as BaseMaterial3D).emission_energy_multiplier = 1.5 * k

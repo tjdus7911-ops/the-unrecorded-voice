@@ -181,7 +181,7 @@ func _display_tab() -> void:
 		fps.append("제한 없음" if f == 0 else "%d" % f)
 	_row("FPS 제한", _option("fps_limit", fps, GameSettings.fps_limit))
 	_row("시야각 (FOV)", _slider(func(): return GameSettings.fov,
-		func(x): GameSettings.set_value(&"fov", x), 60.0, 95.0, 1.0, "%d°", 1.0))
+		func(x): GameSettings.set_value(&"fov", x), 60.0, 80.0, 1.0, "%d°", 1.0))
 
 func _controls_tab() -> void:
 	_row("마우스 감도", _slider(func(): return GameSettings.mouse_sensitivity / 0.0022,
@@ -223,3 +223,6 @@ func _access_tab() -> void:
 		func(x): GameSettings.set_value(&"camera_shake", x), 0.0, 1.0, 0.05))
 	_row("조명 깜빡임 완화", _check("reduce_flashes"))
 	_row("조사 글자 크기", _option("inspect_text_size", ["작게", "보통", "크게", "아주 크게"], GameSettings.inspect_text_size))
+	_row("조준점", _option("crosshair_mode", ["항상 표시", "상호작용 때만", "끔"], GameSettings.crosshair_mode))
+	_row("상호작용 힌트", _check("interaction_hints"))
+	_row("현재 목표 표시", _check("objective_hints"))

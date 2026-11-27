@@ -1,0 +1,820 @@
+{
+  "_doc": "TAPE 02 이후·엔딩·에필로그 녹음 대사 (요구사항 16 공식 대본). planned=true: 아직 게임 이벤트에 연결되지 않음. reuse_of: 같은 녹음 파일 재사용.",
+  "chapter_id": "tapes",
+  "lines": [
+    {
+      "line_id": "T02_001",
+      "tape": "TAPE02",
+      "character_id": "mansu",
+      "chapter_id": "tape02",
+      "text": {
+        "ko": "그날은 아무 소리도 듣지 못했습니다.",
+        "en": "",
+        "ja": ""
+      },
+      "subtitle": {
+        "ko": "그날은 아무 소리도 듣지 못했습니다.",
+        "en": "",
+        "ja": ""
+      },
+      "emotion": "formal",
+      "direction": "공식적인 증언, 굳은 목소리",
+      "order": 1,
+      "condition": "TAPE 02 — 경비원 증언 녹음",
+      "ambience": "경비실 — 형광등 웅웅, 라디오 잡음",
+      "playback": {
+        "mode": "tape",
+        "position": "recorder"
+      },
+      "voice": "voiced",
+      "planned": true
+    },
+    {
+      "line_id": "T02_002",
+      "tape": "TAPE02",
+      "character_id": "soeun",
+      "chapter_id": "tape02",
+      "text": {
+        "ko": "아저씨... 문 좀 열어주세요.",
+        "en": "",
+        "ja": ""
+      },
+      "subtitle": {
+        "ko": "아저씨... 문 좀 열어주세요.",
+        "en": "",
+        "ja": ""
+      },
+      "emotion": "fear",
+      "direction": "멀리서 희미하게, 콘크리트 너머",
+      "order": 2,
+      "condition": "TAPE 02 — 별도의 과거 녹음 발견",
+      "ambience": "지하 — 먼 거리감, 잔향",
+      "playback": {
+        "mode": "tape",
+        "position": "recorder"
+      },
+      "voice": "voiced",
+      "planned": true
+    },
+    {
+      "line_id": "T02_003",
+      "tape": "TAPE02",
+      "character_id": "mansu",
+      "chapter_id": "tape02",
+      "text": {
+        "ko": "또 저기서 소리가 나네...",
+        "en": "",
+        "ja": ""
+      },
+      "subtitle": {
+        "ko": "또 저기서 소리가 나네...",
+        "en": "",
+        "ja": ""
+      },
+      "emotion": "mutter",
+      "direction": "작은 혼잣말, 귀찮은 듯",
+      "order": 3,
+      "condition": "T02_002 직후",
+      "ambience": "경비실 안",
+      "playback": {
+        "mode": "tape",
+        "position": "recorder"
+      },
+      "voice": "voiced",
+      "planned": true
+    },
+    {
+      "line_id": "T03_001",
+      "tape": "TAPE03",
+      "character_id": "resident_a",
+      "chapter_id": "tape03",
+      "text": {
+        "ko": "애들이 장난치는 줄 알았죠.",
+        "en": "",
+        "ja": ""
+      },
+      "subtitle": {
+        "ko": "애들이 장난치는 줄 알았죠.",
+        "en": "",
+        "ja": ""
+      },
+      "emotion": "defensive",
+      "direction": "변명조, 시선을 피하는 듯",
+      "order": 1,
+      "condition": "TAPE 03 — 주민 증언",
+      "ambience": "각 집 거실 — 1990년대 TV 소리 원경",
+      "playback": {
+        "mode": "tape",
+        "position": "recorder"
+      },
+      "voice": "voiced",
+      "planned": true
+    },
+    {
+      "line_id": "T03_002",
+      "tape": "TAPE03",
+      "character_id": "resident_b",
+      "chapter_id": "tape03",
+      "text": {
+        "ko": "괜히 끼어들었다가 골치 아파질까 봐요.",
+        "en": "",
+        "ja": ""
+      },
+      "subtitle": {
+        "ko": "괜히 끼어들었다가 골치 아파질까 봐요.",
+        "en": "",
+        "ja": ""
+      },
+      "emotion": "defensive",
+      "direction": "변명조, 시선을 피하는 듯",
+      "order": 2,
+      "condition": "TAPE 03 — 주민 증언",
+      "ambience": "각 집 거실 — 1990년대 TV 소리 원경",
+      "playback": {
+        "mode": "tape",
+        "position": "recorder"
+      },
+      "voice": "voiced",
+      "planned": true
+    },
+    {
+      "line_id": "T03_003",
+      "tape": "TAPE03",
+      "character_id": "resident_c",
+      "chapter_id": "tape03",
+      "text": {
+        "ko": "다른 누군가 신고했겠거니 했어요.",
+        "en": "",
+        "ja": ""
+      },
+      "subtitle": {
+        "ko": "다른 누군가 신고했겠거니 했어요.",
+        "en": "",
+        "ja": ""
+      },
+      "emotion": "defensive",
+      "direction": "변명조, 시선을 피하는 듯",
+      "order": 3,
+      "condition": "TAPE 03 — 주민 증언",
+      "ambience": "각 집 거실 — 1990년대 TV 소리 원경",
+      "playback": {
+        "mode": "tape",
+        "position": "recorder"
+      },
+      "voice": "voiced",
+      "planned": true
+    },
+    {
+      "line_id": "T04_001",
+      "tape": "TAPE04",
+      "character_id": "mansu",
+      "chapter_id": "tape04",
+      "text": {
+        "ko": "지하에서 애 우는 소리가 납니다.",
+        "en": "",
+        "ja": ""
+      },
+      "subtitle": {
+        "ko": "지하에서 애 우는 소리가 납니다.",
+        "en": "",
+        "ja": ""
+      },
+      "emotion": "tense",
+      "direction": "다급하지만 조심스럽게",
+      "order": 1,
+      "condition": "TAPE 04 — 관리사무소 녹음",
+      "ambience": "관리사무소 — 선풍기, 서류",
+      "playback": {
+        "mode": "tape",
+        "position": "recorder"
+      },
+      "voice": "voiced",
+      "planned": true
+    },
+    {
+      "line_id": "T04_002",
+      "tape": "TAPE04",
+      "character_id": "youngsik",
+      "chapter_id": "tape04",
+      "text": {
+        "ko": "괜히 일 크게 만들지 말고 기다려요.",
+        "en": "",
+        "ja": ""
+      },
+      "subtitle": {
+        "ko": "괜히 일 크게 만들지 말고 기다려요.",
+        "en": "",
+        "ja": ""
+      },
+      "emotion": "tense",
+      "direction": "낮고 단호하게",
+      "order": 2,
+      "condition": "TAPE 04 — 관리사무소 녹음",
+      "ambience": "관리사무소 — 선풍기, 서류",
+      "playback": {
+        "mode": "tape",
+        "position": "recorder"
+      },
+      "voice": "voiced",
+      "planned": true
+    },
+    {
+      "line_id": "T04_003",
+      "tape": "TAPE04",
+      "character_id": "mansu",
+      "chapter_id": "tape04",
+      "text": {
+        "ko": "그래도 확인은 해봐야 하는 거 아닙니까?",
+        "en": "",
+        "ja": ""
+      },
+      "subtitle": {
+        "ko": "그래도 확인은 해봐야 하는 거 아닙니까?",
+        "en": "",
+        "ja": ""
+      },
+      "emotion": "tense",
+      "direction": "망설이며",
+      "order": 3,
+      "condition": "TAPE 04 — 관리사무소 녹음",
+      "ambience": "관리사무소 — 선풍기, 서류",
+      "playback": {
+        "mode": "tape",
+        "position": "recorder"
+      },
+      "voice": "voiced",
+      "planned": true
+    },
+    {
+      "line_id": "T04_004",
+      "tape": "TAPE04",
+      "character_id": "youngsik",
+      "chapter_id": "tape04",
+      "text": {
+        "ko": "내가 알아서 할 테니까.",
+        "en": "",
+        "ja": ""
+      },
+      "subtitle": {
+        "ko": "내가 알아서 할 테니까.",
+        "en": "",
+        "ja": ""
+      },
+      "emotion": "tense",
+      "direction": "말을 자르며",
+      "order": 4,
+      "condition": "TAPE 04 — 관리사무소 녹음",
+      "ambience": "관리사무소 — 선풍기, 서류",
+      "playback": {
+        "mode": "tape",
+        "position": "recorder"
+      },
+      "voice": "voiced",
+      "planned": true
+    },
+    {
+      "line_id": "T05_001",
+      "tape": "TAPE05",
+      "character_id": "soeun",
+      "chapter_id": "tape05",
+      "text": {
+        "ko": "정우야, 우리 친구 맞지?",
+        "en": "",
+        "ja": ""
+      },
+      "subtitle": {
+        "ko": "정우야, 우리 친구 맞지?",
+        "en": "",
+        "ja": ""
+      },
+      "emotion": "warm",
+      "direction": "다정하게, 비밀기지 안 작은 목소리",
+      "order": 1,
+      "condition": "TAPE 05 — 비밀 아지트 녹음",
+      "ambience": "좁은 공간 — 바깥 매미, 아이들 소리 원경",
+      "playback": {
+        "mode": "tape",
+        "position": "recorder"
+      },
+      "voice": "voiced",
+      "planned": true
+    },
+    {
+      "line_id": "T05_002",
+      "tape": "TAPE05",
+      "character_id": "jungwoo_child",
+      "chapter_id": "tape05",
+      "text": {
+        "ko": "당연하지.",
+        "en": "",
+        "ja": ""
+      },
+      "subtitle": {
+        "ko": "당연하지.",
+        "en": "",
+        "ja": ""
+      },
+      "emotion": "warm",
+      "direction": "다정하게, 비밀기지 안 작은 목소리",
+      "order": 2,
+      "condition": "TAPE 05 — 비밀 아지트 녹음",
+      "ambience": "좁은 공간 — 바깥 매미, 아이들 소리 원경",
+      "playback": {
+        "mode": "tape",
+        "position": "recorder"
+      },
+      "voice": "voiced",
+      "planned": true
+    },
+    {
+      "line_id": "T05_003",
+      "tape": "TAPE05",
+      "character_id": "soeun",
+      "chapter_id": "tape05",
+      "text": {
+        "ko": "그럼 나 혼자 두고 가면 안 된다?",
+        "en": "",
+        "ja": ""
+      },
+      "subtitle": {
+        "ko": "그럼 나 혼자 두고 가면 안 된다?",
+        "en": "",
+        "ja": ""
+      },
+      "emotion": "warm",
+      "direction": "다정하게, 비밀기지 안 작은 목소리",
+      "order": 3,
+      "condition": "TAPE 05 — 비밀 아지트 녹음",
+      "ambience": "좁은 공간 — 바깥 매미, 아이들 소리 원경",
+      "playback": {
+        "mode": "tape",
+        "position": "recorder"
+      },
+      "voice": "voiced",
+      "planned": true
+    },
+    {
+      "line_id": "T05_004",
+      "tape": "TAPE05",
+      "character_id": "jungwoo_child",
+      "chapter_id": "tape05",
+      "text": {
+        "ko": "알았어.",
+        "en": "",
+        "ja": ""
+      },
+      "subtitle": {
+        "ko": "알았어.",
+        "en": "",
+        "ja": ""
+      },
+      "emotion": "warm",
+      "direction": "다정하게, 비밀기지 안 작은 목소리",
+      "order": 4,
+      "condition": "TAPE 05 — 비밀 아지트 녹음",
+      "ambience": "좁은 공간 — 바깥 매미, 아이들 소리 원경",
+      "playback": {
+        "mode": "tape",
+        "position": "recorder"
+      },
+      "voice": "voiced",
+      "planned": true
+    },
+    {
+      "line_id": "T06_001",
+      "tape": "TAPE06",
+      "character_id": "soeun",
+      "chapter_id": "tape06",
+      "text": {
+        "ko": "정우야, 문이 안 열려.",
+        "en": "",
+        "ja": ""
+      },
+      "subtitle": {
+        "ko": "정우야, 문이 안 열려.",
+        "en": "",
+        "ja": ""
+      },
+      "emotion": "fear",
+      "direction": "왜곡된 기억 — 깨끗하고 약간 비현실적으로",
+      "order": 1,
+      "condition": "TAPE 06 — 1~4 왜곡된 대화, 5~8 실제 녹음기 발견 후",
+      "ambience": "지하실 — 기계실 웅웅, 콘크리트 잔향",
+      "playback": {
+        "mode": "tape",
+        "position": "recorder"
+      },
+      "voice": "voiced",
+      "planned": true
+    },
+    {
+      "line_id": "T06_002",
+      "tape": "TAPE06",
+      "character_id": "jungwoo_child",
+      "chapter_id": "tape06",
+      "text": {
+        "ko": "기다려. 사람 데리고 올게.",
+        "en": "",
+        "ja": ""
+      },
+      "subtitle": {
+        "ko": "기다려. 사람 데리고 올게.",
+        "en": "",
+        "ja": ""
+      },
+      "emotion": "brave",
+      "direction": "왜곡된 기억 — 영웅적으로",
+      "order": 2,
+      "condition": "TAPE 06 — 1~4 왜곡된 대화, 5~8 실제 녹음기 발견 후",
+      "ambience": "지하실 — 기계실 웅웅, 콘크리트 잔향",
+      "playback": {
+        "mode": "tape",
+        "position": "recorder"
+      },
+      "voice": "voiced",
+      "planned": true
+    },
+    {
+      "line_id": "T06_003",
+      "tape": "TAPE06",
+      "character_id": "soeun",
+      "chapter_id": "tape06",
+      "text": {
+        "ko": "꼭 와야 돼.",
+        "en": "",
+        "ja": ""
+      },
+      "subtitle": {
+        "ko": "꼭 와야 돼.",
+        "en": "",
+        "ja": ""
+      },
+      "emotion": "fear",
+      "direction": "왜곡된 기억",
+      "order": 3,
+      "condition": "TAPE 06 — 1~4 왜곡된 대화, 5~8 실제 녹음기 발견 후",
+      "ambience": "지하실 — 기계실 웅웅, 콘크리트 잔향",
+      "playback": {
+        "mode": "tape",
+        "position": "recorder"
+      },
+      "voice": "voiced",
+      "planned": true
+    },
+    {
+      "line_id": "T06_004",
+      "tape": "TAPE06",
+      "character_id": "jungwoo_child",
+      "chapter_id": "tape06",
+      "text": {
+        "ko": "응. 약속.",
+        "en": "",
+        "ja": ""
+      },
+      "subtitle": {
+        "ko": "응. 약속.",
+        "en": "",
+        "ja": ""
+      },
+      "emotion": "brave",
+      "direction": "왜곡된 기억",
+      "order": 4,
+      "condition": "TAPE 06 — 1~4 왜곡된 대화, 5~8 실제 녹음기 발견 후",
+      "ambience": "지하실 — 기계실 웅웅, 콘크리트 잔향",
+      "playback": {
+        "mode": "tape",
+        "position": "recorder"
+      },
+      "voice": "voiced",
+      "planned": true
+    },
+    {
+      "line_id": "T06_005",
+      "tape": "TAPE06",
+      "character_id": "soeun",
+      "chapter_id": "tape06",
+      "text": {
+        "ko": "정우야, 미안해. 이제 문 열어줘.",
+        "en": "",
+        "ja": ""
+      },
+      "subtitle": {
+        "ko": "정우야, 미안해. 이제 문 열어줘.",
+        "en": "",
+        "ja": ""
+      },
+      "emotion": "cry",
+      "direction": "울음을 참으며 — 실제 사건 녹음",
+      "order": 5,
+      "condition": "TAPE 06 — 1~4 왜곡된 대화, 5~8 실제 녹음기 발견 후",
+      "ambience": "지하실 — 기계실 웅웅, 콘크리트 잔향",
+      "playback": {
+        "mode": "tape",
+        "position": "recorder"
+      },
+      "voice": "voiced",
+      "planned": true
+    },
+    {
+      "line_id": "T06_006",
+      "tape": "TAPE06",
+      "character_id": "jungwoo_child",
+      "chapter_id": "tape06",
+      "text": {
+        "ko": "싫어. 너 거기서 평생 살아.",
+        "en": "",
+        "ja": ""
+      },
+      "subtitle": {
+        "ko": "싫어. 너 거기서 평생 살아.",
+        "en": "",
+        "ja": ""
+      },
+      "emotion": "anger",
+      "direction": "화가 난 9살 — 실제 사건 녹음",
+      "order": 6,
+      "condition": "TAPE 06 — 1~4 왜곡된 대화, 5~8 실제 녹음기 발견 후",
+      "ambience": "지하실 — 기계실 웅웅, 콘크리트 잔향",
+      "playback": {
+        "mode": "tape",
+        "position": "recorder"
+      },
+      "voice": "voiced",
+      "planned": true
+    },
+    {
+      "line_id": "T06_007",
+      "tape": "TAPE06",
+      "character_id": "soeun",
+      "chapter_id": "tape06",
+      "text": {
+        "ko": "정우야, 가지 마.",
+        "en": "",
+        "ja": ""
+      },
+      "subtitle": {
+        "ko": "정우야, 가지 마.",
+        "en": "",
+        "ja": ""
+      },
+      "emotion": "panic",
+      "direction": "다급하게 — 실제 사건 녹음",
+      "order": 7,
+      "condition": "TAPE 06 — 1~4 왜곡된 대화, 5~8 실제 녹음기 발견 후",
+      "ambience": "지하실 — 기계실 웅웅, 콘크리트 잔향",
+      "playback": {
+        "mode": "tape",
+        "position": "recorder"
+      },
+      "voice": "voiced",
+      "planned": true
+    },
+    {
+      "line_id": "T06_008",
+      "tape": "TAPE06",
+      "character_id": "soeun",
+      "chapter_id": "tape06",
+      "text": {
+        "ko": "정우야...",
+        "en": "",
+        "ja": ""
+      },
+      "subtitle": {
+        "ko": "정우야...",
+        "en": "",
+        "ja": ""
+      },
+      "emotion": "cry",
+      "direction": "울먹이며, 문 두드림 뒤 — 실제 사건 녹음",
+      "order": 8,
+      "condition": "TAPE 06 — 1~4 왜곡된 대화, 5~8 실제 녹음기 발견 후",
+      "ambience": "지하실 — 기계실 웅웅, 콘크리트 잔향",
+      "playback": {
+        "mode": "tape",
+        "position": "recorder"
+      },
+      "voice": "voiced",
+      "planned": true
+    },
+    {
+      "line_id": "T07_001",
+      "tape": "TAPE07",
+      "character_id": "soeun",
+      "chapter_id": "tape07",
+      "text": {
+        "ko": "정우야.",
+        "en": "",
+        "ja": ""
+      },
+      "subtitle": {
+        "ko": "정우야.",
+        "en": "",
+        "ja": ""
+      },
+      "emotion": "calm",
+      "direction": "녹음기 밖 초자연 목소리 — 선명하게, 가까이",
+      "order": 1,
+      "condition": "TAPE 07 — 빈 테이프가 돌아간 뒤",
+      "ambience": "작업실 — 빈 테이프 회전음뿐",
+      "playback": {
+        "mode": "tape",
+        "position": "recorder"
+      },
+      "voice": "voiced",
+      "planned": true
+    },
+    {
+      "line_id": "T07_002",
+      "tape": "TAPE07",
+      "character_id": "soeun",
+      "chapter_id": "tape07",
+      "text": {
+        "ko": "이번에는 네가 말해.",
+        "en": "",
+        "ja": ""
+      },
+      "subtitle": {
+        "ko": "이번에는 네가 말해.",
+        "en": "",
+        "ja": ""
+      },
+      "emotion": "calm",
+      "direction": "조용하지만 단호하게",
+      "order": 2,
+      "condition": "T07_001 직후",
+      "ambience": "작업실",
+      "playback": {
+        "mode": "tape",
+        "position": "recorder"
+      },
+      "voice": "voiced",
+      "planned": true
+    },
+    {
+      "line_id": "END_BAD_001",
+      "tape": "BAD ENDING",
+      "character_id": "soeun",
+      "chapter_id": "bad ending",
+      "text": {
+        "ko": "정우야, 녹음되고 있어?",
+        "en": "",
+        "ja": ""
+      },
+      "subtitle": {
+        "ko": "정우야, 녹음되고 있어?",
+        "en": "",
+        "ja": ""
+      },
+      "emotion": "playful",
+      "direction": "PRO_E04_T01과 같은 녹음 재사용 (반복 구조)",
+      "order": 1,
+      "condition": "배드 엔딩 — 상자가 다시 놓인 뒤",
+      "ambience": "작업실",
+      "playback": {
+        "mode": "tape",
+        "position": "recorder"
+      },
+      "voice": "voiced",
+      "planned": true,
+      "reuse_of": "PRO_E04_T01"
+    },
+    {
+      "line_id": "END_NORMAL_001",
+      "tape": "NORMAL ENDING",
+      "character_id": "jungwoo_adult",
+      "chapter_id": "normal ending",
+      "text": {
+        "ko": "1998년, 한소은을 지하실에 가둔 사람은 저였습니다. 저는 그날 소은을 혼자 두고 돌아왔습니다. 그리고 아무에게도 말하지 않았습니다.",
+        "en": "",
+        "ja": ""
+      },
+      "subtitle": {
+        "ko": "1998년, 한소은을 지하실에 가둔 사람은 저였습니다. 저는 그날 소은을 혼자 두고 돌아왔습니다. 그리고 아무에게도 말하지 않았습니다.",
+        "en": "",
+        "ja": ""
+      },
+      "emotion": "confession",
+      "direction": "녹음기를 통해 재생 — 담담하게, 중간에 숨 고름",
+      "order": 1,
+      "condition": "노멀 엔딩 — 녹음 버튼 후 고백",
+      "ambience": "작업실 — 녹음기 모터",
+      "playback": {
+        "mode": "tape",
+        "position": "recorder"
+      },
+      "voice": "voiced",
+      "planned": true
+    },
+    {
+      "line_id": "END_TRUE_001",
+      "tape": "TRUE ENDING",
+      "character_id": "jungwoo_adult",
+      "chapter_id": "true ending",
+      "text": {
+        "ko": "한소은을 지하실에 가둔 사람은 저였습니다. 저는 소은이 문을 열어달라고 하는 것을 들었습니다. 하지만 돌아가지 않았습니다. 제가 한 일을 더 이상 숨기지 않겠습니다.",
+        "en": "",
+        "ja": ""
+      },
+      "subtitle": {
+        "ko": "한소은을 지하실에 가둔 사람은 저였습니다. 저는 소은이 문을 열어달라고 하는 것을 들었습니다. 하지만 돌아가지 않았습니다. 제가 한 일을 더 이상 숨기지 않겠습니다.",
+        "en": "",
+        "ja": ""
+      },
+      "emotion": "confession",
+      "direction": "녹음기를 통해 재생 — 노멀보다 조금 더 단단하게, 끝까지 회피하지 않음",
+      "order": 1,
+      "condition": "트루 엔딩 — 모든 증거 확보 후 고백",
+      "ambience": "작업실 — 녹음기 모터",
+      "playback": {
+        "mode": "tape",
+        "position": "recorder"
+      },
+      "voice": "voiced",
+      "planned": true
+    },
+    {
+      "line_id": "EPI_001",
+      "tape": "EPILOGUE",
+      "character_id": "soeun",
+      "chapter_id": "epilogue",
+      "text": {
+        "ko": "정우야, 우리 나중에 어른 되면 이거 같이 듣자.",
+        "en": "",
+        "ja": ""
+      },
+      "subtitle": {
+        "ko": "정우야, 우리 나중에 어른 되면 이거 같이 듣자.",
+        "en": "",
+        "ja": ""
+      },
+      "emotion": "happy",
+      "direction": "과거의 녹음 재생 — TAPE 01 녹음과 동일",
+      "order": 1,
+      "condition": "에필로그 — 햇빛 놀이터",
+      "ambience": "1998 놀이터 낮 — 빈 그네",
+      "playback": {
+        "mode": "tape",
+        "position": "recorder"
+      },
+      "voice": "voiced",
+      "planned": true,
+      "reuse_of": "T01_REC_001"
+    },
+    {
+      "line_id": "EPI_002",
+      "tape": "EPILOGUE",
+      "character_id": "jungwoo_child",
+      "chapter_id": "epilogue",
+      "text": {
+        "ko": "이런 걸 왜 녹음해?",
+        "en": "",
+        "ja": ""
+      },
+      "subtitle": {
+        "ko": "이런 걸 왜 녹음해?",
+        "en": "",
+        "ja": ""
+      },
+      "emotion": "happy",
+      "direction": "과거의 녹음 재생 — TAPE 01 녹음과 동일",
+      "order": 2,
+      "condition": "에필로그 — 햇빛 놀이터",
+      "ambience": "1998 놀이터 낮 — 빈 그네",
+      "playback": {
+        "mode": "tape",
+        "position": "recorder"
+      },
+      "voice": "voiced",
+      "planned": true,
+      "reuse_of": "T01_REC_002"
+    },
+    {
+      "line_id": "EPI_003",
+      "tape": "EPILOGUE",
+      "character_id": "soeun",
+      "chapter_id": "epilogue",
+      "text": {
+        "ko": "나중에 까먹을 수도 있잖아.",
+        "en": "",
+        "ja": ""
+      },
+      "subtitle": {
+        "ko": "나중에 까먹을 수도 있잖아.",
+        "en": "",
+        "ja": ""
+      },
+      "emotion": "happy",
+      "direction": "과거의 녹음 재생 — TAPE 01 녹음과 동일",
+      "order": 3,
+      "condition": "에필로그 — 햇빛 놀이터",
+      "ambience": "1998 놀이터 낮 — 빈 그네",
+      "playback": {
+        "mode": "tape",
+        "position": "recorder"
+      },
+      "voice": "voiced",
+      "planned": true,
+      "reuse_of": "T01_REC_003"
+    }
+  ]
+}

@@ -48,7 +48,7 @@ func _run() -> void:
 					bad.append(ch)
 		check(bad.is_empty(), "fonts[%s]: every translated glyph renders" % loc, "missing: " + "".join(bad.slice(0, 20)))
 		check(tr("새 게임") != "" and (loc == "ko" or tr("새 게임") != "새 게임"), "translations[%s]: menu text switches language" % loc, tr("새 게임"))
-		check(DialogueDB.text_of("PRO_E03_TAPE_1") != "", "dialogue[%s]: subtitle text" % loc, DialogueDB.text_of("PRO_E03_TAPE_1"))
+		check(DialogueDB.text_of("PRO_E04_T01") != "", "dialogue[%s]: subtitle text" % loc, DialogueDB.text_of("PRO_E04_T01"))
 		# 메뉴 잘림: 타이틀·일시정지·설정 화면을 만들어 글자 폭이 컨테이너를 넘는지 확인
 		var root := Control.new()
 		root.size = Vector2(1280, 720)

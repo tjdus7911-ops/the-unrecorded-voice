@@ -245,7 +245,7 @@ def build_parcel():
     name = "prop_parcel"
     col, root = new_prop(name)
     T.keep(root, "parcel")
-    L, Wd, H, t = 0.34, 0.25, 0.18, 0.004
+    L, Wd, H, t = 0.46, 0.26, 0.18, 0.004      # 테이프 4개가 한 줄에 들어가는 폭 (요구사항 12 목업)
     cb = M["cardboard"]
     T.box("prop_parcel_bottom", (L, Wd, t), (0, 0, t / 2), cb, 0.001, col=col, parent=root)
     for sx in (-1, 1):
@@ -281,15 +281,15 @@ def build_parcel():
           rot=(0.3, 0.2, 0.1))
     # 내용물: 완충재(구겨진 종이) + 테이프 7개 + 메모
     for k in range(10):
-        T.box(f"prop_parcel_filler_{k}", (0.07, 0.06, 0.04), (R.uniform(-0.12, 0.12), R.uniform(-0.08, 0.08), 0.03),
+        T.box(f"prop_parcel_filler_{k}", (0.07, 0.06, 0.03), (R.uniform(-0.18, 0.18), R.uniform(-0.08, 0.08), 0.03),
               M["paper"], 0.018, 3, col=col, parent=root, rot=(R.random() * 3, R.random() * 3, R.random() * 3))
-    tray = T.empty("prop_parcel_contents", (0, 0, 0.055), col, parent=root)
+    # 요구사항 12 §4 목업: 위 줄(상자 안쪽 +Y) TAPE 01~04, 아래 줄 TAPE 05~07 + 메모. 라벨이 위, 글자가 상자 앞(-Y)에서 바로 읽힌다
     for n in range(1, 8):
-        tp = tape_mesh(col, tray, n, wound=0.35 + 0.05 * n)
+        tp = tape_mesh(col, root, n, wound=0.35 + 0.05 * n)     # 부모를 상자 루트로 (빈 tray는 익스포트 병합에서 사라져 높이가 바닥으로 떨어졌다)
         row, c = divmod(n - 1, 4)
-        tp.location = (-0.115 + c * 0.077 if row == 0 else -0.08 + c * 0.077, -0.04 + row * 0.075, 0.002 + row * 0.004)
-        tp.rotation_euler = (0, 0, math.radians(90 + R.uniform(-6, 6)))
-    memo = T.empty("prop_memo", (0.02, 0.0, 0.085), col, parent=tray, rot=(0, 0, math.radians(8)))
+        tp.location = (-0.162 + c * 0.108, 0.052 - row * 0.100, 0.060)
+        tp.rotation_euler = (0, 0, math.radians(R.uniform(-1.0, 1.0)))
+    memo = T.empty("prop_memo", (0.165, -0.052, 0.061), col, parent=root, rot=(0, 0, math.radians(-8)))
     T.keep(memo, "memo")
     memo["tuv_item"] = "note_prologue"
     sheet = T.heightfield("prop_memo_sheet", 0.1, 0.148, 8, 10, lambda u, v: 0.0025 * math.sin(u * math.pi), (0, 0, 0),

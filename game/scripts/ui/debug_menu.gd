@@ -44,7 +44,13 @@ func _ready() -> void:
 	l.add_child(_btn("전력 복구", func():
 		for k in ["StudioCeiling", "DeskLamp", "FloorLamp"]:
 			lvl.set_light(k, "restore")))
-	v.add_child(_lbl("조명"))
+	for st in ["normal", "partial", "broken", "blackout", "emergency"]:
+		l.add_child(_btn("조명상태 " + st, func(): lvl.set_lighting(st)))
+	l.add_child(_btn("손전등 이상현상", func(): lvl.player.flashlight.anomaly_flicker(2.0)))
+	l.add_child(_btn("임시 TTS 미리듣기 켜기/끄기", func():
+		DialogueDB.placeholder_tts = not DialogueDB.placeholder_tts
+		lvl.hud.show_toast("임시 TTS 미리듣기: " + ("켬" if DialogueDB.placeholder_tts else "끔"), 2.0, true)))
+	v.add_child(_lbl("조명 · 음성"))
 	v.add_child(l)
 	var b := HFlowContainer.new()
 	for st in ["calm", "uneasy", "fear", "exhausted"]:
@@ -55,7 +61,7 @@ func _ready() -> void:
 	v.add_child(_lbl("호흡 · 심장"))
 	v.add_child(b)
 	var a := HFlowContainer.new()
-	for line in ["PRO_E01_001", "PRO_E03_TAPE_1", "PRO_E05_001", "PRO_E07_001", "PRO_E08_001"]:
+	for line in ["PRO_E01_001", "PRO_E04_T01", "PRO_E05_002", "PRO_E07_001", "PRO_E10_001"]:
 		a.add_child(_btn(line, func(): lvl.play_line_world(line, lvl.player.camera.global_position + Vector3(0, 0, 2), false)))
 	a.add_child(_btn("비 끔", func(): lvl.set_rain(false, 1.0)))
 	a.add_child(_btn("비 켬", func(): lvl.set_rain(true, 1.0)))

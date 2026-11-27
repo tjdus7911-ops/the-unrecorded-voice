@@ -24,6 +24,7 @@ RENDERS = ROOT / "art" / "renders" / "corridor"
 R = T.RNG
 
 X0, X1 = -5.0, 13.0          # 복도 길이
+PILLAR_X, PILLAR_W, PILLAR_D = -1.35, 0.46, 0.64   # 기둥 (303호와 작업실 문 사이)
 YN, YS = -0.2, -2.0          # 북쪽 벽면, 남쪽 벽면
 H = 2.5                      # 천장고
 WT = 0.2
@@ -68,7 +69,8 @@ def signs():
     img = Image.new("RGB", (512, 512), (150, 18, 14))
     d = ImageDraw.Draw(img)
     d.text((90, 160), "소화전", font=ImageFont.truetype(f, 120, index=1), fill=(245, 240, 235))
-    img.save(CTEX / "cor_hydrant.png")
+    # 남쪽 벽(+y를 향한 면)에 붙으므로 박스 UV가 좌우 반전된다 → 미리 뒤집어 저장 (QA: 글자가 거울상으로 보이던 문제)
+    img.transpose(Image.FLIP_LEFT_RIGHT).save(CTEX / "cor_hydrant.png")
     # 엘리베이터 층 표시
     img = Image.new("RGB", (256, 128), (8, 8, 8))
     d = ImageDraw.Draw(img)
@@ -189,6 +191,9 @@ def build_corridor(M, C):
     T.box("cor_304_plate", (0.2, 0.008, 0.1), (STU_DOOR_X + 0.68, YN - 0.044, 1.65), M["rooms"]["304"], 0.002, col=col)
     # 다른 호실 문
     steel_door(M, col, "cor_door_303", -2.6, YN - 0.04, -1, "303")
+    # 구조 기둥 (요구사항 16 EVENT 09: 괴물이 몸 일부만 드러내는 '복도 모퉁이·기둥 뒤') — 북벽에서 복도 쪽으로 튀어나온 RC 기둥
+    T.box("cor_pillar", (PILLAR_W, PILLAR_D, H), (PILLAR_X, YN - PILLAR_D / 2, H / 2), M["wall"], 0.01, col=col)
+    T.box("cor_pillar_base", (PILLAR_W + 0.02, PILLAR_D + 0.01, 0.1), (PILLAR_X, YN - PILLAR_D / 2, 0.05), M["base"] if "base" in M else M["wall"], 0.004, col=col)
     steel_door(M, col, "cor_door_305", 9.0, YN - 0.04, -1, "305", M["door_green"])
     steel_door(M, col, "cor_door_308", 2.0, YS + 0.04, 1, "308")
     steel_door(M, col, "cor_door_306", 9.5, YS + 0.04, 1, "306")
@@ -324,6 +329,7 @@ def build_colliders(C):
     T.collider("cor_wall_n_w", (X0 * -1 - 0.2, 0.2, H), ((X0 - 0.2) / 2, YN + 0.1, H / 2), cc)
     T.collider("cor_wall_n_e", (X1 - 6.2, 0.2, H), ((6.2 + X1) / 2, YN + 0.1, H / 2), cc)
     T.collider("cor_wall_w", (0.2, 2.2, H), (X0 - 0.1, (YN + YS) / 2, H / 2), cc)
+    T.collider("cor_pillar", (PILLAR_W, PILLAR_D, H), (PILLAR_X, YN - PILLAR_D / 2, H / 2), cc)
     T.collider("cor_landing", (2.6, YN - YS, 0.2), (X1 + 1.3, (YN + YS) / 2, -0.1), cc)
     T.collider("cor_stairwell_e", (0.2, 6, 5), (X1 + 2.7, 0.7, 0.5), cc)
     T.collider("cor_stairwell_n", (3, 0.2, 5), (X1 + 1.3, 3.5, 0.5), cc)

@@ -18,6 +18,7 @@ var _before_pause: int = State.PLAYING
 var _focused := true
 ## 자동 테스트·벤치마크용: 타이틀을 건너뛰고 바로 플레이
 var skip_title := false
+var auto_pause_on_focus_loss := true   ## 자동 캡처·녹화 도구는 끈다 (가상 X 서버에서 포커스 이벤트가 오지 않음)
 ## 레벨 시작 방식: "title"(타이틀 화면) / "new"(새 게임) / "continue"(저장 불러오기)
 var start_mode := "title"
 
@@ -83,7 +84,7 @@ func _notification(what: int) -> void:
 	match what:
 		NOTIFICATION_APPLICATION_FOCUS_OUT:
 			_focused = false
-			if state == State.PLAYING or state == State.INSPECT:
+			if (state == State.PLAYING or state == State.INSPECT) and auto_pause_on_focus_loss:
 				pause()
 			else:
 				_apply_mouse()

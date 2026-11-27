@@ -63,19 +63,21 @@ def paper_bg(w, h, base=(236, 232, 220), lines=None, aged=0.0):
 
 
 def tape_labels():
-    """테이프 7개 라벨 — 같은 사람이 쓴 숫자. A/B면 표시. 일곱 번째는 B면 칸이 비어 있음."""
+    """테이프 7개 라벨 (요구사항 12 §4) — 같은 사람이 매직으로 크게 쓴 'TAPE 01'~'TAPE 07'.
+    2048x1024: 위 절반 = 창 위쪽 라벨 띠(UV v 0.5~1), 아래 28% = 창 아래 띠. 1인칭 거리(약 0.7 m)에서 번호가 읽히도록 글자를 띠 높이의 70%로."""
     for n in range(1, 8):
-        W, H = 1024, 512
-        img = paper_bg(W, H, (238, 233, 214), aged=0.25)
+        W, H = 2048, 1024
+        img = paper_bg(W, H, (240, 236, 220), aged=0.18)
         d = ImageDraw.Draw(img)
-        d.rectangle([0, 0, W, 70], fill=(196, 72, 48, 255))
-        d.rectangle([0, 70, W, 78], fill=(60, 50, 45, 255))
-        d.text((30, 14), "C-60", font=font(SANS, 40), fill=(250, 240, 230, 255))
-        d.text((W - 150, 14), "A", font=font(SANS, 44), fill=(250, 240, 230, 255))
-        for ly in (190, 290, 390):
-            d.line([(40, ly), (W - 40, ly)], fill=(160, 150, 140, 255), width=2)
-        handwrite(img, (70, 110), f"{n}", 120, jitter=1.4)
-        img = img.filter(ImageFilter.GaussianBlur(0.4))
+        # 위 띠: 얇은 색 줄 + 큰 손글씨 번호
+        d.rectangle([0, 0, W, 54], fill=(186, 64, 44, 255))
+        d.text((40, 4), "C-60", font=font(SANS, 40), fill=(250, 240, 230, 255))
+        d.text((W - 90, 2), "A", font=font(SANS, 44), fill=(250, 240, 230, 255))
+        handwrite(img, (150, 120), f"TAPE 0{n}", 330, ink=(20, 22, 40), jitter=0.6, path=SANS, slant=-3)
+        # 아래 띠: 번호만 한 번 더
+        d.line([(60, 750), (W - 60, 750)], fill=(170, 160, 150, 255), width=3)
+        handwrite(img, (W // 2 - 140, 770), f"0{n}", 190, ink=(20, 22, 40), jitter=0.6, path=SANS, slant=-3)
+        img = img.filter(ImageFilter.GaussianBlur(0.5))
         img.convert("RGB").save(OUT / f"prop_tape_label_{n}.png")
 
 

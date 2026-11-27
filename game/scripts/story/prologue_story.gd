@@ -19,6 +19,16 @@ var clock_stopped := false
 var rain_on := true
 var door_locked := false
 var monitor_noise := false
+var staging: StoryStaging
+
+func st() -> StoryStaging:
+	if staging == null:
+		staging = StoryStaging.new()
+		staging.name = "StoryStaging"
+		staging.lvl = lvl
+		staging.story = self
+		add_child(staging)
+	return staging
 
 func _ready() -> void:
 	_fade_layer = CanvasLayer.new()
@@ -59,9 +69,13 @@ func point(name: String) -> Vector3:
 					bd = d
 					best = g
 			return best
-		"apt_light", "apt_spawn":
-			return lvl.apt.point(name) if lvl.apt else Vector3.ZERO
+	var sp := st().point(name)
+	if sp != Vector3.INF:
+		return sp
 	return Vector3.ZERO
+
+func has_los(pt: Vector3) -> bool:
+	return st().has_los(pt)
 
 func check(cond: String) -> bool:
 	match cond:
@@ -74,7 +88,12 @@ func check(cond: String) -> bool:
 		"not_tried_door":
 			return not tried_door
 		"recorder_stopped_after_tape":
-			return lvl.recorder_state == "loaded" and lvl.director.is_done("EV03_tape_play") and not lvl.door_ajar
+			return lvl.recorder_state == "loaded" and lvl.director.is_done("EV04_first_recording")
+		"photo_seen":
+			return lvl.photo != null and lvl.photo.visible
+	var r = st().check(cond)
+	if r != null:
+		return bool(r)
 	return true
 
 func do_action(a: Dictionary, instant: bool) -> void:
@@ -84,7 +103,10 @@ func do_action(a: Dictionary, instant: bool) -> void:
 			lvl.checkpoint(a["id"])
 		"hint":
 			if not instant:
-				lvl.hud.show_toast(a["text"], float(a.get("secs", 3.0)))
+				lvl.hud.show_toast(a["text"], float(a.get("secs", 3.0)), bool(a.get("tutorial", false)))
+		"voice_if":
+			if not instant and check(a.get("cond", "")):
+				lvl.play_line_world(a["line"], Vector3.ZERO, true)
 		"hint_if":
 			if not instant and check(a.get("cond", "")):
 				lvl.hud.show_toast(a["text"], float(a.get("secs", 3.0)))
@@ -132,6 +154,14 @@ func do_action(a: Dictionary, instant: bool) -> void:
 		"lights":
 			for k in a["set"]:
 				lvl.set_light(k, a["set"][k], instant)
+		"lighting":
+			lvl.set_lighting(String(a.get("state", "normal")), instant)
+		"objective":
+			if lvl.hud:
+				lvl.hud.set_objective(String(a.get("text", "")))
+		"flicker_irregular":
+			if not instant:
+				_flicker_irregular(String(a.get("light", "StudioCeiling")), float(a.get("secs", 1.6)), int(a.get("count", 0)))
 		"clock_stop":
 			clock_stopped = true
 			lvl.clock_running = false
@@ -204,11 +234,14 @@ func do_action(a: Dictionary, instant: bool) -> void:
 				_await_look_door(float(a.get("radius", 2.6)), float(a.get("max_deg", 28.0)), float(a.get("fallback_after", 20.0)))
 		"flinch":
 			if not instant:
-				lvl.player.arms.flinch()
+				if lvl.player.arms:
+					lvl.player.arms.flinch()
 				lvl.player.camera_kick(0.6)
 		"flashlight_shake":
 			if not instant:
-				lvl.player.arms.flinch(1.6, float(a.get("secs", 0.5)))
+				if lvl.player.arms:
+					lvl.player.arms.flinch(1.6, float(a.get("secs", 0.5)))
+				lvl.player.flashlight.shake(float(a.get("secs", 0.5)))
 		"recorder_self_play":
 			lvl.recorder_self(true, instant)
 		"recorder_self_stop":
@@ -234,13 +267,103 @@ func do_action(a: Dictionary, instant: bool) -> void:
 				lvl.door_bang(float(a.get("strength", 1.0)))
 		"silence":
 			if not instant:
-				lvl.sudden_silence(2.8)
+				lvl.sudden_silence(float(a.get("secs", 2.8)))
 		"to_title":
 			if not instant and not lvl.get_meta("test_no_title", false):
 				GameFlow.restart_level("title")
 		"title_card":
 			if not instant:
 				_title_card(a.get("title", ""), a.get("subtitle", ""), float(a.get("secs", 4.0)))
+		# ---------------- 요구사항 16
+		"slam_after_line":
+			# 소은의 목소리가 끝나는 순간 등 뒤 문이 쾅 닫히고 잠긴다 (소리는 문 위치에서)
+			door_locked = true
+			lvl.door_locked = true
+			if instant:
+				lvl.slam_door(true)
+			else:
+				var wait := DialogueDB.duration_of(String(a.get("line", ""))) - 0.25
+				get_tree().create_timer(maxf(wait, 0.3), false).timeout.connect(func():
+					lvl.slam_door_story()
+					p.camera_kick(0.6)
+					p.breathing.play_oneshot(&"gasp")
+					p.danger = maxf(p.danger, 0.45))
+		"quiet":
+			if not instant:
+				lvl.set_world_quiet(float(a.get("db", -14.0)), float(a.get("fade", 2.0)))
+		"place_soeun_corridor":
+			st().place_soeun_corridor(instant)
+		"corridor_lights":
+			if String(a.get("state", "")) == "unstable":
+				lvl.set_light("CorLight2", "flicker", instant)
+				lvl.set_light("CorLight4", "flicker", instant)
+		"soeun_vanish_flicker":
+			st().soeun_vanish_flicker(String(a.get("light", "CorLight5")), instant)
+		"place_monster_corner":
+			st().place_monster_corner(instant)
+		"monster_peek_watch":
+			if instant:
+				st().monster_state = "gone"
+			else:
+				st().monster_peek_watch(float(a.get("hide_dist", 4.2)))
+		"follower":
+			st().set_follower(bool(a.get("on", true)) and not instant)
+		"lights_chase":
+			if instant:
+				for i in 5:
+					lvl.set_light("CorLight%d" % i, "story_off", true)
+			else:
+				st().start_lights_chase()
+		"set_lights_off":
+			st().lights_off(a.get("names", []), instant)
+		"flashlight_cut":
+			st().flashlight_cut(instant)
+		"sound":
+			if not instant:
+				Sounds.play(String(a["id"]), &"SFX", float(a.get("db", 0.0)))
+		"enter_apartment":
+			lvl.enter_apartment()
+		"return_control":
+			p.lock_interaction(0.0)
+			p.flashlight.blocked = false
+			p.danger = 0.0
+			p.breathing.force_state(&"calm")
+		"tape_glitch":
+			if not instant:
+				st().tape_glitch(float(a.get("secs", 0.4)))
+		"swing":
+			if not instant and lvl.apt:
+				lvl.apt.swing_move(int(a.get("index", 0)), float(a.get("secs", 7.0)), float(a.get("amp", 24.0)))
+		"apt_child_steps":
+			if not instant:
+				st().apt_child_steps_up()
+		"apt_place_soeun":
+			if not instant:
+				st().apt_place_soeun()
+		"apt_soeun_vanish":
+			if not instant:
+				st().apt_soeun_vanish()
+		"voice_tape_at":
+			if not instant:
+				lvl.play_line_world(a["line"], point(String(a.get("at", "player"))), false, "VoiceTape")
+		"tape_autostop":
+			if not instant:
+				Sounds.play_at("sfx_tape_stop", point("player"), &"SFX", 3.0, null, 0.0, "철컥 — 테이프가 끝나 멈추는 소리")
+		"return_to_studio":
+			lvl.return_to_studio(instant)
+		"tape_finished":
+			lvl.mark_tape_finished(String(a.get("tape", "1")))
+		"show_photo":
+			lvl.show_photo(instant)
+		"fragment_found":
+			# 녹음 조각 발견: 글자·아이콘 없이 짧은 테이프 소리만 (요구사항 13 미니멀 UI)
+			st().fragments = maxi(st().fragments, int(a.get("n", 1)))
+			if not instant:
+				Sounds.play("sfx_deck_button", &"SFX", -12.0)
+				get_tree().create_timer(0.15, false).timeout.connect(func(): Sounds.play("amb_tape_motor", &"SFX", -20.0))
+		"phase_end_card":
+			if not instant:
+				_phase_end_card()
 
 ## EVENT 04: 문틈의 존재를 플레이어가 직접 발견해 다가가면 문이 쾅 닫힌다 (카메라 강제 회전 없음)
 func _await_look_door(radius: float, max_deg: float, fallback: float) -> void:
@@ -284,9 +407,10 @@ func _set_guide(on: bool) -> void:
 		_guide.shadow_enabled = false
 		lvl.add_child(_guide)
 		var dr := lvl.find_child("stu_desk_drawer_0", true, false) as Node3D
-		_guide.global_position = (dr.global_position if dr else lvl.b2g(Vector3(1.6, 4.5, 0.7))) + Vector3(0, 0.45, 0.35)
+		_guide.global_position = (dr.global_position if dr else lvl.b2g(Vector3(1.6, 4.5, 0.7))) + Vector3(0, 0.25, 0.45)
+		_guide.omni_range = 1.3
 	var tw := create_tween()
-	tw.tween_property(_guide, "light_energy", 0.35 if on else 0.0, 2.0)
+	tw.tween_property(_guide, "light_energy", 0.16 if on else 0.0, 2.0)   # 서랍 윤곽만 희미하게 (요구사항 12 §4·13)
 
 func _ensure_gap() -> void:
 	if _gap or lvl.door_hinge == null:
@@ -387,6 +511,33 @@ func _title_card(title: String, sub: String, secs: float) -> void:
 	tw.tween_property(_card, "modulate:a", 1.0, 1.2)
 	tw.tween_interval(secs)
 	tw.tween_property(_card, "modulate:a", 0.0, 1.5)
-	tw.tween_callback(func():
-		_card.queue_free()
-		lvl.hud.show_toast("PHASE 01 테스트 범위는 여기까지입니다. (TAPE 01 본편은 다음 단계에서 제작)", 8.0))
+	tw.tween_callback(_card.queue_free)
+
+## 개발 범위 안내 (대사 아님 · UI 알림): TAPE 02 본편은 다음 단계
+func _phase_end_card() -> void:
+	lvl.hud.show_toast(tr("TAPE 02 준비됨 — 본편은 다음 단계(PHASE 02)에서 제작됩니다."), 8.0, true)
+
+
+## 정전 직전: 천장등이 불규칙하게 깜빡인다
+func _flicker_irregular(light: String, secs: float, count := 0) -> void:
+	var f: LightFixture = lvl.fx.get(light)
+	if f == null:
+		return
+	var el := 0.0
+	var on := false
+	if count > 0:
+		# 정확히 count번 꺼졌다 켜진다 (요구사항 16 EVENT 06: 2~3회)
+		for i in count:
+			f._set_lit(false)
+			await get_tree().create_timer(randf_range(0.08, 0.2), false).timeout
+			f._set_lit(true, randf_range(0.5, 0.9))
+			await get_tree().create_timer(randf_range(0.15, 0.4), false).timeout
+		f._apply()
+		return
+	while el < secs:
+		on = not on
+		f._set_lit(on, randf_range(0.4, 1.0) if on else 0.0)
+		var w := randf_range(0.04, 0.22) if on else randf_range(0.03, 0.12)
+		await get_tree().create_timer(w, false).timeout
+		el += w
+	f._apply()

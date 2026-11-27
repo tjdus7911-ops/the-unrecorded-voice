@@ -8,6 +8,14 @@ var p: PlayerController
 var passed := 0
 var failed := 0
 
+## 미니멀 상호작용 거리(눈에서 1.25 m) 안으로 다가가 바라본다
+func approach(target: Vector3, from: Vector3) -> void:
+	var flat := Vector3(from.x - target.x, 0, from.z - target.z).normalized()
+	p.global_position = Vector3(target.x, 0.05, target.z) + flat * 0.75
+	await frames(5)
+	p.look_at_point(target)
+	await frames(2)
+
 func _ready() -> void:
 	_run.call_deferred()
 
@@ -38,15 +46,15 @@ func _run() -> void:
 
 	# --- 데이터 ---
 	var pro := DialogueDB.lines.keys().filter(func(k): return String(k).begins_with("PRO_"))
-	check(pro.size() >= 9, "dialogue: prologue lines loaded (EVENT 01~08 대사 포함)", str(pro.size()))
-	check(DialogueDB.text_of("PRO_E05_001") == "정우야?", "dialogue: text lookup")
-	check(DialogueDB.get_line("PRO_E05_001")["playback"]["position"] == "behind_player", "dialogue: '정우야?' is spatial behind player")
+	check(pro.size() >= 9, "dialogue: prologue lines loaded (EVENT 01~10 대사 포함)", str(pro.size()))
+	check(DialogueDB.text_of("PRO_E05_002") == "정우야...?", "dialogue: text lookup")
+	check(DialogueDB.get_line("PRO_E05_002")["playback"]["position"] == "behind_player", "dialogue: '정우야...?' is spatial behind player")
 	check(DialogueDB.speaker_name("PRO_E01_001") == "정우", "dialogue: speaker name")
 	check(AudioServer.get_bus_index(&"Breathing") >= 0 and AudioServer.get_bus_index(&"Heartbeat") >= 0 and AudioServer.get_bus_index(&"VoiceTape") >= 0, "audio: bus layout")
 
 	# --- 이동·충돌 ---
 	check(p.is_on_floor(), "player: on floor after spawn")
-	check(absf(p.head.global_position.y - 1.62 - p.global_position.y) < 0.02, "player: eye height 1.62 m")
+	check(absf(p.head.global_position.y - 1.64 - p.global_position.y) < 0.02, "player: eye height 1.64 m (175 cm body)")
 	var x0 := p.global_position.x
 	await hold("move_forward", 60)
 	var walked := p.global_position.x - x0
@@ -100,9 +108,7 @@ func _run() -> void:
 			last = not last
 	check(changes >= 2, "lights: corridor flickers", "%d changes" % changes)
 	# 방 B 스위치 — 눌러도 안 켜짐
-	p.global_position = Vector3(7.3, 0.05, 0.3)
-	await frames(5)
-	p.look_at_point(bed.switch_b.global_position)
+	await approach(bed.switch_b.global_position, Vector3(7.3, 0.05, 0.3))
 	check(p.try_interact(), "interact: room B switch")
 	check(not bed.fixture_b.any_light_visible(), "lights: dead light stays off after switch")
 	bed.fixture_b.set_state(LightFixture.State.NEEDS_POWER)
@@ -111,10 +117,7 @@ func _run() -> void:
 	bed.fixture_b.set_state(LightFixture.State.DEAD)
 
 	# --- 어둠 속 단서 ---
-	p.global_position = Vector3(9.0, 0.05, 0.4)
-	await frames(5)
-	p.look_at_point(bed.clue_cassette.global_position)
-	await frames(2)
+	await approach(bed.clue_cassette.global_position, Vector3(9.0, 0.05, 0.4))
 	check(p.try_interact(), "clue: cassette found in dark room")
 	await frames(2)
 	check(Inventory.has(&"cassette_test"), "clue: cassette in inventory")

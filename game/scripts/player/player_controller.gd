@@ -15,7 +15,7 @@ signal interact_target_changed(target: Interactable)
 @export_group("Body")
 @export var stand_height := 1.75
 @export var crouch_height := 1.15
-@export var eye_below_top := 0.13    ## 눈높이 = 키 - 0.13 → 서 있을 때 1.62 m
+@export var eye_below_top := 0.11    ## 눈높이 = 키 - 0.11 → 서 있을 때 1.64 m (신장 175 cm, 요구사항 12 §1)
 @export var radius := 0.28
 
 @export_group("Stamina")
@@ -24,8 +24,8 @@ signal interact_target_changed(target: Interactable)
 @export var exhausted_threshold := 2.0  ## 탈진 후 이만큼 회복해야 다시 달릴 수 있음
 
 @export_group("Camera FX")
-@export var bob_amount_walk := 0.012
-@export var bob_amount_run := 0.028
+@export var bob_amount_walk := 0.006     ## 요구사항 12: 과도한 흔들림 방지 (이전 0.012)
+@export var bob_amount_run := 0.014
 @export var breath_sway := 0.0035
 
 @onready var head: Node3D = $Head
@@ -57,8 +57,13 @@ signal recorder_key_pressed
 signal interacted_any
 
 var _lock_until := 0.0
+var _game_t := 0.0             ## 게임 시간(일시정지·시간 배율을 따름) — 연출 중 상호작용 잠금용
+## 미니멀 상호작용 (요구사항 13): 몸에서 수평 이 거리 안(약 0.8~1.2 m 접근) + 정확히 바라볼 때만
+@export var interact_reach := 1.15
+## 어두운 곳에서는 빛이 닿아 보이는 지점만 조작 가능 (레벨이 설정: Callable(point) -> bool)
+var visibility_check := Callable()
 var seated := false                  ## 의자에 앉아 있음 (이동 불가, 시점은 자유)
-const seated_height := 1.22
+const seated_height := 1.28        ## 앉은 눈높이 약 1.17 m
 var _kick := 0.0
 
 ## 앉기/일어서기 (EVENT 01 — 조작권은 시점만 잠깐 제한 없이 유지)
@@ -75,6 +80,7 @@ func camera_kick(amount: float) -> void:
 var footsteps: Footsteps
 var arms: ViewmodelArms
 var hands_busy := false
+@export var use_hands := false          ## 1인칭 손·팔 표시 (요구사항 14로 기본 끔, 코드 보관)
 var hands_animate := true            ## 테스트에서 즉시 동작시키려면 false
 var carrying: Node3D = null          ## 두 손으로 옮기는 물건 (택배)
 var held_recorder: Node3D = null     ## 오른손에 든 녹음기
@@ -86,12 +92,14 @@ func _ready() -> void:
 	footsteps = Footsteps.new()
 	footsteps.name = "Footsteps"
 	add_child(footsteps)
-	arms = ViewmodelArms.new()
-	arms.name = "Arms"
-	arms.player = self
-	arms.camera = camera
-	add_child(arms)
-	flashlight.use_hands.call_deferred(arms)
+	# 요구사항 14: 1인칭 손·팔을 표시하지 않는다. (손 모델·리그·포즈 코드는 보관 — use_hands=true면 다시 켜짐)
+	if use_hands:
+		arms = ViewmodelArms.new()
+		arms.name = "Arms"
+		arms.player = self
+		arms.camera = camera
+		add_child(arms)
+		flashlight.use_hands.call_deferred(arms)
 	inspect = InspectSystem.new()
 	inspect.name = "Inspect"
 	inspect.player = self
@@ -135,6 +143,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		danger = 0.0 if danger > 0.5 else 1.0
 
 func _physics_process(delta: float) -> void:
+	_game_t += delta
 	rotation.y = _yaw
 	head.rotation.x = _pitch
 
@@ -169,6 +178,11 @@ func _physics_process(delta: float) -> void:
 	else:
 		velocity.y = maxf(velocity.y, -0.1)
 	move_and_slide()
+	_smooth_steps(delta)
+	if leaning and input_dir.length() > 0.2:
+		lean_out()
+	_lean = _lean.lerp(_lean_goal, clampf(delta * 5.0, 0.0, 1.0))
+	_apply_height()
 
 	_update_camera_fx(delta)
 	if input_enabled:
@@ -207,7 +221,39 @@ func _apply_height() -> void:
 	cap.height = _height
 	cap.radius = radius
 	collision.position.y = _height * 0.5
-	head.position.y = _height - eye_below_top
+	head.position = Vector3(0.0, _height - eye_below_top + _step_off + _lean.y, _lean.z)
+
+## ---- 계단·턱을 오를 때 시점이 튀지 않게: 바닥 높이 변화를 머리 오프셋으로 흡수했다가 부드럽게 따라간다
+var _step_off := 0.0
+var _last_floor_y := 0.0
+func _smooth_steps(delta: float) -> void:
+	var y := global_position.y
+	var dy := y - _last_floor_y
+	_last_floor_y = y
+	if is_on_floor() and absf(dy) > 0.012 and absf(dy) < 0.45:
+		_step_off = clampf(_step_off - dy, -0.4, 0.4)
+	_step_off = lerpf(_step_off, 0.0, clampf(delta * 9.0, 0.0, 1.0))
+
+## ---- 몸을 숙여 들여다보기 (상자 안 등). 이동 입력이 들어오면 원래 자세로
+var _lean := Vector3.ZERO
+var _lean_goal := Vector3.ZERO
+var leaning := false
+func lean_into(point: Vector3, forward := 0.34, down := 0.40) -> void:
+	leaning = true
+	_lean_goal = Vector3(0, -down, -forward)
+	var tw := create_tween().set_parallel().set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	var eye := global_position + Vector3.UP * (_height - eye_below_top - down)
+	var flat := Vector3(point.x - global_position.x, 0, point.z - global_position.z).normalized()
+	eye += flat * forward
+	var d := point - eye
+	var yaw := atan2(-d.x, -d.z)
+	yaw = _yaw + wrapf(yaw - _yaw, -PI, PI)
+	tw.tween_property(self, "_yaw", yaw, 0.7)
+	tw.tween_property(self, "_pitch", atan2(d.y, Vector2(d.x, d.z).length()), 0.7)
+
+func lean_out() -> void:
+	leaning = false
+	_lean_goal = Vector3.ZERO
 
 # --- Stamina --------------------------------------------------------------
 func _update_stamina(trying_to_run: bool, delta: float) -> void:
@@ -254,10 +300,15 @@ func _update_interact_target() -> void:
 	var t: Interactable = null
 	if interact_ray.is_colliding():
 		var c := interact_ray.get_collider()
-		if c is Interactable and (c as Interactable).can_interact(self) and _line_of_sight(interact_ray.get_collision_point()):
+		var hp := interact_ray.get_collision_point()
+		if c is Interactable and (c as Interactable).can_interact(self) and _line_of_sight(hp) \
+				and Vector2(hp.x - global_position.x, hp.z - global_position.z).length() <= interact_reach \
+				and (not visibility_check.is_valid() or visibility_check.call(hp)):
 			t = c
 	if t != _interact_target:
+		_set_highlight(_interact_target, false)
 		_interact_target = t
+		_set_highlight(t, true)
 		interact_target_changed.emit(t)
 
 ## 벽 너머 오브젝트는 조작할 수 없게: 월드 충돌체가 조사 지점보다 0.3 m 이상 앞에 있으면 가려진 것으로 본다
@@ -278,10 +329,10 @@ func look_at_point(pt: Vector3) -> void:
 
 ## 스토리 연출 중 잠시 상호작용 금지
 func lock_interaction(secs: float) -> void:
-	_lock_until = Time.get_ticks_msec() / 1000.0 + secs
+	_lock_until = _game_t + secs
 
 func try_interact() -> bool:
-	if Time.get_ticks_msec() / 1000.0 < _lock_until:
+	if _game_t < _lock_until:
 		return false
 	if hands_busy or carrying:
 		if carrying and carry_target_fn.is_valid():
@@ -310,7 +361,7 @@ func try_interact() -> bool:
 func _reach_then(it: Interactable, then: Callable) -> void:
 	hands_busy = true
 	var rh: ViewmodelArms.Hand = arms.sides["R"]
-	var had_tool := rh.held != null and rh.mode == ViewmodelArms.Mode.HOLD_RECORDER
+	var had_tool := rh.held != null and rh.mode == ViewmodelArms.Mode.HOLD_RECORDER and not arms.is_lowered("R")
 	if had_tool:
 		await arms.lower_tool("R")
 	var p := it.reach_point()
@@ -332,3 +383,31 @@ func _reach_then(it: Interactable, then: Callable) -> void:
 	if had_tool and rh.mode != ViewmodelArms.Mode.HOLD_OBJECT:
 		arms.raise_tool("R")
 	hands_busy = false
+
+
+## 바라보는 필수 물건의 은은한 강조 (요구사항 12 §4) — 외곽선·아이콘이 아니라 표면이 살짝 밝아지는 정도
+static var _hl_mat: ShaderMaterial
+func _set_highlight(t, on: bool) -> void:
+	if t == null or not is_instance_valid(t) or not (t is Interactable) or not t.highlight:
+		return
+	if on and not GameSettings.interaction_hints:
+		return          # 미니멀 UI 기본: 강조 없음 (설정 '상호작용 힌트'에서만)
+	if _hl_mat == null:
+		var sh := Shader.new()
+		sh.code = """shader_type spatial;
+render_mode unshaded, blend_add, depth_draw_never, cull_back;
+void fragment() {
+	float rim = pow(1.0 - clamp(dot(NORMAL, VIEW), 0.0, 1.0), 2.0);
+	float pulse = 0.75 + 0.25 * sin(TIME * 2.4);
+	ALBEDO = vec3(1.0, 0.93, 0.8) * (0.035 + rim * 0.10) * pulse;
+}"""
+		_hl_mat = ShaderMaterial.new()
+		_hl_mat.shader = sh
+	var root: Node = t.inspect_visual if t.inspect_visual else t.get_parent()
+	if root == null:
+		return
+	var meshes := root.find_children("*", "MeshInstance3D", true, false)
+	if root is MeshInstance3D:
+		meshes.append(root)
+	for m in meshes:
+		(m as MeshInstance3D).material_overlay = _hl_mat if on else null

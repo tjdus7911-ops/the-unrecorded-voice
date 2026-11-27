@@ -2,7 +2,7 @@ class_name EventDirector
 extends Node
 ## 공포·스토리 이벤트 디렉터 (요구사항 08). 이벤트는 JSON(data/events/*.json)으로만 정의한다 — 코드에 하드코딩 없음.
 ##
-## 트리거 종류: game_start · tutorial_complete · signal(이름, 인자) · look_at(대상, 각도, fallback) · near(대상, 반경) · time(초)
+## 트리거 종류: game_start · tutorial_complete · signal(이름, 인자) · look_at(대상, 각도, los, max_dist, fallback) · near(대상, 반경) · time(초) · condition
 ##   signal 이름 예: door_opened, door_locked_try, recorder_play, recorder_stop, tape_inserted, flashlight_pickup,
 ##                  flashlight_on, flashlight_off, switch, inspect:<물건>, item:<아이템>, parcel_picked, parcel_placed
 ## 안정성:
@@ -38,8 +38,11 @@ func load_file(path: String) -> void:
 		push_warning("EventDirector: missing " + path)
 		return
 	var d: Dictionary = JSON.parse_string(f.get_as_text())
-	events = d.get("events", [])
-	for e in events:
+	# 여러 파일을 이어서 불러올 수 있다 (prologue → tape01 …). 같은 id는 뒤 파일이 대체
+	for e in d.get("events", []):
+		if by_id.has(e["id"]):
+			events.erase(by_id[e["id"]])
+		events.append(e)
 		by_id[e["id"]] = e
 
 func start_new() -> void:
@@ -127,7 +130,10 @@ func _triggered(e: Dictionary) -> bool:
 			var cam := player.camera
 			var dir := (tgt - cam.global_position).normalized()
 			var fwd := -cam.global_transform.basis.z
-			if rad_to_deg(fwd.angle_to(dir)) <= float(tr.get("max_deg", 40.0)) and _conds(e):
+			var near_ok: bool = not tr.has("max_dist") or cam.global_position.distance_to(tgt) <= float(tr["max_dist"])
+			# los: 대상이 벽·문에 가려 있지 않아야 '봤다'로 인정
+			if rad_to_deg(fwd.angle_to(dir)) <= float(tr.get("max_deg", 40.0)) and near_ok and _conds(e) \
+					and (not tr.get("los", false) or story.has_los(tgt)):
 				return true
 			return tr.has("fallback_after") and since >= float(tr["fallback_after"])
 		"near":
@@ -161,7 +167,8 @@ func _fire(e: Dictionary) -> void:
 		last = maxf(last, float(a.get("t", 0.0)))
 		_run_action_at(a)
 	var end = e.get("end", "immediate")
-	var wait := 0.0
+	# "immediate" = 마지막 액션이 실행된 뒤 완료 (요구사항 16: 다음 이벤트가 앞 이벤트의 연출 도중에 끼어들지 않게)
+	var wait := last
 	if typeof(end) == TYPE_DICTIONARY:
 		wait = float(end.get("after", last))
 	if wait > 0.0:

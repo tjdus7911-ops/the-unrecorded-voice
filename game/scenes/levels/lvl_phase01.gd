@@ -40,6 +40,8 @@ var soeun_node: Node3D
 var soeun_poser: CharacterPoser
 var clue_tape: Node3D
 var _self_play := false
+var _rewinding := false
+var _dropout_t := 3.0
 var _mon_breath: AmbientEmitter
 var title_ui: CanvasLayer
 var title_cam: Camera3D
@@ -57,6 +59,15 @@ var door_open := false
 var door_busy := false
 var window_light: SpotLight3D
 var window_base_energy := 2.4
+const WINDOW_ENERGY := 2.4
+var monitor_light: OmniLight3D
+var probes: Array[ReflectionProbe] = []
+var city_mat: ShaderMaterial
+var lighting := "normal"
+var _carry_tutorial_done := false           ## 조명 상태 (요구사항 12 §3)
+var _emissive_mats: Array = []     ## 작업실 전자기기 발광 재질 [mat, energy]
+var emergency_light: OmniLight3D
+var _emergency_mesh: MeshInstance3D
 var recorder: Node3D
 var recorder_state := "empty"    ## empty / loaded / playing
 var recorder_tape: Node3D
@@ -103,6 +114,10 @@ func _ready() -> void:
 	hud = HUD.new()
 	add_child(hud)
 	hud.bind_player(player)
+	player.visibility_check = point_lit
+	# 조사 화면을 일반 플레이 화면과 분리 (요구사항 14): 배경을 어둡게·흐리게
+	player.inspect.opened.connect(func(_t): _inspect_view(true))
+	player.inspect.closed.connect(func(_t, _p): _inspect_view(false))
 	_door()
 	_switches_and_lamps()
 	_furniture()
@@ -255,13 +270,15 @@ func _objects_state() -> Dictionary:
 	return {"door_open": door_open, "door_locked": door_locked, "parcel_open": parcel_open, "parcel_on_desk": parcel_on_desk,
 		"parcel_visible": parcel.visible if parcel else false, "recorder_state": recorder_state,
 		"recorder_held": player.held_recorder != null, "flashlight_taken": flashlight_prop == null or not is_instance_valid(flashlight_prop),
-		"drawer0": drawer_open[0]}
+		"drawer0": drawer_open[0], "tapes_done": tapes_done, "recorder_tape_no": recorder_tape_no, "in_apartment": in_apartment,
+		"photo": photo != null and photo.visible}
 
 func _apply_objects_state(o: Dictionary) -> void:
 	if o.get("door_open", false) and not door_open and door_hinge:
 		door_hinge.rotation.y = deg_to_rad(100.0)
 		door_open = true
 	door_locked = o.get("door_locked", false)
+	tapes_done.assign(o.get("tapes_done", []))
 	if parcel:
 		parcel.visible = o.get("parcel_visible", true)
 		if o.get("parcel_on_desk", false):
@@ -280,9 +297,10 @@ func _apply_objects_state(o: Dictionary) -> void:
 				var fl := parcel.find_child(sp[0], true, false) as Node3D
 				if fl:
 					fl.rotation += sp[1]
-			_parcel_contents_ready()
-			if Inventory.has(&"tape_1") or o.get("recorder_state", "empty") != "empty":
-				var t1 := parcel.find_child("prop_tape_1", true, false)
+			_parcel_contents_ready(false)
+			var in_rec := String(o.get("recorder_tape_no", "1" if o.get("recorder_state", "empty") != "empty" else ""))
+			if in_rec != "" or Inventory.has(&"tape_1"):
+				var t1 := parcel.find_child("prop_tape_%s" % (in_rec if in_rec != "" else "1"), true, false)
 				if t1:
 					t1.queue_free()
 			if Inventory.has(&"note_prologue"):
@@ -293,7 +311,9 @@ func _apply_objects_state(o: Dictionary) -> void:
 		flashlight_prop.queue_free()
 		flashlight_prop = null
 	if o.get("recorder_state", "empty") != "empty" and recorder:
-		_load_tape_instant("1")
+		_load_tape_instant(String(o.get("recorder_tape_no", "1")) if String(o.get("recorder_tape_no", "")) != "" else "1")
+	if o.get("photo", false):
+		show_photo(true)
 	if o.get("recorder_held", false):
 		_pick_recorder.call_deferred()
 
@@ -302,7 +322,7 @@ func checkpoint(id: String) -> void:
 		return
 	SaveGame.write(id, get_save_state())
 	if hud:
-		hud.show_toast(tr("자동 저장됨 · ") + tr(SaveGame.LABELS.get(id, id)))
+		hud.show_toast(tr("자동 저장됨 · ") + tr(SaveGame.LABELS.get(id, id)), 2.5, true)
 
 ## 녹음기에 테이프를 애니메이션 없이 바로 넣는다 (타이틀 연출·불러오기)
 func _load_tape_instant(n: String) -> void:
@@ -381,6 +401,7 @@ func _fix_materials(root: Node) -> void:
 					var cm := ShaderMaterial.new()
 					cm.shader = CITY
 					cache["city"] = cm
+					city_mat = cm
 				rep = cache["city"]
 			elif nm.contains("glass") or nm.contains("clear_plastic") or nm.contains("lens") or nm.contains("pet_bottle"):
 				if not cache.has(nm):
@@ -516,6 +537,7 @@ func _lights() -> void:
 	window_light.shadow_normal_bias = 2.0
 	# 모니터 화면 빛
 	var mon := OmniLight3D.new()
+	monitor_light = mon
 	add_child(mon)
 	mon.global_position = b2g(Vector3(3.0, 4.45, 1.05))
 	mon.light_color = Color(0.75, 0.8, 0.9)
@@ -567,6 +589,7 @@ func _lights() -> void:
 		rp.interior = true
 		rp.update_mode = ReflectionProbe.UPDATE_ONCE
 		rp.ambient_mode = ReflectionProbe.AMBIENT_DISABLED
+		probes.append(rp)
 
 # ======================================================================= 사운드
 func _reverb() -> void:
@@ -661,6 +684,18 @@ func _process(delta: float) -> void:
 		_ding_t = randf_range(70.0, 140.0)
 		Sounds.play_at("sfx_elevator_ding", b2g(Vector3(-4.9, -1.1, 1.3)), &"SFX", -16.0, null, 0.0, "멀리서 엘리베이터 소리", 2.0)
 	# 재생 중 릴 회전 · VU 바늘
+	if _rewinding:
+		for r in _reels:
+			if is_instance_valid(r):
+				r.rotate_object_local(Vector3.UP, delta * 14.0)
+	# 오래된 녹음 특유의 불규칙한 잡음 — 짧은 드롭아웃·잡음 튐 (대사를 가리지 않을 정도)
+	if recorder_state == "playing" and hiss:
+		_dropout_t -= delta
+		if _dropout_t <= 0.0:
+			_dropout_t = randf_range(2.5, 6.5)
+			var tw := create_tween()
+			tw.tween_property(hiss, "volume_db", hiss.base_volume_db + 6.0, 0.03)
+			tw.tween_property(hiss, "volume_db", hiss.base_volume_db, 0.12)
 	if recorder_state == "playing" or _self_play:
 		for r in _reels:
 			if is_instance_valid(r):
@@ -874,8 +909,15 @@ func _furniture() -> void:
 			open[0] = not open[0]
 			drawer_open[idx] = open[0]
 			_notify("drawer", str(idx))
-			var tw := create_tween().set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
-			tw.tween_property(dr, "position", base + (Vector3(0, 0, 0.3) if open[0] else Vector3.ZERO), 0.45)
+			# 요구사항 14: 손 대신 서랍 자체의 물리적인 움직임 — 열 때 레일 끝에서 살짝 튕기고, 닫을 때 끝에서 '탁'
+			var tw := create_tween()
+			if open[0]:
+				tw.tween_property(dr, "position", base + Vector3(0, 0, 0.31), 0.42).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+				tw.tween_property(dr, "position", base + Vector3(0, 0, 0.3), 0.08)
+			else:
+				tw.tween_property(dr, "position", base, 0.32).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+				tw.tween_property(dr, "position", base + Vector3(0, 0, 0.004), 0.05)
+				tw.tween_property(dr, "position", base, 0.06)
 			Sounds.play_at("sfx_drawer_open" if open[0] else "sfx_drawer_close", dr.global_position, &"SFX", -6.0)
 	for i in 2:
 		var cd := find_child("stu_cabinet_door_%d" % i, true, false) as Node3D
@@ -1015,7 +1057,7 @@ func _props() -> void:
 		it.action = func():
 			if parcel_open:
 				return
-			if story and _hands_on() and not parcel_on_desk:
+			if story and not parcel_on_desk:
 				_parcel_pick_up()
 			elif _hands_on():
 				_parcel_open_hands()
@@ -1079,7 +1121,7 @@ func _parcel_open() -> void:
 		tw.tween_property(fl, "rotation", target, 0.45).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 	tw.tween_callback(_parcel_contents_ready)
 
-func _parcel_contents_ready() -> void:
+func _parcel_contents_ready(fresh := true) -> void:
 	var box_it := parcel.find_child("ParcelInteract", false, false) as Interactable
 	if box_it:
 		box_it.enabled = false
@@ -1087,23 +1129,32 @@ func _parcel_contents_ready() -> void:
 		var t := parcel.find_child("prop_tape_%d" % n, true, false) as Node3D
 		if t == null:
 			continue
-		var it := Interactable.attach_to(t, tr("테이프 %d") % n, 0.003, 0.03)
+		var it := Interactable.attach_to(t, ("첫 번째 테이프 획득" if n == 1 else "TAPE 0%d" % n), 0.006, 0.03)
 		it.inspectable = true
 		it.inspect_visual = t
+		it.highlight = true
 		it.inspect_title = tr("카세트테이프 %d번") % n
-		it.inspect_text = (tr("라벨에 손글씨로 '%d'.\n투명 창 너머로 감긴 테이프가 보인다.") % n) if n == 1 else (tr("라벨에 손글씨로 '%d'.\n1번부터 들어 보자.") % n)
+		it.inspect_text = (tr("라벨에 매직으로 크게 'TAPE 0%d'.\n투명 창 너머로 감긴 테이프가 보인다.") % n) if n == 1 else (tr("라벨에 'TAPE 0%d'.\n1번부터 들어 보자.") % n)
 		it.reach = "pick"
-		# 프롤로그에서는 1번 테이프만 가져간다 (나머지는 상자에 둔다)
-		it.pickup_item = StringName("tape_%d" % n) if (n == 1 or not story) else &""
+		# 테이프는 순서대로만 가져간다 (요구사항 16: 테이프 순서 상태) — 다음 차례가 아니면 살펴보기만
+		it.pickup_item = StringName("tape_%d" % n) if (n == next_tape() or not story) else &""
+		it.set_meta("tape_no", n)
 	var memo := parcel.find_child("prop_memo", true, false) as Node3D
 	if memo:
 		var it := Interactable.attach_to(memo, "메모", 0.005, 0.03)
 		it.inspectable = true
 		it.inspect_visual = memo
-		it.inspect_title = "손으로 쓴 메모"
-		it.inspect_text = "\"잡음을 제거하지 말아 주세요.\n그 안에 목소리가 있습니다.\""
+		it.inspect_title = "손으로 쓴 편지"
+		it.highlight = true
+		it.inspect_text = DialogueDB.text_of("PRO_E03_NOTE")
 		it.pickup_item = &"note_prologue"
 		it.reach = "pick"
+	# 개봉하면 몸을 숙여 상자 안을 들여다본다 — 테이프 7개가 한눈에 보이는 시점 (이동하면 원래 자세로)
+	if not fresh:
+		return
+	if player and player.global_position.distance_to(parcel.global_position) < 1.6:
+		player.lean_into(parcel.global_position + Vector3(0, 0.05, 0))
+	_notify("parcel_opened")
 
 func _held_tape() -> String:
 	for n in range(1, 8):
@@ -1140,7 +1191,10 @@ func _recorder_use() -> void:
 				return
 			_insert_tape(n)
 		"loaded":
-			_play_tape()
+			if tapes_done.has(recorder_tape_no):
+				_eject_tape()            # 다 들은 테이프는 꺼낸다 (요구사항 16: TAPE 01 → TAPE 02)
+			else:
+				_play_tape()
 		"playing":
 			_stop_tape()
 
@@ -1186,8 +1240,15 @@ func _insert_tape(n: String) -> void:
 	tw.tween_callback(func(): Sounds.play_at("sfx_cassette_insert", recorder.global_position, &"SFX", -4.0, null, 0.0, "테이프 넣는 소리"))
 	tw.tween_interval(0.25)
 	tw.tween_property(door, "rotation:x", base_r, 0.22)
+	tw.tween_callback(func(): Sounds.play_at("sfx_cassette_door", recorder.global_position, &"SFX", -4.0))
+	# 처음으로 되감기 (요구사항 15: 되감기 소리 + 릴이 거꾸로 빠르게 돈다)
 	tw.tween_callback(func():
-		Sounds.play_at("sfx_cassette_door", recorder.global_position, &"SFX", -4.0)
+		_rewinding = true
+		Sounds.play_at("amb_tape_rewind", recorder.global_position, &"SFX", -8.0, null, 0.0, "테이프 되감는 소리"))
+	tw.tween_interval(1.1)
+	tw.tween_callback(func():
+		_rewinding = false
+		Sounds.play_at("sfx_tape_stop", recorder.global_position, &"SFX", -10.0)
 		Inventory.items.erase(StringName("tape_" + n))
 		recorder_state = "loaded"
 		recorder_tape_no = n
@@ -1234,7 +1295,7 @@ func _play_tape() -> void:
 	if director == null:
 		get_tree().create_timer(1.6, false).timeout.connect(func():
 			if recorder_state == "playing":
-				_play_line_at("PRO_E03_TAPE_1", recorder))
+				_play_line_at("PRO_E04_T01", recorder))
 
 func _stop_tape() -> void:
 	recorder_state = "loaded"
@@ -1297,6 +1358,7 @@ func _setup_story(mode: String) -> void:
 	story_fx.director = director
 	add_child(director)
 	director.load_file("res://data/events/prologue_events.json")
+	director.load_file("res://data/events/tape01_events.json")
 	if mode == "new":
 		ClueBook.reset()
 	Inventory.item_added.connect(func(id):
@@ -1310,7 +1372,7 @@ func _setup_story(mode: String) -> void:
 		_notify("inspect:" + t.inspect_title)
 		if t.inspect_title == "운송장":
 			ClueBook.add(&"clue_pro_waybill"))
-	director.event_finished.connect(func(id): if id == "EV03_tape_play": ClueBook.add(&"clue_pro_tape01"))
+	director.event_finished.connect(func(id): if id == "EV04_first_recording": ClueBook.add(&"clue_pro_tape01"))
 	player.interacted_any.connect(func(): _notify("interact"))
 	if clue_tape and mode == "new":
 		clue_tape.visible = false
@@ -1353,13 +1415,21 @@ func play_line_world(line_id: String, pos: Vector3, at_player := false, bus := "
 	DialogueDB.line_started.emit(DialogueDB.get_line(line_id))
 	if stream == null:
 		return
+	_duck_for(stream.get_length())
 	if at_player:
+		# 정우 독백은 한 번에 하나만 (겹치면 앞 대사를 짧게 줄이고 새 대사) — 요구사항 12 §8 중복 재생 방지
+		if is_instance_valid(_jw_voice) and _jw_voice.playing:
+			var old := _jw_voice
+			var tw0 := create_tween()
+			tw0.tween_property(old, "volume_db", -40.0, 0.15)
+			tw0.tween_callback(old.queue_free)
 		var p2 := AudioStreamPlayer.new()
 		p2.stream = stream
 		p2.bus = &"Voice"
 		add_child(p2)
 		p2.play()
 		p2.finished.connect(p2.queue_free)
+		_jw_voice = p2
 		return
 	var p := AudioStreamPlayer3D.new()
 	p.stream = stream
@@ -1494,16 +1564,21 @@ func _parcel_pick_up() -> void:
 	Sounds.play_at("sfx_cardboard_flap", parcel.global_position, &"SFX", -8.0)
 	player.carrying = parcel
 	player.carry_target_fn = _parcel_try_place
-	await player.arms.carry_begin(parcel, size)
+	if _hands_on():
+		await player.arms.carry_begin(parcel, size)
+	else:
+		# 손 없이: 상자를 들어 품에 안은 것으로 처리 — 화면에 떠 있는 물체를 보이지 않는다 (요구사항 14)
+		_set_parcel_carried_hidden(true)
 	_notify("parcel_picked")
-	hud.show_toast("책상 위에 올려놓자.  [E] 내려놓기", 4.0)
+	if not _carry_tutorial_done:
+		hud.show_toast("E 내려놓기", 3.0, true)     # 처음 한 번만 (튜토리얼)
+		_carry_tutorial_done = true
 
 func _desk_place_transform() -> Transform3D:
-	var desk := find_child("stu_desk", true, false) as Node3D
-	var box := Interactable.local_aabb(desk) if desk else AABB()
-	# 책상 상판 왼쪽 빈 곳 (녹음기·키보드와 겹치지 않게)
-	var top := desk.global_transform * Vector3(box.position.x + box.size.x * 0.22, box.end.y, box.get_center().z + 0.05) if desk else b2g(Vector3(1.4, 4.6, 0.76))
-	return Transform3D(Basis(Vector3.UP, deg_to_rad(-12)), top + Vector3(0, 0.001, 0))
+	# 책상 상판 오른쪽 빈 곳 (마우스 패드 오른쪽, 머그컵 앞). 상판 높이는 실제 규격 0.74 m
+	# (정적 메시 병합 후 stu_desk 노드에는 서랍장만 남아 AABB로 높이를 구하면 상자가 책상에 파묻혔다 — 요구사항 12 QA에서 발견)
+	var top: Vector3 = b2g(Vector3(3.86, 4.19, 0.741))
+	return Transform3D(Basis(Vector3.UP, deg_to_rad(-12)), top)
 
 func _parcel_try_place() -> void:
 	if not player.carrying:
@@ -1513,7 +1588,12 @@ func _parcel_try_place() -> void:
 		hud.show_toast("책상 근처에서 내려놓자.", 2.0)
 		return
 	var size := Interactable.local_aabb(parcel).size
-	await player.arms.carry_end(t, size)
+	if _hands_on():
+		await player.arms.carry_end(t, size)
+	else:
+		parcel.top_level = true
+		parcel.global_transform = t
+		_set_parcel_carried_hidden(false)
 	Sounds.play_at("sfx_cardboard_flap", t.origin, &"SFX", -6.0)
 	player.carrying = null
 	player.carry_target_fn = Callable()
@@ -1550,29 +1630,60 @@ func _pick_recorder() -> void:
 		it.enabled = false
 	Sounds.play_at("sfx_pickup", recorder.global_position, &"SFX", -6.0)
 	player.arms.hold_recorder(recorder)
-	hud.show_toast("R 키: 녹음기 사용 (테이프 넣기 · 재생 · 정지)", 4.0)
+	hud.show_toast("R 녹음기 (테이프 넣기 · 재생 · 정지)", 4.0, true)    # 처음 한 번 — 녹음기 조작 튜토리얼
+	_schedule_recorder_lower(6.0)
 
 ## 플레이어 R 키
 func recorder_key() -> void:
 	if recorder == null:
+		return
+	if not _hands_on():
+		# 요구사항 14: 녹음기는 책상 위에 둔 채 조작 (손에 들지 않음). R = 가까이 있을 때 녹음기 조작 단축키
+		if recorder_state != "busy" and Vector2(recorder.global_position.x - player.global_position.x,
+				recorder.global_position.z - player.global_position.z).length() <= player.interact_reach + 0.15:
+			_recorder_use()
 		return
 	if not player.held_recorder and story:
 		hud.show_toast("녹음기는 책상 위에 있다.", 2.0)
 		return
 	if player.hands_busy:
 		return
+	# 장비 상태: 내려 둔 녹음기는 먼저 꺼내 든 다음 조작한다 (요구사항 12 §3)
+	if player.arms and player.arms.enabled and player.held_recorder and player.arms.is_lowered("R"):
+		player.arms.raise_tool("R")
+		await get_tree().create_timer(0.3, false).timeout
 	_recorder_use()
+	_schedule_recorder_lower()
+
+var _rec_lower_token := 0
+## 조작이 끝나고 몇 초 지나면 녹음기를 다시 내린다 (화면 중앙을 계속 가리지 않게)
+func _schedule_recorder_lower(after := 4.0) -> void:
+	_rec_lower_token += 1
+	var tok := _rec_lower_token
+	get_tree().create_timer(after, false).timeout.connect(func():
+		if tok != _rec_lower_token or player.held_recorder == null or not player.arms or not player.arms.enabled:
+			return
+		if recorder_state == "busy" or player.hands_busy:
+			_schedule_recorder_lower(1.5)
+			return
+		player.arms.lower_tool("R"))
 
 func enter_apartment() -> void:
 	if apt == null:
 		apt = AptCorridor.new()
 		apt.name = "AptCorridor1998"
 		add_child(apt)
-	player.global_position = apt.point("apt_spawn")
+	in_apartment = true
+	apt.enter(env)
+	player.global_position = apt.point("apt_spawn") + Vector3(0, 0.05, 0)
 	player.set("_yaw", apt.spawn_yaw)
 	player.set("_pitch", 0.0)
-	player.footsteps.surface_zones.append({"aabb": apt.bounds(), "surface": "tile"})
+	var z := {"aabb": apt.bounds(), "surface": "concrete"}
+	if not player.footsteps.surface_zones.has(z):
+		player.footsteps.surface_zones.append(z)
 	set_rain(false, 0.0)
+	set_world_quiet(0.0, 0.1)
+	# 작업실·복도 조명은 이 공간과 무관 — 멀리 있으므로 그대로 둔다
 
 
 # ======================================================================= 요구사항 11 프롤로그 연출
@@ -1630,8 +1741,9 @@ func intro_seated() -> void:
 	player.look_at_point(mon.global_position + Vector3(0, -0.05, 0))
 
 func intro_headphones() -> void:
-	player.arms.headphones_off()
-	Sounds.play("sfx_pickup", &"SFX", -10.0)
+	if player.arms:
+		player.arms.headphones_off()
+	Sounds.play("sfx_pickup", &"SFX", -10.0)        # 헤드폰을 벗어 책상에 내려놓는 소리
 
 ## 일어서며 의자를 뒤로 민다 (바퀴 굴러가는 소리)
 func intro_stand_up() -> void:
@@ -1836,7 +1948,8 @@ func door_bang(strength: float) -> void:
 		tw.tween_property(door_hinge, "rotation:y", deg_to_rad(-0.4 * strength), 0.08)
 		tw.tween_property(door_hinge, "rotation:y", 0.0, 0.12)
 	player.camera_kick(0.35 * strength)
-	player.arms.flinch(0.5 * strength, 0.25)
+	if player.arms:
+		player.arms.flinch(0.5 * strength, 0.25)
 
 ## 모든 소리가 갑자기 멈춘다 (환경음 버스를 잠깐 끊었다가 천천히 복구)
 func sudden_silence(secs: float) -> void:
@@ -1848,3 +1961,366 @@ func sudden_silence(secs: float) -> void:
 	await get_tree().create_timer(secs, false).timeout
 	var tw := create_tween()
 	tw.tween_method(func(v): AudioServer.set_bus_volume_db(idx, v), -60.0, base, 2.5)
+
+
+# ======================================================================= 조명 상태 (요구사항 12)
+## normal 정상 점등 · partial 부분 소등 · broken 조명 고장(스위치 무반응) · blackout 완전 정전
+## · emergency 비상등(붉은 조명만). 손전등과 초자연 깜빡임은 Flashlight가 따로 담당한다.
+## 화면 필터가 아니라 실제 3D 조명·환경광·GI·반사·발광 재질을 바꾼다.
+const LIGHTING_STATES := ["normal", "partial", "broken", "blackout", "emergency"]
+
+func _collect_emissives() -> void:
+	if not _emissive_mats.is_empty() or stu == null:
+		return
+	var seen := {}
+	for n in stu.find_children("*", "MeshInstance3D", true, false):
+		var mi := n as MeshInstance3D
+		if mi.mesh == null:
+			continue
+		for i in mi.mesh.get_surface_count():
+			var m := mi.get_active_material(i)
+			if m is BaseMaterial3D and (m as BaseMaterial3D).emission_enabled and not seen.has(m):
+				seen[m] = true
+				_emissive_mats.append([m, (m as BaseMaterial3D).emission_energy_multiplier])
+
+func _ensure_emergency() -> void:
+	if emergency_light:
+		return
+	# 출입문 위 비상등 (배터리식, 정전 시 붉게 점등)
+	var pos: Vector3 = b2g(Vector3(0.95, 0.12, 2.32))
+	_emergency_mesh = MeshInstance3D.new()
+	var bm := BoxMesh.new()
+	bm.size = Vector3(0.26, 0.07, 0.06)
+	_emergency_mesh.mesh = bm
+	var m := StandardMaterial3D.new()
+	m.albedo_color = Color(0.25, 0.04, 0.03)
+	m.emission = Color(1.0, 0.08, 0.04)
+	m.emission_energy_multiplier = 0.0
+	m.emission_enabled = true
+	m.roughness = 0.4
+	_emergency_mesh.material_override = m
+	add_child(_emergency_mesh)
+	_emergency_mesh.global_position = pos
+	emergency_light = OmniLight3D.new()
+	emergency_light.light_color = Color(1.0, 0.12, 0.06)
+	emergency_light.light_energy = 0.0
+	emergency_light.omni_range = 5.5
+	emergency_light.omni_attenuation = 1.6
+	emergency_light.shadow_enabled = true
+	emergency_light.visible = false
+	add_child(emergency_light)
+	emergency_light.global_position = pos + Vector3(0, -0.08, -0.12)
+
+func set_lighting(st: String, instant := false) -> void:
+	if not LIGHTING_STATES.has(st):
+		return
+	_collect_emissives()
+	_ensure_emergency()
+	lighting = st
+	var studio_fixtures := ["StudioCeiling", "DeskLamp", "FloorLamp"]
+	var powered := st == "normal" or st == "partial"
+	match st:
+		"normal":
+			for n in studio_fixtures:
+				set_light(n, "restore", instant)
+			if fx.has("StudioCeiling"):
+				fx["StudioCeiling"].switched_on = true
+				fx["StudioCeiling"]._apply()
+		"partial":
+			set_light("StudioCeiling", "story_off", instant)
+			set_light("FloorLamp", "story_off", instant)
+			set_light("DeskLamp", "restore", instant)
+		"broken":
+			set_light("StudioCeiling", "dead", instant)
+			set_light("FloorLamp", "story_off", instant)
+			set_light("DeskLamp", "restore", instant)
+		"blackout", "emergency":
+			for n in studio_fixtures:
+				set_light(n, "story_off", instant)
+	# 모니터·전자기기 발광 (정전이면 전부 꺼짐)
+	var devices_on := powered or st == "broken"
+	if monitor_light:
+		monitor_light.visible = devices_on
+	for e in _emissive_mats:
+		(e[0] as BaseMaterial3D).emission_energy_multiplier = float(e[1]) if devices_on else 0.0
+	if not devices_on:
+		set_monitor_off()
+	# 창밖 도시광: 정전 시 블록 전체가 꺼진 것처럼 거의 남기지 않는다 (먼 건물 몇 개만)
+	var dark := st == "blackout" or st == "emergency"
+	window_base_energy = WINDOW_ENERGY * (0.06 if dark else 1.0)
+	if window_light:
+		window_light.light_energy = window_base_energy
+		window_light.shadow_enabled = not dark
+	if city_mat:
+		city_mat.set_shader_parameter("energy", 0.35 if dark else 1.6)
+		city_mat.set_shader_parameter("lit_ratio", 0.08 if dark else 0.28)
+	# 환경광·GI·반사: 잔여 광원 제거 (자동 노출은 사용하지 않음 — 노출 고정)
+	if env:
+		env.ambient_light_energy = 0.0 if dark else (0.05 if st != "normal" else 0.08)
+		env.ambient_light_color = Color(0.36, 0.40, 0.48)
+		env.sdfgi_energy = 0.55 if dark else 1.25
+		env.ssil_intensity = 0.25 if dark else 0.6
+		env.glow_intensity = 0.35
+		env.tonemap_exposure = 1.15
+	for rp in probes:
+		rp.intensity = 0.03 if dark else 1.0
+	# 비상등
+	var em := st == "emergency"
+	emergency_light.visible = em
+	emergency_light.light_energy = 0.9 if em else 0.0
+	(_emergency_mesh.material_override as StandardMaterial3D).emission_energy_multiplier = 2.5 if em else 0.0
+
+
+## 정전·비상등 상태에서 그 지점이 실제로 빛을 받아 보이는가 (요구사항 13: 보이는 물건만 상호작용 아이콘)
+func point_lit(pt: Vector3) -> bool:
+	if lighting != "blackout" and lighting != "emergency":
+		return true
+	if not in_studio(pt):
+		return true                     # 복도·계단은 비상 전원 조명이 살아 있다
+	var fl: Flashlight = player.flashlight
+	if fl and fl.is_on and fl.spot.visible:
+		var sp := fl.spot.global_position
+		var dir := -fl.spot.global_transform.basis.z
+		var to := pt - sp
+		if to.length() < fl.spot.spot_range * 0.6 and rad_to_deg(dir.angle_to(to.normalized())) < fl.spot.spot_angle * 0.95 and _clear(sp, pt):
+			return true
+	if lighting == "emergency" and emergency_light and emergency_light.global_position.distance_to(pt) < 3.2 and _clear(emergency_light.global_position, pt):
+		return true
+	# 손전등을 찾기 전 안내광 (서랍 주변만 희미하게 보인다)
+	if story_fx and story_fx._guide and story_fx._guide.light_energy > 0.05 and story_fx._guide.global_position.distance_to(pt) < 1.1:
+		return true
+	return false
+
+func _clear(a: Vector3, b: Vector3) -> bool:
+	var q := PhysicsRayQueryParameters3D.create(a, b, 1)
+	q.exclude = [player.get_rid()]
+	var hit := get_world_3d().direct_space_state.intersect_ray(q)
+	return hit.is_empty() or (hit.position as Vector3).distance_to(b) < 0.3
+
+
+var _parcel_layers := {}
+func _set_parcel_carried_hidden(on: bool) -> void:
+	parcel.visible = not on
+	for c in parcel.find_children("*", "CollisionObject3D", true, false):
+		var co := c as CollisionObject3D
+		if co is Interactable:
+			continue
+		if on:
+			_parcel_layers[co] = co.collision_layer
+			co.collision_layer = 0
+		elif _parcel_layers.has(co):
+			co.collision_layer = _parcel_layers[co]
+
+
+var _cam_attr: CameraAttributesPractical
+func _inspect_view(on: bool) -> void:
+	if _cam_attr == null:
+		_cam_attr = CameraAttributesPractical.new()
+		_cam_attr.dof_blur_far_distance = 0.55
+		_cam_attr.dof_blur_far_transition = 0.35
+		_cam_attr.dof_blur_amount = 0.0
+		player.camera.attributes = _cam_attr
+	_cam_attr.dof_blur_far_enabled = true
+	var tw := create_tween().set_parallel()
+	tw.tween_property(_cam_attr, "dof_blur_amount", 0.14 if on else 0.0, 0.35)
+	if env:
+		tw.tween_property(env, "adjustment_brightness", GameSettings.brightness * (0.45 if on else 1.0), 0.35)
+	if not on:
+		tw.chain().tween_callback(func(): _cam_attr.dof_blur_far_enabled = false)
+
+
+var _jw_voice: AudioStreamPlayer
+var _duck_tw: Tween
+var _duck_fx := {}
+## 대사가 효과음·환경음에 묻히지 않게 잠깐 낮춘다 (대사 길이 동안 -5 dB).
+## 설정의 버스 볼륨과 겹치지 않도록 버스에 증폭 이펙트를 하나 붙여 그것만 조절한다.
+func _duck_for(secs: float) -> void:
+	for bus in [&"Ambience", &"SFX"]:
+		var idx := AudioServer.get_bus_index(bus)
+		if idx < 0 or _duck_fx.has(bus):
+			continue
+		var amp := AudioEffectAmplify.new()
+		AudioServer.add_bus_effect(idx, amp)
+		_duck_fx[bus] = amp
+	if _duck_tw:
+		_duck_tw.kill()
+	_duck_tw = create_tween()
+	_duck_tw.tween_method(_set_duck, 0.0, 1.0, 0.2)
+	_duck_tw.tween_interval(maxf(secs - 0.1, 0.3))
+	_duck_tw.tween_method(_set_duck, 1.0, 0.0, 0.5)
+
+func _set_duck(k: float) -> void:
+	for bus in _duck_fx:
+		(_duck_fx[bus] as AudioEffectAmplify).volume_db = -5.0 * k
+
+func _exit_tree() -> void:
+	# 레벨 재시작 시 버스 이펙트가 쌓이지 않게 제거
+	for bus in _duck_fx:
+		var idx := AudioServer.get_bus_index(bus)
+		for i in range(AudioServer.get_bus_effect_count(idx) - 1, -1, -1):
+			if AudioServer.get_bus_effect(idx, i) == _duck_fx[bus]:
+				AudioServer.remove_bus_effect(idx, i)
+
+
+# ======================================================================= 요구사항 16: 테이프 순서 · 작업실 복귀 · 사진
+var tapes_done: Array[String] = []
+var in_apartment := false
+var photo: Node3D
+const PHOTO_TEX := "res://assets/textures/apt/apt_tape01_photo.jpg"
+
+## 다음에 들어야 할 테이프 번호 (1부터 순서대로)
+func next_tape() -> int:
+	for n in range(1, 8):
+		if not tapes_done.has(str(n)):
+			return n
+	return 8
+
+func mark_tape_finished(n: String) -> void:
+	if not tapes_done.has(n):
+		tapes_done.append(n)
+	_refresh_box_tapes()
+
+## 상자 안 테이프의 '가져가기' 가능 여부를 다음 차례에 맞춘다
+func _refresh_box_tapes() -> void:
+	if parcel == null:
+		return
+	for it in parcel.find_children("*", "Interactable", true, false):
+		var i := it as Interactable
+		if i.has_meta("tape_no"):
+			var n := int(i.get_meta("tape_no"))
+			var mine := n == next_tape() and recorder_tape_no != str(n)
+			i.pickup_item = StringName("tape_%d" % n) if mine else &""
+			i.prompt = ("TAPE 0%d" % n)
+
+## 다 들은 테이프를 꺼내 상자의 제자리에 돌려놓는다
+func _eject_tape() -> void:
+	if recorder_tape == null:
+		return
+	recorder_state = "busy"
+	var n := recorder_tape_no
+	var door := recorder.find_child("prop_recorder_door", true, false) as Node3D
+	var d0 := door.rotation.x if door else 0.0
+	Sounds.play_at("sfx_cassette_door", recorder.global_position, &"SFX", -4.0, null, 0.0, "녹음기 덮개 여는 소리")
+	var tw := create_tween()
+	if door:
+		tw.tween_property(door, "rotation:x", d0 - deg_to_rad(55), 0.3).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tw.tween_property(recorder_tape, "position", Vector3(0, 0.08, 0), 0.35).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	tw.tween_callback(func():
+		# 꺼낸 테이프는 상자의 원래 칸으로 (빌드 스크립트 build_props.py와 같은 배치: 한 줄에 4개)
+		var tp := recorder_tape
+		recorder_tape = null
+		if parcel:
+			var i := int(n) - 1
+			var local := Vector3(-0.162 + (i % 4) * 0.108, 0.060, -(0.052 - (i / 4) * 0.100))
+			tp.get_parent().remove_child(tp)
+			parcel.add_child(tp)
+			tp.transform = Transform3D(Basis(), local)
+			var it := Interactable.attach_to(tp, "TAPE 0%s" % n, 0.006, 0.03)
+			it.inspectable = true
+			it.inspect_visual = tp
+			it.inspect_title = tr("카세트테이프 %s번") % n
+			it.inspect_text = ""
+			it.set_meta("tape_no", int(n))
+			Sounds.play_at("sfx_cassette_insert", parcel.global_position, &"SFX", -10.0, null, 0.0, "테이프를 상자에 넣는 소리")
+		else:
+			tp.queue_free())
+	if door:
+		tw.tween_property(door, "rotation:x", d0, 0.22)
+	tw.tween_callback(func():
+		recorder_state = "empty"
+		recorder_tape_no = ""
+		_refresh_box_tapes()
+		_notify("tape_ejected", n))
+
+## 소은의 목소리가 끝나는 순간: 열려 있으면 쾅 닫히고, 닫혀 있으면 문짝이 크게 덜컹인다 (소리는 문 위치)
+func slam_door_story() -> void:
+	if door_hinge == null:
+		return
+	var at := door_inside_point() + Vector3(0, 0.9, 0)
+	if door_open:
+		door_open = false
+		door_busy = true
+		var tw := create_tween()
+		tw.tween_property(door_hinge, "rotation:y", 0.0, 0.2).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+		tw.tween_callback(func():
+			door_busy = false
+			Sounds.play_at("sfx_door_bang", at, &"SFX", 4.0, null, 0.0, "쾅!"))
+	else:
+		var r0 := door_hinge.rotation.y
+		var tw := create_tween()
+		tw.tween_property(door_hinge, "rotation:y", r0 + deg_to_rad(1.6), 0.05)
+		tw.tween_property(door_hinge, "rotation:y", r0, 0.12).set_trans(Tween.TRANS_BOUNCE).set_ease(Tween.EASE_OUT)
+		Sounds.play_at("sfx_door_bang", at, &"SFX", 4.0, null, 0.0, "쾅!")
+	get_tree().create_timer(0.35, false).timeout.connect(func():
+		Sounds.play_at("sfx_door_lock", at, &"SFX", -4.0, null, 0.0, "철컥"))
+
+## 방 안의 생활 소음(시계·빗소리·환경음)을 줄인다 — '조용해짐' (요구사항 16 EVENT 05)
+func set_world_quiet(db: float, fade: float) -> void:
+	var idx := AudioServer.get_bus_index(&"Ambience")
+	if idx < 0:
+		return
+	if not has_meta("amb_base_db"):
+		set_meta("amb_base_db", AudioServer.get_bus_volume_db(idx))
+	var base: float = get_meta("amb_base_db")
+	var tw := create_tween()
+	tw.tween_method(func(v): AudioServer.set_bus_volume_db(idx, v), AudioServer.get_bus_volume_db(idx), base + db, fade)
+
+## TAPE 01이 끝나면 작업실 책상 앞(녹음기 앞)으로 돌아온다 — 1998년에서 돌아온 직후
+func return_to_studio(instant: bool) -> void:
+	if apt:
+		apt.leave(env)
+	in_apartment = false
+	set_lighting("partial", true)          # 책상 스탠드만 켜져 있다 (Q-14 임시 결정)
+	set_world_quiet(-6.0, 0.1)
+	slam_door(true)
+	door_locked = true
+	if recorder and recorder_state == "playing":
+		recorder_state = "loaded"
+		motor.stop()
+		hiss.stop()
+	if recorder:
+		var to_desk := recorder.global_position
+		var front := b2g(Vector3(3.55, 3.45, 0.0))     # 책상 앞 (의자 옆), 녹음기를 내려다보는 자리
+		player.global_position = Vector3(front.x, 0.05, front.z)
+		player.look_at_point(to_desk + Vector3(0, -0.05, 0))
+	player.flashlight.blocked = false
+	if player.flashlight.is_on:
+		player.flashlight.set_on(false)
+
+## 책상 위, 녹음기 옆에 놓인 사진 (TAPE 01 이후)
+func show_photo(instant := false) -> void:
+	if photo == null:
+		photo = MeshInstance3D.new()
+		photo.name = "prop_photo_tape01"
+		var bm := BoxMesh.new()
+		bm.size = Vector3(0.127, 0.0012, 0.089)
+		(photo as MeshInstance3D).mesh = bm
+		var back := StandardMaterial3D.new()
+		back.albedo_color = Color(0.93, 0.92, 0.88)       # 인화지 뒷면
+		back.roughness = 0.8
+		(photo as MeshInstance3D).material_override = back
+		var face := MeshInstance3D.new()
+		var qm := QuadMesh.new()
+		qm.size = Vector2(0.127, 0.089)
+		face.mesh = qm
+		var front := StandardMaterial3D.new()
+		front.roughness = 0.3                             # 광택 인화지
+		front.albedo_color = Color(0.5, 0.45, 0.4)
+		if ResourceLoader.exists(PHOTO_TEX):
+			front.albedo_texture = load(PHOTO_TEX)
+			front.albedo_color = Color.WHITE
+		face.material_override = front
+		photo.add_child(face)
+		face.position = Vector3(0, 0.00065, 0)
+		face.rotation_degrees = Vector3(-90, 0, 0)
+		add_child(photo)
+		# 키보드 위에 놓여 있다 — 정우가 앉으면 바로 손이 닿는 자리 (책상 위 다른 물건과 겹치지 않음, 놓칠 수 없는 위치)
+		var kb := b2g(Vector3(2.93, 4.2, 0.74 + 0.0235))
+		photo.global_transform = Transform3D(Basis(Vector3.UP, deg_to_rad(-7)) * Basis(Vector3.RIGHT, deg_to_rad(1.5)), kb)
+		var it := Interactable.attach_to(photo, "사진", 0.01, 0.06)
+		it.inspectable = true
+		it.inspect_visual = photo
+		it.inspect_title = "사진"
+		it.inspect_text = ""
+	photo.visible = true
+

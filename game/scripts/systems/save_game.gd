@@ -13,6 +13,9 @@ const LABELS := {
 	"tape1_played": "첫 번째 테이프 재생",
 	"flashlight_obtained": "손전등 획득",
 	"apt_entered": "1998년 아파트 진입",
+	"corridor": "복도",
+	"tape01_done": "TAPE 01 종료",
+	"tape02_ready": "TAPE 02 삽입",
 }
 
 ## 레벨을 다시 불러올 때 적용할 저장 데이터 (이어하기 / 체크포인트에서 다시 시작)

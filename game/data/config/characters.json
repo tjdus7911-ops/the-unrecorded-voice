@@ -65,6 +65,33 @@
       "age": 46,
       "voice_brief": "권위적이고 냉정한 중년 남성",
       "voice_status": "unassigned"
+    },
+    {
+      "character_id": "resident_a",
+      "display_name": {
+        "ko": "주민 A",
+        "en": "Resident A",
+        "ja": "住民A"
+      },
+      "voice_id": "vo_resident_a"
+    },
+    {
+      "character_id": "resident_b",
+      "display_name": {
+        "ko": "주민 B",
+        "en": "Resident B",
+        "ja": "住民B"
+      },
+      "voice_id": "vo_resident_b"
+    },
+    {
+      "character_id": "resident_c",
+      "display_name": {
+        "ko": "주민 C",
+        "en": "Resident C",
+        "ja": "住民C"
+      },
+      "voice_id": "vo_resident_c"
     }
   ],
   "ghosts": [

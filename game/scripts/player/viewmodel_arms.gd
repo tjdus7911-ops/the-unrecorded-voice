@@ -33,6 +33,7 @@ var tremble := 0.0          ## 공포 떨림 0~1
 var exhaustion := 0.0       ## 달린 뒤 0~1
 var enabled := true
 var _flinch := 0.0
+var _run_k := 0.0
 var _flinch_secs := 0.3
 var _flinch_shake := 1.0
 ## 외부 카메라 검토용: 1인칭 재질 보정(z_clip_scale·fov_override)을 끈다
@@ -341,6 +342,8 @@ func _process(delta: float) -> void:
 	if player and player is CharacterBody3D:
 		speed = Vector2((player as CharacterBody3D).velocity.x, (player as CharacterBody3D).velocity.z).length()
 	_bob_phase += delta * (1.8 + speed * 1.35)
+	var running: bool = player != null and player.get("is_running") == true and speed > 2.5
+	_run_k = move_toward(_run_k, 1.0 if running else 0.0, delta * 3.0)
 	var walk := clampf(speed / 4.5, 0.0, 1.0)
 	var shake := float(GameSettings.camera_shake)
 	for side in sides:
@@ -359,7 +362,13 @@ func _process(delta: float) -> void:
 			off.z += sin(_t * 1.6 + 0.5) * 0.0015 * (1.0 + exhaustion * 2.0)
 			var tr := tremble * 0.0025 * shake
 			off += Vector3(sin(_t * 31.0 + h.sign), sin(_t * 27.0), sin(_t * 23.0 + 2.0)) * tr
-		_solve(h, h.pos + off, h.F, h.R)
+		# 달리기: 장비를 든 손을 아래·바깥으로 낮추고 앞쪽을 숙인다 (빛도 발밑 쪽으로)
+		var run_k := _run_k
+		var F := h.F
+		if run_k > 0.01 and (h.mode == Mode.HOLD_FLASHLIGHT or h.mode == Mode.HOLD_RECORDER) and not is_lowered(side):
+			off += Vector3(0.035 * h.sign, -0.07, 0.05) * run_k
+			F = (h.F + Vector3(0, -0.45 * run_k, 0)).normalized()
+		_solve(h, h.pos + off, F, h.R)
 		_fingers(h, delta)
 		_place_held(h)
 
@@ -505,36 +514,45 @@ func grip_axes(side: String, axis: Vector3, dorsal: Vector3) -> Array:
 			return [F, R]
 	return [A, N.cross(A)]
 
-## ------------------------------------------------------------------ 도구 · 물체 쥐기 프리셋
-## 왼손 손전등: 원통 축이 손바닥을 대각선(0.8R + 0.6F)으로 가로지르고 스위치(+Y)가 손등 쪽
-const FL_CENTER := Vector3(-0.165, -0.175, -0.47)
-const REC_CENTER := Vector3(0.15, -0.195, -0.44)
+## ------------------------------------------------------------------ 도구 · 물체 쥐기 프리셋 (요구사항 12 §2·§3 재작성)
+## 기준: 화면 아래쪽 모서리에서 팔이 들어오고, 손목은 곧게, 손등이 바깥·위를 향한다 (RE7·Outlast·Amnesia 1인칭 레퍼런스).
+## 좌표: 카메라 루트 공간 (-Z 앞, +Y 위, +X 오른쪽). F = 손목→손가락, R = 엄지 쪽, N = 손등.
+@export var fl_center := Vector3(-0.165, -0.168, -0.38)   ## 손전등을 쥐는 지점 (화면 왼쪽 아래)
+@export var fl_beam := Vector3(0.13, 0.10, -1.0)          ## 빛 방향 — 화면 중앙 약간 아래(약 4 m 앞)를 비춘다
+@export var fl_dorsal := Vector3(-0.85, 0.45, 0.25)        ## 왼손 손등: 왼쪽 위 (엄지가 원통 위 스위치)
+@export var rec_center := Vector3(0.165, -0.185, -0.42)   ## 녹음기 중심 (화면 오른쪽 아래)
+@export var rec_face := Vector3(-0.30, 0.55, 0.78)         ## 녹음기 창(손바닥) 방향 — 카메라 쪽을 비스듬히 본다
+@export var rec_fingers := Vector3(-0.95, 0.25, -0.15)     ## 오른손 손가락: 녹음기 뒤를 감싸 왼쪽 가장자리로
 
 func hold_flashlight(rig: Node3D) -> void:
-	var beam := Vector3(0.10, 0.05, -1).normalized()
-	var axes := grip_axes("L", beam, Vector3(-0.55, 0.83, 0.1))
+	var A := fl_beam.normalized()
+	var axes := grip_axes("L", A, fl_dorsal)
 	var F: Vector3 = axes[0]
 	var R: Vector3 = axes[1]
 	var N := _dorsal_for(sides["L"], F, R)
+	var wrist := fl_center - F * 0.062 + N * 0.040
 	var h: Hand = sides["L"]
-	h.hold = [FL_CENTER - F * 0.065 + N * 0.042, F, R]
-	var a_local := Vector3(0.8, 0.0, 0.6).normalized()
-	var y_local := Vector3(0, 1, 0)
-	var z_local := -a_local
-	attach("L", rig, Transform3D(Basis(y_local.cross(z_local), y_local, z_local), Vector3(0, -0.042, 0.065)))
+	h.hold = [wrist, F, R]
+	# 손전등: 로컬 -Z = 빛, +Y = 스위치 → 스위치가 엄지(손등 쪽 위)를 향하게
+	var up := (N - A * N.dot(A)).normalized()
+	var objT := Transform3D(Basis(up.cross(-A), up, -A), fl_center)
+	attach_at("L", rig, objT, wrist, F, R)
 	set_mode("L", Mode.HOLD_FLASHLIGHT)
 
-## 오른손 녹음기: 손바닥 위에 눕혀 들고 버튼 면이 플레이어 쪽, 엄지로 버튼을 누른다
 func hold_recorder(rec: Node3D) -> void:
-	var rN := Vector3(-0.1, -0.84, 0.53).normalized()
-	var rF := Vector3(-0.35, 0.45, -0.82)
-	rF = (rF - rN * rF.dot(rN)).normalized()
-	var rR := -rN.cross(rF)
-	if _dorsal_for(sides["R"], rF, rR).dot(rN) < 0:
-		rR = -rR
+	var face := rec_face.normalized()                  # 손바닥·녹음기 창이 향하는 쪽 (카메라 쪽)
+	var N := -face                                     # 손등은 반대(앞·아래)
+	var F := (rec_fingers - N * rec_fingers.dot(N)).normalized()
+	var R := N.cross(F)
+	if _dorsal_for(sides["R"], F, R).dot(N) < 0.0:
+		R = -R
+	var wrist := rec_center - F * 0.055 + N * 0.030    # 녹음기 뒤판이 손바닥 안에
 	var h: Hand = sides["R"]
-	h.hold = [REC_CENTER - rF * 0.07 + rN * 0.032, rF, rR]
-	attach("R", rec, Transform3D(Basis(Vector3(1, 0, 0), Vector3(0, -1, 0), Vector3(0, 0, -1)), Vector3(0, -0.049, 0.07)))
+	h.hold = [wrist, F, R]
+	# 녹음기: 로컬 +Y = 창(덮개) 면 → face, 로컬 +Z = 버튼 가장자리 → 엄지 쪽(R)
+	var bz := (R - face * R.dot(face)).normalized()
+	var objT := Transform3D(Basis(face.cross(bz), face, bz), rec_center + face * 0.004)
+	attach_at("R", rec, objT, wrist, F, R)
 	set_mode("R", Mode.HOLD_RECORDER)
 
 ## 루트 공간 물체 변환 objT를 원하는 손 자세(wrist, F, R)로 쥐도록 오프셋 계산 (held_raw)
@@ -564,16 +582,24 @@ func press_thumb(side := "R") -> void:
 	await get_tree().create_timer(0.16).timeout
 	h.pose_want = keep
 
-## 도구를 든 손을 화면 밖으로 내렸다가(숨김) 돌려놓기
+## 도구를 든 손을 화면 밖으로 내렸다가(숨김) 돌려놓기 — 장비 내리기/들기
+var _lowered := {"L": false, "R": false}
+func is_lowered(side: String) -> bool:
+	return _lowered.get(side, false)
+
 func lower_tool(side: String) -> void:
 	var h: Hand = sides[side]
-	aim(side, _low_pos(h), Vector3(0, -1, -0.3), Vector3(0, 0, -1), 9.0)
-	await get_tree().create_timer(0.28).timeout
-	if h.held:
+	if h.mode == Mode.REACH:
+		return
+	_lowered[side] = true
+	aim(side, _low_pos(h), Vector3(0, -1, -0.3), Vector3(0, 0, -1), 7.0)
+	await get_tree().create_timer(0.32).timeout
+	if _lowered[side] and h.held:
 		h.held.visible = false
 
 func raise_tool(side: String) -> void:
 	var h: Hand = sides[side]
+	_lowered[side] = false
 	if h.held:
 		h.held.visible = true
 	set_mode(side, h.mode if h.mode != Mode.REACH else (Mode.HOLD_RECORDER if side == "R" else Mode.HOLD_FLASHLIGHT))
